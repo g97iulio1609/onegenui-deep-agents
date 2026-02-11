@@ -1,0 +1,53 @@
+{
+  "name": "@onegenui/deep-agents",
+  "version": "0.1.0",
+  "description": "Deep Agent Framework built on Vercel AI SDK v6 — planning, context management, subagents, persistent memory, MCP integration",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "check-types": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "ai": "^6.0.68",
+    "zod": "^4.0.0"
+  },
+  "peerDependencies": {
+    "@onegenui/mcp": "workspace:*",
+    "@onegenui/providers": "workspace:*",
+    "@onegenui/jobs": "workspace:*",
+    "@supabase/supabase-js": "^2.0.0",
+    "tiktoken": "^1.0.0",
+    "@ai-sdk/mcp": "^0.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@onegenui/mcp": { "optional": true },
+    "@onegenui/providers": { "optional": true },
+    "@onegenui/jobs": { "optional": true },
+    "@supabase/supabase-js": { "optional": true },
+    "tiktoken": { "optional": true },
+    "@ai-sdk/mcp": { "optional": true }
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "rimraf": "^6.1.2",
+    "tsup": "^8.0.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.15"
+  }
+}
