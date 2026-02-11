@@ -431,4 +431,70 @@ describe("DeepAgent", () => {
       expect(agent).toBeInstanceOf(DeepAgent);
     });
   });
+
+  // ===========================================================================
+  // withTools (integration)
+  // ===========================================================================
+
+  describe("withTools", () => {
+    it("should merge extra tools from withTools into agent", async () => {
+      const agent = DeepAgent.create({
+        model: mockModel,
+        instructions: "test",
+      })
+        .withTools({
+          custom: {
+            description: "custom test tool",
+            parameters: { type: "object", properties: {} },
+          } as unknown as import("ai").Tool,
+        })
+        .build();
+
+      expect(agent).toBeInstanceOf(DeepAgent);
+      expect(agent.sessionId).toBeDefined();
+
+      await agent.run("Hello");
+
+      const settings = constructorSpy.mock.calls[0]![0] as Record<
+        string,
+        unknown
+      >;
+      const toolKeys = Object.keys(
+        settings.tools as Record<string, unknown>,
+      );
+      expect(toolKeys).toContain("custom");
+    });
+
+    it("withTools returns the builder for chaining", () => {
+      const builder = DeepAgent.create({
+        model: mockModel,
+        instructions: "test",
+      });
+
+      const result = builder.withTools({ a: {} as unknown as import("ai").Tool });
+      expect(result).toBe(builder);
+    });
+
+    it("withTools merges multiple calls", async () => {
+      const agent = DeepAgent.create({
+        model: mockModel,
+        instructions: "test",
+      })
+        .withTools({ toolA: {} as unknown as import("ai").Tool })
+        .withTools({ toolB: {} as unknown as import("ai").Tool })
+        .build();
+
+      await agent.run("Hello");
+
+      const settings = constructorSpy.mock.calls[0]![0] as Record<
+        string,
+        unknown
+      >;
+      const toolKeys = Object.keys(
+        settings.tools as Record<string, unknown>,
+      );
+      expect(toolKeys).toContain("toolA");
+      expect(toolKeys).toContain("toolB");
+    });
+  });
 });

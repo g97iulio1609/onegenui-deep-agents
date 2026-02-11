@@ -51,6 +51,8 @@ export class DeepAgentBuilder {
   private subagentConfig?: Partial<SubagentConfig>;
   private approvalConfig?: Partial<ApprovalConfig>;
 
+  private extraTools: Record<string, Tool> = {};
+
   private readonly eventHandlers: Array<{
     type: AgentEventType | "*";
     handler: AgentEventHandler;
@@ -90,6 +92,11 @@ export class DeepAgentBuilder {
   ): this {
     this.subagents = true;
     this.subagentConfig = config;
+    return this;
+  }
+
+  withTools(tools: Record<string, Tool>): this {
+    Object.assign(this.extraTools, tools);
     return this;
   }
 
@@ -138,6 +145,7 @@ export class DeepAgentBuilder {
       checkpointConfig: resolveCheckpointConfig(
         this.agentConfig.checkpoint,
       ),
+      extraTools: this.extraTools,
     });
 
     for (const { type, handler } of this.eventHandlers) {
@@ -167,6 +175,7 @@ interface DeepAgentInternalConfig {
   subagentConfig?: Partial<SubagentConfig>;
   approvalConfig?: Required<ApprovalConfig>;
   checkpointConfig?: Required<CheckpointConfig>;
+  extraTools?: Record<string, Tool>;
 }
 
 export class DeepAgent {
@@ -213,27 +222,13 @@ export class DeepAgent {
   }
 
   // ---------------------------------------------------------------------------
-  // Run
+  // Private: build merged tool set
   // ---------------------------------------------------------------------------
 
-  // Approval is implemented via tool wrapper pattern rather than AI SDK's
-  // toolCallConfirmation, as ToolLoopAgent does not expose this option.
-  // Each tool's execute function is wrapped with ApprovalManager.checkAndApprove()
-  // when approval config has a non-empty requireApproval list.
-
-  async run(prompt: string): Promise<DeepAgentResult> {
-    this.eventBus.emit("agent:start", { prompt });
-
-    // --- Checkpoint: try loading latest ---
-    const cpConfig = this.config.checkpointConfig;
-    if (cpConfig?.enabled) {
-      const cp = await this.config.memory.loadLatestCheckpoint(this.sessionId);
-      if (cp) this.eventBus.emit("checkpoint:load", { checkpoint: cp });
-    }
-
-    // --- Build tools ---
+  private async buildTools(): Promise<Record<string, Tool>> {
     const tools: Record<string, Tool> = {
       ...createFilesystemTools(this.config.fs),
+      ...(this.config.extraTools ?? {}),
     };
 
     if (this.config.planning) {
@@ -252,7 +247,7 @@ export class DeepAgent {
       );
     }
 
-    // --- MCP tools: discover and merge with namespace prefix ---
+    // MCP tools: discover and merge with namespace prefix
     if (this.config.mcp) {
       const mcpDefs = await this.config.mcp.discoverTools();
       const mcp = this.config.mcp;
@@ -269,7 +264,7 @@ export class DeepAgent {
       }
     }
 
-    // --- Approval: wrap tool execute fns with approval gate ---
+    // Approval: wrap tool execute fns with approval gate
     const approval = this.config.approvalConfig
       ? new ApprovalManager(
           this.config.approvalConfig,
@@ -293,6 +288,30 @@ export class DeepAgent {
         };
       }
     }
+
+    return tools;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Run
+  // ---------------------------------------------------------------------------
+
+  // Approval is implemented via tool wrapper pattern rather than AI SDK's
+  // toolCallConfirmation, as ToolLoopAgent does not expose this option.
+  // Each tool's execute function is wrapped with ApprovalManager.checkAndApprove()
+  // when approval config has a non-empty requireApproval list.
+
+  async run(prompt: string): Promise<DeepAgentResult> {
+    this.eventBus.emit("agent:start", { prompt });
+
+    // --- Checkpoint: try loading latest ---
+    const cpConfig = this.config.checkpointConfig;
+    if (cpConfig?.enabled) {
+      const cp = await this.config.memory.loadLatestCheckpoint(this.sessionId);
+      if (cp) this.eventBus.emit("checkpoint:load", { checkpoint: cp });
+    }
+
+    const tools = await this.buildTools();
 
     try {
       const agent = new ToolLoopAgent({
@@ -354,6 +373,26 @@ export class DeepAgent {
       this.eventBus.emit("error", { error });
       throw error;
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Stream — returns a ToolLoopAgent-compatible streaming interface
+  // ---------------------------------------------------------------------------
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async stream(params: { messages: Array<{ role: string; content: unknown }> }): Promise<any> {
+    this.eventBus.emit("agent:start", { messages: params.messages });
+
+    const tools = await this.buildTools();
+
+    const agent = new ToolLoopAgent({
+      model: this.config.model,
+      instructions: this.config.instructions,
+      tools,
+      stopWhen: stepCountIs(this.config.maxSteps),
+    });
+
+    return agent.stream(params as Parameters<typeof agent.stream>[0]);
   }
 
   // ---------------------------------------------------------------------------
