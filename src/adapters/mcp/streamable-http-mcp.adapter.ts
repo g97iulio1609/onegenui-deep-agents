@@ -33,6 +33,7 @@ interface JsonRpcResponse {
 interface ServerState {
   config: McpServerConfig;
   sessionId: string | null;
+  connected: boolean;
   tools: Record<string, McpToolDefinition>;
 }
 
@@ -45,6 +46,7 @@ export class StreamableHttpMcpAdapter implements McpPort {
       this.servers.set(server.id, {
         config: server,
         sessionId: null,
+        connected: false,
         tools: {},
       });
     }
@@ -87,6 +89,7 @@ export class StreamableHttpMcpAdapter implements McpPort {
     this.servers.set(config.id, {
       config,
       sessionId,
+      connected: true,
       tools: {},
     });
   }
@@ -95,7 +98,7 @@ export class StreamableHttpMcpAdapter implements McpPort {
     const result: Record<string, McpToolDefinition> = {};
 
     for (const [serverId, state] of this.servers) {
-      if (!state.config.url || !state.sessionId) continue;
+      if (!state.config.url || !state.connected) continue;
 
       const response = await this.sendRequest(
         state.config.url,
@@ -139,7 +142,7 @@ export class StreamableHttpMcpAdapter implements McpPort {
     const toolName = name.slice(colonIndex + 1);
     const state = this.servers.get(serverId);
 
-    if (!state || !state.config.url || !state.sessionId) {
+    if (!state || !state.config.url || !state.connected) {
       throw new Error(`Server "${serverId}" is not connected`);
     }
 
@@ -184,7 +187,7 @@ export class StreamableHttpMcpAdapter implements McpPort {
       infos.push({
         id,
         name: state.config.name,
-        status: state.sessionId ? "connected" : "disconnected",
+        status: state.connected ? "connected" : "disconnected",
         toolCount: Object.keys(state.tools).length,
         transport: state.config.transport,
       });

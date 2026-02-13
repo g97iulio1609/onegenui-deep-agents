@@ -82,7 +82,10 @@ export class DenoKvMemoryAdapter implements MemoryPort {
 
   private async kv(): Promise<DenoKv> {
     if (!this.kvPromise) {
-      this.kvPromise = getDenoKv().openKv(this.kvPath);
+      this.kvPromise = getDenoKv().openKv(this.kvPath).catch((err: unknown) => {
+        this.kvPromise = null;
+        throw err;
+      });
     }
     return this.kvPromise;
   }

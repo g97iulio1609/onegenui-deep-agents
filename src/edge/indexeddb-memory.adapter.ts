@@ -80,6 +80,7 @@ interface IndexedDbMemoryOptions {
 export class IndexedDbMemoryAdapter implements MemoryPort {
   private readonly dbName: string;
   private db: IDBDb | null = null;
+  private dbPromise: Promise<IDBDb> | null = null;
 
   constructor(options: IndexedDbMemoryOptions = {}) {
     this.dbName = options.dbName ?? "deep-agent-memory";
@@ -91,6 +92,13 @@ export class IndexedDbMemoryAdapter implements MemoryPort {
 
   private async getDb(): Promise<IDBDb> {
     if (this.db) return this.db;
+    if (!this.dbPromise) {
+      this.dbPromise = this.openDb();
+    }
+    return this.dbPromise;
+  }
+
+  private openDb(): Promise<IDBDb> {
     const idb = getIDB();
     return new Promise((resolve, reject) => {
       const request = idb.open(this.dbName, DB_VERSION);
@@ -113,7 +121,10 @@ export class IndexedDbMemoryAdapter implements MemoryPort {
         this.db = request.result;
         resolve(this.db!);
       };
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        this.dbPromise = null;
+        reject(request.error);
+      };
     });
   }
 
@@ -254,5 +265,6 @@ export class IndexedDbMemoryAdapter implements MemoryPort {
   close(): void {
     this.db?.close();
     this.db = null;
+    this.dbPromise = null;
   }
 }
