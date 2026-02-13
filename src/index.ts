@@ -201,3 +201,16 @@ export type {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { createAllTodosDoneCondition } from "./agent/stop-conditions.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Runtime Detection
+// ─────────────────────────────────────────────────────────────────────────────
+
+export {
+  detectRuntime,
+  detectCapabilities,
+} from "./runtime/detect.js";
+export type {
+  RuntimeId,
+  RuntimeCapabilities,
+} from "./runtime/detect.js";
