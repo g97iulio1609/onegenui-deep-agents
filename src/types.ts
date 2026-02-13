@@ -105,7 +105,15 @@ export type AgentEventType =
   | "subagent:spawn"
   | "subagent:complete"
   | "planning:update"
-  | "error";
+  | "error"
+  | "graph:start"
+  | "graph:complete"
+  | "node:start"
+  | "node:complete"
+  | "consensus:start"
+  | "consensus:result"
+  | "fork:start"
+  | "fork:complete";
 
 export interface AgentEvent<T = unknown> {
   type: AgentEventType;

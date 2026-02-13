@@ -23,6 +23,14 @@ export const AgentEventTypeSchema = z.enum([
   "subagent:complete",
   "planning:update",
   "error",
+  "graph:start",
+  "graph:complete",
+  "node:start",
+  "node:complete",
+  "consensus:start",
+  "consensus:result",
+  "fork:start",
+  "fork:complete",
 ]);
 
 export type AgentEventTypeValue = z.infer<typeof AgentEventTypeSchema>;

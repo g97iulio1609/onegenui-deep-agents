@@ -29,7 +29,7 @@ describe("createStreamableHttpHandler", () => {
       }),
     );
     expect(res.status).toBe(400);
-    const json = await res.json();
+    const json = (await res.json()) as { error: { code: number } };
     expect(json.error.code).toBe(-32700);
   });
 
@@ -43,7 +43,7 @@ describe("createStreamableHttpHandler", () => {
     );
     expect(res.status).toBe(200);
     expect(res.headers.get("mcp-session-id")).toBeTruthy();
-    const json = await res.json();
+    const json = (await res.json()) as { result: { serverInfo: { name: string } } };
     expect(json.result.serverInfo.name).toBe("test");
   });
 

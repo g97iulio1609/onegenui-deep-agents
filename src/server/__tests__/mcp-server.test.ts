@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { McpServer } from "../mcp-server.js";
 import type { Tool } from "ai";
 
-function makeRequest(method: string, params?: unknown, id: number | string = 1) {
+function makeRequest(method: string, params?: Record<string, unknown>, id: number | string = 1) {
   return { jsonrpc: "2.0" as const, id, method, ...(params ? { params } : {}) };
 }
 

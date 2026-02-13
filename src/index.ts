@@ -214,3 +214,29 @@ export type {
   RuntimeId,
   RuntimeCapabilities,
 } from "./runtime/detect.js";
+
+// ---------------------------------------------------------------------------
+// Graph — Multi-Agent Collaboration
+// ---------------------------------------------------------------------------
+export { AgentGraph, AgentGraphBuilder } from "./graph/agent-graph.js";
+export { SharedContext } from "./graph/shared-context.js";
+export { GraphExecutor } from "./graph/graph-executor.js";
+export type { AgentNodeConfig, NodeResult } from "./graph/agent-node.js";
+export type { ConsensusPort, ConsensusResult } from "./ports/consensus.port.js";
+export { LlmJudgeConsensus } from "./adapters/consensus/llm-judge.adapter.js";
+export { MajorityVoteConsensus } from "./adapters/consensus/majority-vote.adapter.js";
+export { DebateConsensus } from "./adapters/consensus/debate.adapter.js";
+export type { GraphConfig, GraphResult } from "./domain/graph.schema.js";
+
+// ---------------------------------------------------------------------------
+// Streaming — Real-Time Event Streaming
+// ---------------------------------------------------------------------------
+export { createEventStream } from "./streaming/event-stream.js";
+export { createSseHandler } from "./streaming/sse-handler.js";
+export { handleWebSocket } from "./streaming/ws-handler.js";
+export { createDeltaEncoder } from "./streaming/delta-encoder.js";
+export { createGraphEventStream } from "./streaming/graph-stream.js";
+export type { EventStreamOptions } from "./streaming/event-stream.js";
+export type { SseHandlerOptions } from "./streaming/sse-handler.js";
+export type { WsCommand, WsHandlerOptions, WebSocketLike } from "./streaming/ws-handler.js";
+export type { DeltaEncoder } from "./streaming/delta-encoder.js";

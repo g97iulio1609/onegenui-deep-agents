@@ -695,6 +695,58 @@ Any language that speaks HTTP + JSON-RPC can consume agent tools via the MCP Str
 
 See [`examples/python-mcp-client/`](./examples/python-mcp-client/) for a working Python client.
 
+## Multi-Agent Collaboration
+
+Orchestrate multiple agents using a declarative graph API with DAG execution, parallel forking, and consensus:
+
+```ts
+import { AgentGraph, LlmJudgeConsensus } from '@onegenui/deep-agents';
+import { openai } from '@ai-sdk/openai';
+
+const model = openai('gpt-4o');
+
+const graph = AgentGraph.create({ maxConcurrency: 3 })
+  .node('research', { model, instructions: 'Research the topic thoroughly.' })
+  .node('code', { model, instructions: 'Write clean, tested code.' })
+  .node('test', { model, instructions: 'Write comprehensive tests.' })
+  .edge('research', 'code')
+  .edge('code', 'test')
+  .fork('review', [
+    { model, instructions: 'Review for correctness and bugs.' },
+    { model, instructions: 'Review for performance and style.' },
+    { model, instructions: 'Review for security vulnerabilities.' },
+  ])
+  .consensus('review', new LlmJudgeConsensus({ model }))
+  .edge('test', 'review')
+  .build();
+
+const result = await graph.run('Build a REST API with JWT auth.');
+console.log(result.output);
+console.log(result.nodeResults); // Per-node results
+```
+
+## Real-Time Event Streaming
+
+Stream agent events via SSE for real-time monitoring:
+
+```ts
+import { DeepAgent, createSseHandler } from '@onegenui/deep-agents';
+import { openai } from '@ai-sdk/openai';
+
+const agent = DeepAgent.minimal({ model: openai('gpt-4o'), instructions: '...' });
+const handler = createSseHandler({ eventBus: agent.eventBus });
+
+// Serve with any runtime (Node.js, Deno, Bun, Cloudflare Workers)
+Bun.serve({ port: 3001, fetch: handler });
+```
+
+Client-side with native EventSource:
+
+```js
+const source = new EventSource('http://localhost:3001?filter=tool:call,step:end');
+source.addEventListener('tool:call', (e) => console.log(JSON.parse(e.data)));
+```
+
 ## License
 
 MIT
