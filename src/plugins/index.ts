@@ -26,3 +26,12 @@ export {
   type A2ATasksSendParams,
   type A2ARequestHandlers,
 } from "./a2a-handler.js";
+
+export {
+  GuardrailsPlugin,
+  createGuardrailsPlugin,
+  createPiiFilter,
+  GuardrailsError,
+  type GuardrailsPluginOptions,
+  type ContentFilter,
+} from "./guardrails.plugin.js";

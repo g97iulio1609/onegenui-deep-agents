@@ -160,6 +160,10 @@ export {
   createA2APlugin,
   createA2AJsonRpcHandler,
   createA2AHttpHandler,
+  GuardrailsPlugin,
+  createGuardrailsPlugin,
+  createPiiFilter,
+  GuardrailsError,
 } from "./plugins/index.js";
 export type {
   AgentCardPluginOptions,
@@ -174,6 +178,8 @@ export type {
   A2ATaskStatus,
   A2ATasksSendParams,
   A2ARequestHandlers,
+  GuardrailsPluginOptions,
+  ContentFilter,
 } from "./plugins/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
