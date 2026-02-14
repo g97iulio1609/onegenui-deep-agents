@@ -35,3 +35,9 @@ export {
   type GuardrailsPluginOptions,
   type ContentFilter,
 } from "./guardrails.plugin.js";
+
+export {
+  OneCrawlPlugin,
+  createOneCrawlPlugin,
+  type OneCrawlPluginOptions,
+} from "./onecrawl.plugin.js";

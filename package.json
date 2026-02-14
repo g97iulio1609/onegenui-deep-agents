@@ -55,7 +55,8 @@
   "peerDependencies": {
     "@ai-sdk/mcp": "^1.0.0",
     "@supabase/supabase-js": "^2.0.0",
-    "tiktoken": "^1.0.0"
+    "tiktoken": "^1.0.0",
+    "onecrawl": ">=1.0.0"
   },
   "peerDependenciesMeta": {
     "@supabase/supabase-js": {
@@ -65,6 +66,9 @@
       "optional": true
     },
     "@ai-sdk/mcp": {
+      "optional": true
+    },
+    "onecrawl": {
       "optional": true
     }
   },

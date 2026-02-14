@@ -164,6 +164,8 @@ export {
   createGuardrailsPlugin,
   createPiiFilter,
   GuardrailsError,
+  OneCrawlPlugin,
+  createOneCrawlPlugin,
 } from "./plugins/index.js";
 export type {
   AgentCardPluginOptions,
@@ -180,6 +182,7 @@ export type {
   A2ARequestHandlers,
   GuardrailsPluginOptions,
   ContentFilter,
+  OneCrawlPluginOptions,
 } from "./plugins/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
