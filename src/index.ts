@@ -101,6 +101,13 @@ export {
   type AgentEventValue,
 } from "./domain/events.schema.js";
 
+export {
+  EvalMetricsSchema,
+  EvalResultSchema,
+  type EvalMetrics,
+  type EvalResult,
+} from "./domain/eval.schema.js";
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Agent Configuration
 // ─────────────────────────────────────────────────────────────────────────────
@@ -168,6 +175,8 @@ export {
   createOneCrawlPlugin,
   VectorlessPlugin,
   createVectorlessPlugin,
+  EvalsPlugin,
+  createEvalsPlugin,
 } from "./plugins/index.js";
 export type {
   AgentCardPluginOptions,
@@ -186,6 +195,8 @@ export type {
   ContentFilter,
   OneCrawlPluginOptions,
   VectorlessPluginOptions,
+  EvalsPluginOptions,
+  EvalScorer,
 } from "./plugins/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────

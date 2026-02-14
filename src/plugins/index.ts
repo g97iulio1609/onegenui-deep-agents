@@ -47,3 +47,10 @@ export {
   createVectorlessPlugin,
   type VectorlessPluginOptions,
 } from "./vectorless.plugin.js";
+
+export {
+  EvalsPlugin,
+  createEvalsPlugin,
+  type EvalsPluginOptions,
+  type EvalScorer,
+} from "./evals.plugin.js";
