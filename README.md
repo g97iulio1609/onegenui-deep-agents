@@ -112,6 +112,7 @@ src/
     plugin.port.ts            Plugin contracts and lifecycle hooks
     token-counter.port.ts     TokenCounterPort interface
     learning.port.ts          LearningPort interface
+    runtime.port.ts           RuntimePort interface
   adapters/
     filesystem/
       virtual-fs.adapter.ts   In-memory VFS with optional disk sync
@@ -127,6 +128,12 @@ src/
       tiktoken.adapter.ts     BPE-accurate counting via tiktoken
     learning/
       in-memory-learning.adapter.ts  Map-based learning storage
+    runtime/
+      node-runtime.adapter.ts   Node.js runtime (process.env)
+      deno-runtime.adapter.ts   Deno runtime (Deno.env.get)
+      bun-runtime.adapter.ts    Bun runtime (process.env)
+      edge-runtime.adapter.ts   Edge/CF Workers runtime
+      detect-runtime.ts         Auto-detection + factory
   agent/
     deep-agent.ts             DeepAgent class and DeepAgentBuilder
     agent-config.ts           Default configs and resolvers
@@ -239,6 +246,7 @@ Fluent builder returned by `DeepAgent.create()`.
 | `.withFilesystem(fs)` | Provide a custom `FilesystemPort` implementation |
 | `.withMemory(memory)` | Provide a custom `MemoryPort` implementation |
 | `.withLearning(learning, userId?)` | Provide a `LearningPort` for cross-session learning |
+| `.withRuntime(runtime)` | Provide a custom `RuntimePort` (auto-detected by default) |
 | `.withTokenCounter(counter)` | Provide a custom `TokenCounterPort` implementation |
 | `.withMcp(mcp)` | Provide a `McpPort` for MCP tool integration |
 | `.withPlanning()` | Enable planning tools (`write_todos`, `review_todos`) |
@@ -518,6 +526,19 @@ interface MemoryPort {
 }
 ```
 
+#### RuntimePort
+
+Platform-agnostic runtime abstraction. Auto-detected or explicitly set with `.withRuntime()`.
+
+```typescript
+interface RuntimePort {
+  randomUUID(): string;
+  fetch(input: string | URL | Request, init?: RequestInit): Promise<Response>;
+  getEnv(key: string): string | undefined;
+  setTimeout(callback: () => void, ms: number): { clear(): void };
+}
+```
+
 #### LearningPort
 
 Cross-session learning with user profiles, memories, and shared knowledge.
@@ -608,6 +629,15 @@ interface TokenCounterPort {
 | Adapter | Description |
 |---------|-------------|
 | `InMemoryLearningAdapter` | `Map`-based in-process learning storage. Suitable for testing and ephemeral sessions. |
+
+#### Runtime
+
+| Adapter | Description |
+|---------|-------------|
+| `NodeRuntimeAdapter` | Node.js runtime. Uses `process.env` for environment variables. |
+| `DenoRuntimeAdapter` | Deno runtime. Uses `Deno.env.get()` for environment variables. |
+| `BunRuntimeAdapter` | Bun runtime. Uses `process.env` (Node-compatible). |
+| `EdgeRuntimeAdapter` | Edge/Cloudflare Workers. Env vars bound via request context. |
 
 #### Token Counter
 
@@ -855,6 +885,30 @@ await agent.dispose();
 ## Multi-Runtime Support
 
 The framework runs on **Node.js**, **Deno**, **Bun**, **Edge** (Cloudflare Workers, Vercel Edge), and **Browser** runtimes. The core API (`DeepAgent`, `VirtualFilesystem`, `InMemoryAdapter`) is runtime-agnostic; platform-specific adapters live in dedicated sub-path exports.
+
+### RuntimePort
+
+Platform-specific APIs are abstracted behind a `RuntimePort` interface. The framework auto-detects your runtime and selects the appropriate adapter:
+
+```ts
+import { DeepAgent } from "@onegenui/agent";
+
+// Auto-detect runtime (Node, Deno, Bun, or Edge)
+const agent = DeepAgent.create({ model, instructions: "..." }).build();
+
+// Or specify explicitly
+import { DenoRuntimeAdapter } from "@onegenui/agent";
+const agent = DeepAgent.create({ model, instructions: "..." })
+  .withRuntime(new DenoRuntimeAdapter())
+  .build();
+```
+
+| Adapter | Runtime | `getEnv()` |
+|---------|---------|------------|
+| `NodeRuntimeAdapter` | Node.js | `process.env` |
+| `DenoRuntimeAdapter` | Deno | `Deno.env.get()` |
+| `BunRuntimeAdapter` | Bun | `process.env` |
+| `EdgeRuntimeAdapter` | Edge/CF Workers | Returns `undefined` (env bound via request context) |
 
 ### Installation per Runtime
 
