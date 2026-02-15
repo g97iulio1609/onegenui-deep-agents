@@ -71,3 +71,9 @@ export {
   type Span,
   type AgentMetrics,
 } from "./observability.plugin.js";
+
+export {
+  SemanticScrapingPlugin,
+  createSemanticScrapingPlugin,
+  type SemanticScrapingPluginOptions,
+} from "./semantic-scraping.plugin.js";

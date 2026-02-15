@@ -76,6 +76,13 @@ export type {
 export type { TracingPort, Span } from "./ports/tracing.port.js";
 export type { MetricsPort } from "./ports/metrics.port.js";
 export type { LoggingPort, LogLevel, LogEntry } from "./ports/logging.port.js";
+export type {
+  ISemanticScrapingPort,
+  ManifestTool,
+  PageToolSet,
+  SiteToolManifest,
+  SemanticTool,
+} from "./ports/semantic-scraping.port.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Schemas
@@ -223,6 +230,8 @@ export {
   createWorkflowPlugin,
   ObservabilityPlugin,
   createObservabilityPlugin,
+  SemanticScrapingPlugin,
+  createSemanticScrapingPlugin,
 } from "./plugins/index.js";
 export type {
   AgentCardPluginOptions,
@@ -247,6 +256,7 @@ export type {
   ObservabilityConfig,
   ObservabilityPluginConfig,
   AgentMetrics,
+  SemanticScrapingPluginOptions,
 } from "./plugins/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -293,6 +303,12 @@ export { InMemoryMetricsAdapter } from "./adapters/metrics/index.js";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { ConsoleLoggingAdapter } from "./adapters/logging/index.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Adapters — Semantic Scraping
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { SemanticScrapingAdapter, urlToPattern, hashTools } from "./adapters/semantic-scraping/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Adapters — Validation
