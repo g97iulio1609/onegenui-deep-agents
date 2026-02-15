@@ -30,6 +30,242 @@ A hexagonal-architecture agent framework with built-in planning, context managem
 - **Multi-runtime** — runs on Node.js, Deno, Bun, Edge (Cloudflare Workers, Vercel Edge), and Browser
 - **CLI** — interactive REPL and single-shot mode with `gaussflow chat/run/demo` commands
 - **REST API** — zero-dependency HTTP server for multi-language access (Python, Go, Ruby, etc.)
+- **Resilience patterns** — circuit breaker, rate limiter, and tool cache for robust agent operations
+
+## Resilience Patterns
+
+GaussFlow includes built-in resilience patterns to handle failures, rate limits, and caching:
+
+### CircuitBreaker
+
+Prevents cascading failures by temporarily blocking failing operations:
+
+```typescript
+import { DeepAgent, CircuitBreaker } from "@giulio-leone/gaussflow-agent";
+import { openai } from "@ai-sdk/openai";
+
+const circuitBreaker = new CircuitBreaker({
+  failureThreshold: 5,        // Open after 5 failures
+  resetTimeoutMs: 30_000,     // Wait 30s before trying again
+  monitorWindowMs: 60_000,    // Track failures over 1 minute
+});
+
+const agent = DeepAgent.create({
+  model: openai("gpt-4o"),
+  instructions: "You are a resilient assistant.",
+})
+  .withCircuitBreaker(circuitBreaker)
+  .build();
+
+// Circuit breaker automatically wraps tool executions
+const result = await agent.run("Process this data safely.");
+```
+
+States: `CLOSED` (normal) → `OPEN` (blocking) → `HALF_OPEN` (testing).
+
+### RateLimiter
+
+Controls request rate using token bucket algorithm:
+
+```typescript
+import { DeepAgent, RateLimiter } from "@giulio-leone/gaussflow-agent";
+import { openai } from "@ai-sdk/openai";
+
+const rateLimiter = new RateLimiter({
+  maxTokens: 10,              // 10 requests burst
+  refillRateMs: 1000,         // 1 token per second
+});
+
+const agent = DeepAgent.create({
+  model: openai("gpt-4o"),
+  instructions: "You are a rate-limited assistant.",
+})
+  .withRateLimiter(rateLimiter)
+  .build();
+
+// Automatically throttles tool executions
+const result = await agent.run("Make API calls at controlled rate.");
+```
+
+### ToolCache
+
+LRU cache with TTL for tool execution results:
+
+```typescript
+import { DeepAgent, ToolCache } from "@giulio-leone/gaussflow-agent";
+import { openai } from "@ai-sdk/openai";
+
+const toolCache = new ToolCache({
+  defaultTtlMs: 300_000,      // 5 minute TTL
+  maxSize: 1000,              // 1000 entries max
+});
+
+const agent = DeepAgent.create({
+  model: openai("gpt-4o"),
+  instructions: "You are a caching assistant.",
+})
+  .withToolCache(toolCache)
+  .build();
+
+// Identical tool calls return cached results
+const result = await agent.run("Optimize with smart caching.");
+```
+
+### Combined Resilience
+
+Use all patterns together for maximum robustness:
+
+```typescript
+const agent = DeepAgent.create({ model, instructions: "..." })
+  .withCircuitBreaker(new CircuitBreaker({ failureThreshold: 3 }))
+  .withRateLimiter(new RateLimiter({ maxTokens: 5, refillRateMs: 2000 }))
+  .withToolCache(new ToolCache({ defaultTtlMs: 600_000 }))
+  .build();
+```
+
+## Error Handling
+
+GaussFlow provides a hierarchical error system with specific error classes:
+
+### GaussFlowError Hierarchy
+
+```typescript
+import {
+  GaussFlowError,          // Base error class
+  ToolExecutionError,      // Tool execution failures
+  PluginError,            // Plugin lifecycle errors  
+  McpConnectionError,     // MCP server connection issues
+  RuntimeError,           // Runtime/platform errors
+  StreamingError,         // Streaming/SSE errors
+  ConfigurationError,     // Invalid configuration
+} from "@giulio-leone/gaussflow-agent";
+```
+
+### Error Properties
+
+All errors include structured information:
+
+```typescript
+try {
+  await agent.run("Might fail");
+} catch (error) {
+  if (error instanceof GaussFlowError) {
+    console.log("Error code:", error.code);
+    console.log("Message:", error.message);
+    console.log("Cause:", error.cause);
+  }
+}
+```
+
+### Error Codes
+
+| Error Class | Code | Description |
+|-------------|------|-------------|
+| `ToolExecutionError` | `TOOL_EXECUTION_ERROR` | Tool failed to execute |
+| `PluginError` | `PLUGIN_ERROR` | Plugin hook failure |
+| `McpConnectionError` | `MCP_CONNECTION_ERROR` | MCP server unreachable |
+| `RuntimeError` | `RUNTIME_ERROR` | Platform/runtime issue |
+| `StreamingError` | `STREAMING_ERROR` | SSE/streaming failure |
+| `ConfigurationError` | `CONFIGURATION_ERROR` | Invalid config provided |
+
+### Error Event Handling
+
+Listen for errors via the event system:
+
+```typescript
+const agent = DeepAgent.create({ model, instructions: "..." })
+  .on("error", (event) => {
+    console.error("Agent error:", event.data);
+    
+    // Handle specific error types
+    if (event.data instanceof ToolExecutionError) {
+      console.log("Tool failed:", event.data.code);
+    }
+  })
+  .build();
+```
+
+## Performance
+
+GaussFlow includes several performance optimization features:
+
+### Memory Bounds Configuration
+
+Control context window memory usage:
+
+```typescript
+const agent = DeepAgent.create({
+  model: openai("gpt-4o"),
+  instructions: "You are an efficient assistant.",
+  context: {
+    summarizationThreshold: 0.70,    // Summarize at 70% context
+    truncationThreshold: 0.85,       // Truncate at 85% context
+    offloadTokenThreshold: 20000,    // Offload large results to VFS
+    preserveRecentMessages: 10,      // Keep 10 recent messages
+  }
+}).build();
+```
+
+### Lazy Loading
+
+Adapters and resources are loaded on-demand:
+
+```typescript
+// Runtime auto-detection happens only when needed
+const agent = DeepAgent.auto({ model, instructions: "..." });
+
+// MCP connections established lazily
+const agent = DeepAgent.create({ model, instructions: "..." })
+  .withMcp(mcpAdapter)  // Connected on first tool call
+  .build();
+```
+
+### Backpressure Handling
+
+Rate limiter provides automatic backpressure:
+
+```typescript
+const rateLimiter = new RateLimiter({
+  maxTokens: 5,
+  refillRateMs: 1000,
+});
+
+// Tool executions automatically queue when rate limit exceeded
+const agent = DeepAgent.create({ model, instructions: "..." })
+  .withRateLimiter(rateLimiter)
+  .build();
+
+// Multiple concurrent runs will be throttled appropriately
+const results = await Promise.all([
+  agent.run("Task 1"),
+  agent.run("Task 2"), 
+  agent.run("Task 3"),
+]);
+```
+
+### Performance Monitoring
+
+Use `ObservabilityPlugin` for performance metrics:
+
+```typescript
+import { DeepAgent, ObservabilityPlugin } from "@giulio-leone/gaussflow-agent";
+
+const observability = new ObservabilityPlugin({
+  tracing: { enabled: true },
+  metrics: { enabled: true },
+  logging: { level: "info" },
+});
+
+const agent = DeepAgent.create({ model, instructions: "..." })
+  .use(observability)
+  .build();
+
+// Metrics collected automatically:
+// - Tool execution latency
+// - Token usage per step
+// - Memory consumption
+// - Cache hit/miss rates
+```
 
 ## Installation
 
@@ -324,6 +560,9 @@ Fluent builder returned by `DeepAgent.create()`.
 | `.withRuntime(runtime)` | Provide a custom `RuntimePort` (auto-detected by default) |
 | `.withTokenCounter(counter)` | Provide a custom `TokenCounterPort` implementation |
 | `.withMcp(mcp)` | Provide a `McpPort` for MCP tool integration |
+| `.withCircuitBreaker(breaker)` | Enable circuit breaker pattern for resilience |
+| `.withRateLimiter(limiter)` | Enable rate limiting with token bucket algorithm |
+| `.withToolCache(cache)` | Enable LRU caching of tool execution results |
 | `.withPlanning()` | Enable planning tools (`write_todos`, `review_todos`) |
 | `.withSubagents(config?)` | Enable the `task` tool for spawning subagents |
 | `.withApproval(config?)` | Enable human-in-the-loop approval for tool calls |

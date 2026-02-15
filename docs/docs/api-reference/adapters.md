@@ -270,3 +270,129 @@ import { DebateConsensus } from "@giulio-leone/gaussflow-agent";
 
 const consensus = new DebateConsensus({ model: openai("gpt-4o"), rounds: 3 });
 ```
+
+## Resilience Adapters
+
+### CircuitBreaker
+
+Implements the circuit breaker pattern to prevent cascading failures by temporarily blocking operations that are likely to fail.
+
+```typescript
+import { CircuitBreaker, DEFAULT_CIRCUIT_BREAKER_CONFIG } from "@giulio-leone/gaussflow-agent";
+
+// With custom configuration
+const circuitBreaker = new CircuitBreaker({
+  failureThreshold: 5,        // Open after 5 consecutive failures
+  resetTimeoutMs: 30_000,     // Wait 30 seconds before trying half-open
+  monitorWindowMs: 60_000,    // Track failures over 1 minute window
+});
+
+// With default configuration
+const defaultBreaker = new CircuitBreaker(DEFAULT_CIRCUIT_BREAKER_CONFIG);
+
+// Manual usage
+await circuitBreaker.execute(async () => {
+  const response = await fetch("https://api.example.com/data");
+  if (!response.ok) throw new Error("API failed");
+  return response.json();
+});
+
+// Check state
+console.log("Circuit state:", circuitBreaker.getState()); // 'closed', 'open', or 'half-open'
+console.log("Failure count:", circuitBreaker.getFailureCount());
+```
+
+### RateLimiter
+
+Controls request rate using token bucket algorithm to prevent overwhelming services.
+
+```typescript
+import { RateLimiter, DEFAULT_RATE_LIMITER_CONFIG } from "@giulio-leone/gaussflow-agent";
+
+// With custom configuration
+const rateLimiter = new RateLimiter({
+  maxTokens: 10,              // Maximum burst capacity
+  refillRateMs: 1000,         // Add 1 token every 1000ms
+});
+
+// With default configuration
+const defaultLimiter = new RateLimiter(DEFAULT_RATE_LIMITER_CONFIG);
+
+// Wait for token (queues if necessary)
+await rateLimiter.acquire();
+console.log("Token acquired, can proceed");
+
+// Try immediate acquisition
+if (rateLimiter.tryAcquire()) {
+  console.log("Token available immediately");
+} else {
+  console.log("No tokens available, would need to wait");
+}
+```
+
+### ToolCache
+
+LRU cache with TTL support for tool execution results.
+
+```typescript
+import { ToolCache, DEFAULT_TOOL_CACHE_CONFIG } from "@giulio-leone/gaussflow-agent";
+
+// With custom configuration
+const toolCache = new ToolCache({
+  defaultTtlMs: 300_000,      // 5 minute default TTL
+  maxSize: 1000,              // Maximum 1000 entries
+});
+
+// With default configuration
+const defaultCache = new ToolCache(DEFAULT_TOOL_CACHE_CONFIG);
+
+// Store with default TTL
+toolCache.set("expensive-operation", { result: "computed value" });
+
+// Store with custom TTL (1 hour)
+toolCache.set("long-lived-data", { data: "important" }, 3600_000);
+
+// Retrieve cached values
+const cached = toolCache.get("expensive-operation");
+if (cached) {
+  console.log("Cache hit:", cached);
+}
+
+// Check cache statistics
+console.log("Cache stats:", toolCache.getStats());
+// Output: { size: 2, hits: 1, misses: 0, hitRate: 1 }
+
+// Clear cache
+toolCache.clear();
+```
+
+### Combined Usage with DeepAgent
+
+All resilience adapters can be used together for maximum robustness:
+
+```typescript
+import { 
+  DeepAgent, 
+  CircuitBreaker, 
+  RateLimiter, 
+  ToolCache 
+} from "@giulio-leone/gaussflow-agent";
+
+const agent = DeepAgent.create({
+  model: openai("gpt-4o"),
+  instructions: "You are a resilient assistant.",
+})
+  .withCircuitBreaker(new CircuitBreaker({
+    failureThreshold: 3,
+    resetTimeoutMs: 30_000,
+  }))
+  .withRateLimiter(new RateLimiter({
+    maxTokens: 5,
+    refillRateMs: 2000,
+  }))
+  .withToolCache(new ToolCache({
+    defaultTtlMs: 600_000,
+    maxSize: 1000,
+  }))
+  .build();
+```
