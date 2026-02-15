@@ -102,4 +102,25 @@ describe("CLI Config", () => {
     const config = loadConfig();
     expect(config).toEqual({ keys: {} });
   });
+
+  it("setDefaultProvider and getDefaultProvider round-trip", async () => {
+    const { setDefaultProvider, getDefaultProvider } = await import("../config.js");
+    setDefaultProvider("anthropic");
+    expect(getDefaultProvider()).toBe("anthropic");
+  });
+
+  it("setDefaultModel and getDefaultModelFromConfig round-trip", async () => {
+    const { setDefaultModel, getDefaultModelFromConfig } = await import("../config.js");
+    setDefaultModel("gpt-4o-mini");
+    expect(getDefaultModelFromConfig()).toBe("gpt-4o-mini");
+  });
+
+  it("loadConfig preserves defaultProvider and defaultModel", async () => {
+    const { saveConfig, loadConfig } = await import("../config.js");
+    saveConfig({ keys: { openai: "sk-test" }, defaultProvider: "groq", defaultModel: "llama-3.3-70b-versatile" });
+    const config = loadConfig();
+    expect(config.defaultProvider).toBe("groq");
+    expect(config.defaultModel).toBe("llama-3.3-70b-versatile");
+    expect(config.keys.openai).toBe("sk-test");
+  });
 });

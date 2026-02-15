@@ -4,7 +4,7 @@
 // =============================================================================
 
 import { parseArgs } from "node:util";
-import { setKey, deleteKey, listKeys, resolveApiKey, envVarName } from "./config.js";
+import { setKey, deleteKey, listKeys, resolveApiKey, envVarName, setDefaultProvider, setDefaultModel, getDefaultProvider, getDefaultModelFromConfig, loadConfig } from "./config.js";
 import { createModel, isValidProvider, SUPPORTED_PROVIDERS, getDefaultModel } from "./providers.js";
 import type { ProviderName } from "./providers.js";
 import { runChat } from "./commands/chat.js";
@@ -18,18 +18,21 @@ const HELP = `
 ${bold("OneAgent CLI")} — AI Agent Framework
 
 ${bold("Usage:")}
-  oneagent chat [--provider <name>] [--model <id>] [--api-key <key>]
-  oneagent run "<prompt>" [--provider <name>] [--model <id>] [--api-key <key>]
-  oneagent config set <provider> <api-key>
-  oneagent config list
-  oneagent config delete <provider>
-  oneagent demo <type> [--provider <name>] [--api-key <key>]
-  oneagent --help | --version
+  oneagent "<prompt>"                         Direct prompt with streaming
+  oneagent chat [--provider <name>] [...]     Interactive REPL
+  oneagent run "<prompt>" [--provider <name>] Single-shot execution
+  oneagent config set <provider> <api-key>    Save API key
+  oneagent config set-provider <name>         Set default provider
+  oneagent config set-model <name>            Set default model
+  oneagent config list                        List API keys
+  oneagent config show                        Show full config
+  oneagent config delete <provider>           Delete API key
+  oneagent demo <type> [--provider <name>]    Feature demos
 
 ${bold("Commands:")}
   chat        Start interactive REPL chat session
   run         Single-shot prompt execution
-  config      Manage API keys in ~/.oneagentrc
+  config      Manage API keys and defaults in ~/.oneagentrc
   demo        Run feature demos (guardrails, workflow, graph, observability)
 
 ${bold("Options:")}
@@ -41,9 +44,10 @@ ${bold("Options:")}
 
 ${bold("Environment Variables:")}
   OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_GENERATIVE_AI_API_KEY,
-  GROQ_API_KEY, MISTRAL_API_KEY
+  GROQ_API_KEY, MISTRAL_API_KEY, OPENROUTER_API_KEY
 
 ${bold("Examples:")}
+  oneagent "What is the capital of France?"
   oneagent chat --provider openai --api-key sk-...
   oneagent run "What is the capital of France?" --provider anthropic
   oneagent config set openai sk-...
@@ -100,9 +104,11 @@ async function main(): Promise<void> {
       );
 
     default:
-      console.error(color("red", `Unknown command: ${command}`));
-      console.log(color("dim", "Run 'oneagent --help' for usage.\n"));
-      process.exitCode = 1;
+      // Treat unknown command as a direct prompt (like claude code / opencode)
+      return handleRun(
+        [command, ...positionals.slice(1)].join(" "),
+        values as Record<string, string | undefined>,
+      );
   }
 }
 
@@ -166,8 +172,59 @@ function handleConfig(args: string[]): void {
       break;
     }
 
+    case "set-provider": {
+      const name = args[1];
+      if (!name) {
+        console.error(color("red", "Usage: oneagent config set-provider <name>"));
+        process.exitCode = 1;
+        return;
+      }
+      if (!isValidProvider(name)) {
+        console.error(color("red", `Unknown provider: ${name}`));
+        console.log(color("dim", `Available: ${SUPPORTED_PROVIDERS.join(", ")}`));
+        process.exitCode = 1;
+        return;
+      }
+      setDefaultProvider(name);
+      console.log(color("green", `✓ Default provider set to ${name}`));
+      break;
+    }
+
+    case "set-model": {
+      const name = args[1];
+      if (!name) {
+        console.error(color("red", "Usage: oneagent config set-model <name>"));
+        process.exitCode = 1;
+        return;
+      }
+      setDefaultModel(name);
+      console.log(color("green", `✓ Default model set to ${name}`));
+      break;
+    }
+
+    case "show": {
+      const config = loadConfig();
+      const entries = Object.entries(config.keys);
+      console.log(bold("\nConfiguration (~/.oneagentrc):"));
+      if (entries.length === 0) {
+        console.log(color("dim", "  No API keys configured."));
+      } else {
+        console.log(bold("  API Keys:"));
+        for (const [provider, key] of entries) {
+          const masked = key.length > 16
+            ? key.slice(0, 8) + "..." + key.slice(-4)
+            : key.slice(0, 4) + "****";
+          console.log(`    ${provider}: ${color("dim", masked)}`);
+        }
+      }
+      console.log(`  Default provider: ${config.defaultProvider ?? color("dim", "(not set)")}`);
+      console.log(`  Default model: ${config.defaultModel ?? color("dim", "(not set)")}`);
+      console.log();
+      break;
+    }
+
     default:
-      console.error(color("red", "Usage: oneagent config [set|list|delete]"));
+      console.error(color("red", "Usage: oneagent config [set|set-provider|set-model|list|show|delete]"));
       process.exitCode = 1;
   }
 }
@@ -237,7 +294,7 @@ async function handleDemo(
 async function resolveProviderAndModel(
   opts: Record<string, string | undefined>,
 ): Promise<{ provider: ProviderName; model: string | undefined; apiKey: string }> {
-  const providerName = opts.provider ?? "openai";
+  const providerName = opts.provider ?? getDefaultProvider() ?? "openai";
 
   if (!isValidProvider(providerName)) {
     console.error(color("red", `Unknown provider: ${providerName}`));
@@ -255,9 +312,15 @@ async function resolveProviderAndModel(
     process.exit(1);
   }
 
+  const configProvider = getDefaultProvider();
+  const configModel =
+    !opts.model && providerName === configProvider
+      ? getDefaultModelFromConfig()
+      : undefined;
+
   return {
     provider: providerName,
-    model: opts.model,
+    model: opts.model ?? configModel,
     apiKey,
   };
 }

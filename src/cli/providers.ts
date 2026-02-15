@@ -10,6 +10,7 @@ export const SUPPORTED_PROVIDERS = [
   "google",
   "groq",
   "mistral",
+  "openrouter",
 ] as const;
 
 export type ProviderName = (typeof SUPPORTED_PROVIDERS)[number];
@@ -20,6 +21,7 @@ const DEFAULT_MODELS: Record<ProviderName, string> = {
   google: "gemini-2.0-flash",
   groq: "llama-3.3-70b-versatile",
   mistral: "mistral-large-latest",
+  openrouter: "openai/gpt-4o",
 };
 
 export function isValidProvider(name: string): name is ProviderName {
@@ -57,6 +59,10 @@ export async function createModel(
     case "mistral": {
       const { createMistral } = await import("@ai-sdk/mistral");
       return createMistral({ apiKey })(model);
+    }
+    case "openrouter": {
+      const { createOpenAI } = await import("@ai-sdk/openai");
+      return createOpenAI({ apiKey, baseURL: "https://openrouter.ai/api/v1" })(model);
     }
   }
 }

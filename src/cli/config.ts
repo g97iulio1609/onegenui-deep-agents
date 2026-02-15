@@ -10,6 +10,8 @@ const CONFIG_FILE = ".oneagentrc";
 
 export interface OneAgentConfig {
   keys: Record<string, string>;
+  defaultProvider?: string;
+  defaultModel?: string;
 }
 
 function configPath(): string {
@@ -22,7 +24,11 @@ export function loadConfig(): OneAgentConfig {
   try {
     const raw = readFileSync(path, "utf-8");
     const parsed = JSON.parse(raw) as Partial<OneAgentConfig>;
-    return { keys: parsed.keys ?? {} };
+    return {
+      keys: parsed.keys ?? {},
+      defaultProvider: parsed.defaultProvider,
+      defaultModel: parsed.defaultModel,
+    };
   } catch {
     return { keys: {} };
   }
@@ -66,6 +72,7 @@ export const ENV_MAP: Record<string, string> = {
   google: "GOOGLE_GENERATIVE_AI_API_KEY",
   groq: "GROQ_API_KEY",
   mistral: "MISTRAL_API_KEY",
+  openrouter: "OPENROUTER_API_KEY",
 };
 
 export function envVarName(provider: string): string {
@@ -74,4 +81,24 @@ export function envVarName(provider: string): string {
 
 export function resolveApiKey(provider: string, cliKey?: string): string | undefined {
   return cliKey ?? getKey(provider) ?? process.env[ENV_MAP[provider] ?? ""];
+}
+
+export function setDefaultProvider(provider: string): void {
+  const config = loadConfig();
+  config.defaultProvider = provider;
+  saveConfig(config);
+}
+
+export function setDefaultModel(model: string): void {
+  const config = loadConfig();
+  config.defaultModel = model;
+  saveConfig(config);
+}
+
+export function getDefaultProvider(): string | undefined {
+  return loadConfig().defaultProvider;
+}
+
+export function getDefaultModelFromConfig(): string | undefined {
+  return loadConfig().defaultModel;
 }

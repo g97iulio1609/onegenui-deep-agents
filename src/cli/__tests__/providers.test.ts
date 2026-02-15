@@ -21,6 +21,7 @@ describe("CLI Providers", () => {
       expect(isValidProvider("unknown")).toBe(false);
       expect(isValidProvider("")).toBe(false);
       expect(isValidProvider("openAI")).toBe(false);
+      expect(isValidProvider("openRouter")).toBe(false);
     });
   });
 
@@ -44,11 +45,15 @@ describe("CLI Providers", () => {
     it("returns mistral-large-latest for mistral", () => {
       expect(getDefaultModel("mistral")).toBe("mistral-large-latest");
     });
+
+    it("returns openai/gpt-4o for openrouter", () => {
+      expect(getDefaultModel("openrouter")).toBe("openai/gpt-4o");
+    });
   });
 
   describe("SUPPORTED_PROVIDERS", () => {
-    it("contains exactly 5 providers", () => {
-      expect(SUPPORTED_PROVIDERS).toHaveLength(5);
+    it("contains exactly 6 providers", () => {
+      expect(SUPPORTED_PROVIDERS).toHaveLength(6);
     });
 
     it("contains all expected providers", () => {
@@ -57,6 +62,7 @@ describe("CLI Providers", () => {
       expect(SUPPORTED_PROVIDERS).toContain("google");
       expect(SUPPORTED_PROVIDERS).toContain("groq");
       expect(SUPPORTED_PROVIDERS).toContain("mistral");
+      expect(SUPPORTED_PROVIDERS).toContain("openrouter");
     });
   });
 });

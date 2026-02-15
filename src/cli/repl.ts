@@ -92,7 +92,7 @@ export async function startRepl(
         console.log("  /exit              Exit the REPL");
         console.log("  /clear             Clear the screen");
         console.log("  /model <name>      Switch model (e.g. /model gpt-4o-mini)");
-        console.log("  /provider <name>   Switch provider (openai, anthropic, google, groq, mistral)");
+        console.log("  /provider <name>   Switch provider (openai, anthropic, google, groq, mistral, openrouter)");
         console.log("  /info              Show current provider and model\n");
         break;
 
