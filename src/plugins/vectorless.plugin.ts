@@ -9,6 +9,10 @@ import type { PluginHooks } from "../ports/plugin.port.js";
 import { BasePlugin } from "./base.plugin.js";
 import type { ValidationPort } from "../ports/validation.port.js";
 import { ZodValidationAdapter } from "../adapters/validation/zod-validation.adapter.js";
+import type { Chunk, ChunkingPort } from "../ports/chunking.port.js";
+import type { ReRankingPort, ScoredResult, SourceAttribution } from "../ports/reranking.port.js";
+import { DefaultChunkingAdapter } from "../adapters/chunking/index.js";
+import { DefaultReRankingAdapter } from "../adapters/reranking/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -36,6 +40,10 @@ export interface VectorlessPluginOptions {
   model?: unknown;
   /** Validation adapter (defaults to ZodValidationAdapter) */
   validator?: ValidationPort;
+  /** Custom chunking adapter (defaults to DefaultChunkingAdapter) */
+  chunkingAdapter?: ChunkingPort;
+  /** Custom re-ranking adapter (defaults to DefaultReRankingAdapter) */
+  rerankingAdapter?: ReRankingPort;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -50,12 +58,17 @@ export class VectorlessPlugin extends BasePlugin {
   private vectorlessPromise: Promise<any> | null = null;
   private currentKnowledge: unknown = null;
   private readonly validator: ValidationPort;
+  readonly chunks: Map<string, Chunk> = new Map();
+  readonly chunkingAdapter: ChunkingPort;
+  readonly rerankingAdapter: ReRankingPort;
 
   constructor(options: VectorlessPluginOptions = {}) {
     super();
     this.options = options;
     this.currentKnowledge = options.knowledgeBase ?? null;
     this.validator = options.validator ?? new ZodValidationAdapter();
+    this.chunkingAdapter = options.chunkingAdapter ?? new DefaultChunkingAdapter();
+    this.rerankingAdapter = options.rerankingAdapter ?? new DefaultReRankingAdapter();
   }
 
   protected buildHooks(): PluginHooks {
@@ -90,7 +103,22 @@ export class VectorlessPlugin extends BasePlugin {
     const getVectorless = this.getVectorless.bind(this);
     const getKnowledge = () => this.currentKnowledge;
     const setKnowledge = (k: unknown) => { this.currentKnowledge = k; };
+    const mergeKnowledge = (newK: unknown) => {
+      const existing = this.currentKnowledge as Record<string, unknown> | null;
+      const incoming = newK as Record<string, unknown> | null;
+      if (!existing || !incoming) { this.currentKnowledge = incoming ?? existing; return; }
+      const merged: Record<string, unknown> = { ...existing };
+      for (const key of ['entities', 'relations', 'quotes']) {
+        const a = Array.isArray(existing[key]) ? existing[key] as unknown[] : [];
+        const b = Array.isArray(incoming[key]) ? incoming[key] as unknown[] : [];
+        if (a.length > 0 || b.length > 0) merged[key] = [...a, ...b];
+      }
+      this.currentKnowledge = merged;
+    };
     const validator = this.validator;
+    const chunks = this.chunks;
+    const chunkingAdapter = this.chunkingAdapter;
+    const rerankingAdapter = this.rerankingAdapter;
 
     return {
       generate: tool({
@@ -185,12 +213,178 @@ export class VectorlessPlugin extends BasePlugin {
           }));
         },
       }),
+
+      // ─── Advanced RAG tools ──────────────────────────────────────────
+
+      "rag:ingest": tool({
+        description: "Chunk a document and extract knowledge from each chunk",
+        inputSchema: z.object({
+          text: z.string().describe("The document text to ingest"),
+          source: z.string().optional().describe("Source identifier for attribution"),
+          chunkingStrategy: z.enum(["fixed", "sliding-window", "semantic", "recursive"]).default("recursive").describe("Chunking strategy"),
+          maxTokens: z.number().min(1).default(512).describe("Max tokens per chunk"),
+          overlap: z.number().min(0).default(50).describe("Token overlap for sliding-window"),
+        }),
+        execute: async (args: unknown) => {
+          const { text, source, chunkingStrategy, maxTokens, overlap } = validator.validateOrThrow<{
+            text: string; source?: string; chunkingStrategy: string; maxTokens: number; overlap: number;
+          }>(
+            z.object({
+              text: z.string(),
+              source: z.string().optional(),
+              chunkingStrategy: z.enum(["fixed", "sliding-window", "semantic", "recursive"]).default("recursive"),
+              maxTokens: z.number().min(1).default(512),
+              overlap: z.number().min(0).default(50),
+            }),
+            args,
+          );
+
+          const produced = chunkingAdapter.chunk(text, {
+            strategy: chunkingStrategy as "fixed" | "sliding-window" | "semantic" | "recursive",
+            maxTokens,
+            overlap,
+          });
+
+          for (const c of produced) {
+            c.metadata.source = source;
+            chunks.set(c.id, c);
+          }
+
+          // Also extract knowledge via vectorless if available
+          try {
+            const vl = await getVectorless();
+            const generate = vl.generateKnowledge ?? vl.generate ?? vl.extract;
+            if (generate) {
+              const knowledge = await generate(text, { topic: source });
+              mergeKnowledge(knowledge);
+            }
+          } catch {
+            // vectorless not available — chunks-only mode
+          }
+
+          return `Ingested ${produced.length} chunks (strategy: ${chunkingStrategy}, maxTokens: ${maxTokens})${source ? ` from "${source}"` : ""}`;
+        },
+      }),
+
+      "rag:search": tool({
+        description: "Hybrid search: combine entity search + keyword search, then re-rank results",
+        inputSchema: z.object({
+          query: z.string().describe("Search query"),
+          limit: z.number().min(1).max(100).default(10).describe("Max results"),
+          rerankerStrategy: z.enum(["tfidf", "bm25", "mmr"]).default("bm25").describe("Re-ranking strategy"),
+          includeAttribution: z.boolean().default(true).describe("Include source attribution"),
+        }),
+        execute: async (args: unknown) => {
+          const { query, limit, rerankerStrategy, includeAttribution } = validator.validateOrThrow<{
+            query: string; limit: number; rerankerStrategy: string; includeAttribution: boolean;
+          }>(
+            z.object({
+              query: z.string(),
+              limit: z.number().min(1).max(100).default(10),
+              rerankerStrategy: z.enum(["tfidf", "bm25", "mmr"]).default("bm25"),
+              includeAttribution: z.boolean().default(true),
+            }),
+            args,
+          );
+
+          const candidates: ScoredResult[] = [];
+          const queryLower = query.toLowerCase();
+
+          // 1. Entity search from knowledge base
+          const knowledge = getKnowledge();
+          if (knowledge) {
+            const kb = knowledge as KnowledgeBase | null;
+            const entities: Entity[] = Array.isArray(kb?.entities) ? kb.entities : [];
+            for (const e of entities) {
+              const name = (e.name ?? e.label ?? "").toLowerCase();
+              if (name.includes(queryLower) || queryLower.includes(name)) {
+                candidates.push({
+                  id: `entity:${e.name ?? e.label}`,
+                  text: `${e.name ?? e.label} (${e.type ?? e.category ?? "unknown"})`,
+                  score: 0,
+                });
+              }
+            }
+          }
+
+          // 2. Full-text keyword search across chunks
+          for (const [, chunk] of chunks) {
+            if (chunk.text.toLowerCase().includes(queryLower) || queryLower.split(/\s+/).some((w) => chunk.text.toLowerCase().includes(w))) {
+              const result: ScoredResult = {
+                id: chunk.id,
+                text: chunk.text,
+                score: 0,
+              };
+              if (includeAttribution) {
+                result.source = {
+                  chunkId: chunk.id,
+                  chunkIndex: chunk.index,
+                  documentId: chunk.metadata.source,
+                  startOffset: chunk.metadata.startOffset,
+                  endOffset: chunk.metadata.endOffset,
+                  relevanceScore: 0,
+                };
+              }
+              candidates.push(result);
+            }
+          }
+
+          if (candidates.length === 0) return [];
+
+          // 3. Re-rank
+          const reranked = rerankingAdapter.rerank(query, candidates, {
+            strategy: rerankerStrategy as "tfidf" | "bm25" | "mmr",
+          });
+
+          // Update attribution relevance scores
+          const top = reranked.slice(0, limit);
+          for (const r of top) {
+            if (r.source) r.source.relevanceScore = r.score;
+          }
+
+          return top;
+        },
+      }),
+
+      "rag:search-chunks": tool({
+        description: "Search directly against stored chunks",
+        inputSchema: z.object({
+          query: z.string().describe("Search query"),
+          limit: z.number().min(1).max(100).default(10).describe("Max results"),
+        }),
+        execute: async (args: unknown) => {
+          const { query, limit } = validator.validateOrThrow<{ query: string; limit: number }>(
+            z.object({
+              query: z.string(),
+              limit: z.number().min(1).max(100).default(10),
+            }),
+            args,
+          );
+
+          const queryWords = query.toLowerCase().split(/\s+/).filter(Boolean);
+          const results: Array<Chunk & { matchScore: number }> = [];
+
+          for (const [, chunk] of chunks) {
+            const chunkLower = chunk.text.toLowerCase();
+            const matchCount = queryWords.filter((w) => chunkLower.includes(w)).length;
+            if (matchCount > 0) {
+              results.push({ ...chunk, matchScore: matchCount / queryWords.length });
+            }
+          }
+
+          return results
+            .sort((a, b) => b.matchScore - a.matchScore)
+            .slice(0, limit)
+            .map(({ matchScore, ...chunk }) => chunk);
+        },
+      }),
     };
   }
 
   async dispose(): Promise<void> {
     this.currentKnowledge = null;
     this.vectorlessPromise = null;
+    this.chunks.clear();
   }
 }
 

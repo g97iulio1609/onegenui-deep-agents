@@ -83,6 +83,17 @@ export type {
   SiteToolManifest,
   SemanticTool,
 } from "./ports/semantic-scraping.port.js";
+export type {
+  ChunkingPort,
+  ChunkOptions,
+  Chunk,
+} from "./ports/chunking.port.js";
+export type {
+  ReRankingPort,
+  ReRankingOptions,
+  ScoredResult,
+  SourceAttribution,
+} from "./ports/reranking.port.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Schemas
@@ -345,6 +356,14 @@ export { ConsoleLoggingAdapter } from "./adapters/logging/index.js";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { SemanticScrapingAdapter, urlToPattern, hashTools } from "./adapters/semantic-scraping/index.js";
+
+export { DefaultChunkingAdapter } from "./adapters/chunking/index.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Adapters — Re-Ranking
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { DefaultReRankingAdapter } from "./adapters/reranking/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Adapters — Validation
