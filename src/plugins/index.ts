@@ -62,3 +62,9 @@ export {
   createWorkflowPlugin,
   type WorkflowPluginConfig,
 } from "./workflow.plugin.js";
+
+export {
+  ObservabilityPlugin,
+  createObservabilityPlugin,
+  type ObservabilityPluginConfig,
+} from "./observability.plugin.js";

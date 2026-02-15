@@ -59,6 +59,9 @@ export type {
   TokenBudget,
   TokenUsage,
 } from "./ports/token-counter.port.js";
+export type { TracingPort, Span } from "./ports/tracing.port.js";
+export type { MetricsPort } from "./ports/metrics.port.js";
+export type { LoggingPort, LogLevel, LogEntry } from "./ports/logging.port.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Schemas
@@ -202,6 +205,8 @@ export {
   WorkflowPlugin,
   WorkflowError,
   createWorkflowPlugin,
+  ObservabilityPlugin,
+  createObservabilityPlugin,
 } from "./plugins/index.js";
 export type {
   AgentCardPluginOptions,
@@ -223,6 +228,7 @@ export type {
   EvalsPluginOptions,
   EvalScorer,
   WorkflowPluginConfig,
+  ObservabilityPluginConfig,
 } from "./plugins/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -251,6 +257,24 @@ export { SupabaseMemoryAdapter } from "./adapters/memory/supabase.adapter.js";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { InMemoryLearningAdapter } from "./adapters/learning/index.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Adapters — Tracing
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { InMemoryTracingAdapter } from "./adapters/tracing/index.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Adapters — Metrics
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { InMemoryMetricsAdapter } from "./adapters/metrics/index.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Adapters — Logging
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { ConsoleLoggingAdapter } from "./adapters/logging/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Adapters — Validation
