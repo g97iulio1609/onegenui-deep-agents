@@ -2,7 +2,7 @@
 // GraphExecutor — DAG execution engine with concurrency and budget control
 // =============================================================================
 
-import type { GraphConfig, GraphResult } from "../domain/graph.schema.js";
+import type { GraphConfig, GraphResult, GraphStreamEvent } from "../domain/graph.schema.js";
 import type { ConsensusPort } from "../ports/consensus.port.js";
 import type { NodeResult } from "./agent-node.js";
 import type { AgentNode } from "./agent-node.js";
@@ -23,6 +23,20 @@ export class GraphExecutor {
   ) {}
 
   async execute(prompt: string): Promise<GraphResult> {
+    let result: GraphResult | undefined;
+    for await (const event of this.stream(prompt)) {
+      if (event.type === "graph:complete") {
+        result = event.result;
+      }
+      if (event.type === "graph:error") {
+        throw new Error(event.error);
+      }
+    }
+    if (!result) throw new Error("Graph execution produced no result");
+    return result;
+  }
+
+  async *stream(prompt: string): AsyncGenerator<GraphStreamEvent> {
     const start = Date.now();
     const order = this.topologicalSort();
     const nodeResults = new Map<string, NodeResult>();
@@ -30,6 +44,7 @@ export class GraphExecutor {
     let totalOutput = 0;
 
     this.eventBus?.emit("graph:start", { nodeCount: order.length });
+    yield { type: "graph:start", nodeCount: order.length };
 
     try {
       const completed = new Set<string>();
@@ -55,9 +70,19 @@ export class GraphExecutor {
 
         for (let i = 0; i < ready.length; i += this.config.maxConcurrency) {
           const batch = ready.slice(i, i + this.config.maxConcurrency);
+          const batchEvents: GraphStreamEvent[][] = batch.map(() => []);
           const settled = await Promise.allSettled(
-            batch.map((id) => this.executeNode(id, prompt, nodeResults)),
+            batch.map((id, idx) =>
+              this.executeNodeWithEvents(id, prompt, nodeResults, batchEvents[idx]!),
+            ),
           );
+
+          // Yield all collected events from the batch
+          for (const events of batchEvents) {
+            for (const event of events) {
+              yield event;
+            }
+          }
 
           const errors: Error[] = [];
           for (const outcome of settled) {
@@ -104,29 +129,38 @@ export class GraphExecutor {
         totalTokenUsage: result.totalTokenUsage,
       });
 
-      return result;
+      yield { type: "graph:complete", result };
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
       this.eventBus?.emit("graph:complete", {
         totalDurationMs: Date.now() - start,
         totalTokenUsage: { input: totalInput, output: totalOutput },
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMsg,
       });
-      throw error;
+
+      const partialResults: Record<string, NodeResult> = {};
+      for (const [id, r] of nodeResults) {
+        partialResults[id] = r;
+      }
+      yield { type: "graph:error", error: errorMsg, partialResults };
     }
   }
 
-  private async executeNode(
+  private async executeNodeWithEvents(
     nodeId: string,
     prompt: string,
     previousResults: Map<string, NodeResult>,
+    events: GraphStreamEvent[],
   ): Promise<NodeResult> {
     this.eventBus?.emit("node:start", { nodeId });
+    events.push({ type: "node:start", nodeId });
 
     try {
       const fork = this.forks.get(nodeId);
       if (fork) {
-        const result = await this.executeFork(nodeId, prompt, fork, previousResults);
+        const result = await this.executeForkWithEvents(nodeId, prompt, fork, previousResults, events);
         this.eventBus?.emit("node:complete", { nodeId, result });
+        events.push({ type: "node:complete", nodeId, result });
         return result;
       }
 
@@ -136,26 +170,28 @@ export class GraphExecutor {
       const enrichedPrompt = this.buildNodePrompt(prompt, nodeId, previousResults);
       const result = await node.run(enrichedPrompt, this.sharedContext);
       this.eventBus?.emit("node:complete", { nodeId, result });
+      events.push({ type: "node:complete", nodeId, result });
       return result;
     } catch (error) {
-      this.eventBus?.emit("node:complete", {
-        nodeId,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.eventBus?.emit("node:complete", { nodeId, error: errorMsg });
+      events.push({ type: "node:error", nodeId, error: errorMsg });
       throw error;
     }
   }
 
-  private async executeFork(
+  private async executeForkWithEvents(
     forkId: string,
     prompt: string,
     fork: { nodes: AgentNode[]; consensus?: ConsensusPort },
     previousResults: Map<string, NodeResult>,
+    events: GraphStreamEvent[],
   ): Promise<NodeResult> {
     const start = Date.now();
     const enrichedPrompt = this.buildNodePrompt(prompt, forkId, previousResults);
 
     this.eventBus?.emit("fork:start", { forkId, agentCount: fork.nodes.length });
+    events.push({ type: "fork:start", forkId, agentCount: fork.nodes.length });
 
     let results: NodeResult[];
     try {
@@ -181,11 +217,13 @@ export class GraphExecutor {
       }
 
       this.eventBus?.emit("fork:complete", { forkId, resultCount: results.length });
+      events.push({ type: "fork:complete", forkId, results });
     } catch (error) {
       this.eventBus?.emit("fork:complete", {
         forkId,
         error: error instanceof Error ? error.message : String(error),
       });
+      events.push({ type: "fork:complete", forkId, results: [] });
       throw error;
     }
 
@@ -201,6 +239,7 @@ export class GraphExecutor {
 
     if (fork.consensus) {
       this.eventBus?.emit("consensus:start", { forkId });
+      events.push({ type: "consensus:start", forkId });
       try {
         const consensusInput = results.map((r) => ({
           id: r.nodeId,
@@ -213,11 +252,13 @@ export class GraphExecutor {
           merged: !!consensusResult.merged,
         });
         output = consensusResult.merged ?? consensusResult.winnerOutput;
+        events.push({ type: "consensus:result", forkId, output });
       } catch (error) {
         this.eventBus?.emit("consensus:result", {
           forkId,
           error: error instanceof Error ? error.message : String(error),
         });
+        events.push({ type: "consensus:result", forkId, output: "" });
         throw error;
       }
     } else {

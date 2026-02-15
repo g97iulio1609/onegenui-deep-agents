@@ -45,3 +45,15 @@ export const GraphResultSchema = z.object({
 });
 
 export type GraphResult = z.infer<typeof GraphResultSchema>;
+
+export type GraphStreamEvent =
+  | { type: "graph:start"; nodeCount: number }
+  | { type: "node:start"; nodeId: string }
+  | { type: "node:complete"; nodeId: string; result: NodeResultValue }
+  | { type: "node:error"; nodeId: string; error: string }
+  | { type: "fork:start"; forkId: string; agentCount: number }
+  | { type: "fork:complete"; forkId: string; results: NodeResultValue[] }
+  | { type: "consensus:start"; forkId: string }
+  | { type: "consensus:result"; forkId: string; output: string }
+  | { type: "graph:complete"; result: GraphResult }
+  | { type: "graph:error"; error: string; partialResults: Record<string, NodeResultValue> };

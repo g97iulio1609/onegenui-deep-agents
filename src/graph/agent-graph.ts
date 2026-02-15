@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { GraphConfigSchema } from "../domain/graph.schema.js";
-import type { GraphConfig, GraphResult } from "../domain/graph.schema.js";
+import type { GraphConfig, GraphResult, GraphStreamEvent } from "../domain/graph.schema.js";
 import type { DeepAgentConfig } from "../types.js";
 import type { ConsensusPort } from "../ports/consensus.port.js";
 import type { FilesystemPort } from "../ports/filesystem.port.js";
@@ -41,6 +41,19 @@ export class AgentGraph {
       this.eventBus,
     );
     return executor.execute(prompt);
+  }
+
+  async *stream(prompt: string): AsyncGenerator<GraphStreamEvent> {
+    const sharedContext = new SharedContext(this.fs);
+    const executor = new GraphExecutor(
+      this.nodes,
+      this.edges,
+      this.forks,
+      this.config,
+      sharedContext,
+      this.eventBus,
+    );
+    yield* executor.stream(prompt);
   }
 }
 
