@@ -28,6 +28,8 @@ A hexagonal-architecture agent framework with built-in planning, context managem
 - **MCP integration** — discover and execute tools from any MCP server
 - **Cross-session learning** — user profiles, memories, and shared knowledge persisting across sessions
 - **Multi-runtime** — runs on Node.js, Deno, Bun, Edge (Cloudflare Workers, Vercel Edge), and Browser
+- **CLI** — interactive REPL and single-shot mode with `oneagent chat/run/demo` commands
+- **REST API** — zero-dependency HTTP server for multi-language access (Python, Go, Ruby, etc.)
 
 ## Installation
 
@@ -1106,6 +1108,7 @@ The `TokenTracker` accumulates input and output token usage across the session, 
 - `examples/06-full-featured.ts` — full stack composition
 - `examples/07-plugin-system.ts` — custom plugin + AgentCardPlugin
 - `examples/08-a2a-server.ts` — expose DeepAgent as A2A JSON-RPC server
+- `examples/09-cli-and-rest.ts` — REST API server
 
 ### Basic Planning Agent
 
@@ -1403,6 +1406,49 @@ Client-side with native EventSource:
 ```js
 const source = new EventSource('http://localhost:3001?filter=tool:call,step:end');
 source.addEventListener('tool:call', (e) => console.log(JSON.parse(e.data)));
+```
+
+## CLI
+
+```bash
+# Interactive REPL
+oneagent chat --provider openai --api-key sk-...
+
+# Single-shot
+oneagent run "What is AI?" --provider anthropic
+
+# Config management
+oneagent config set openai sk-...
+oneagent config list
+
+# Feature demos
+oneagent demo guardrails --provider openai
+oneagent demo workflow --provider openai
+oneagent demo graph --provider openai
+```
+
+## REST API
+
+```typescript
+import { OneAgentServer } from "@onegenui/agent";
+
+const server = new OneAgentServer({ port: 3456, cors: true });
+await server.listen();
+```
+
+```bash
+# Health check
+curl http://localhost:3456/api/health
+
+# Run prompt
+curl -X POST http://localhost:3456/api/run \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"Hello!","provider":"openai","apiKey":"sk-..."}'
+
+# Stream response (SSE)
+curl -X POST http://localhost:3456/api/stream \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"Tell me a story","provider":"openai","apiKey":"sk-..."}'
 ```
 
 ## License
