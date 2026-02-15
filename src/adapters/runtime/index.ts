@@ -1,3 +1,4 @@
+export { BaseRuntimeAdapter } from "./base-runtime.adapter.js";
 export { NodeRuntimeAdapter } from "./node-runtime.adapter.js";
 export { DenoRuntimeAdapter } from "./deno-runtime.adapter.js";
 export { BunRuntimeAdapter } from "./bun-runtime.adapter.js";

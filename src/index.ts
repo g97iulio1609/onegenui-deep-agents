@@ -234,6 +234,7 @@ export { InMemoryLearningAdapter } from "./adapters/learning/index.js";
 // Adapters — Runtime
 // ─────────────────────────────────────────────────────────────────────────────
 
+export { BaseRuntimeAdapter } from "./adapters/runtime/base-runtime.adapter.js";
 export { NodeRuntimeAdapter } from "./adapters/runtime/node-runtime.adapter.js";
 export { DenoRuntimeAdapter } from "./adapters/runtime/deno-runtime.adapter.js";
 export { BunRuntimeAdapter } from "./adapters/runtime/bun-runtime.adapter.js";
