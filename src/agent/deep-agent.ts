@@ -352,12 +352,12 @@ export class DeepAgent {
     if (this.config.subagents) {
       this.registerTools(
         tools,
-        createSubagentTools({
+        { ...createSubagentTools({
           parentModel: this.config.model,
           parentFilesystem: this.config.fs,
           maxDepth: this.config.subagentConfig?.maxDepth,
           timeoutMs: this.config.subagentConfig?.timeoutMs,
-        }) as unknown as Record<string, Tool>,
+        }) },
         "subagents",
       );
     }
@@ -527,9 +527,9 @@ export class DeepAgent {
 
       const result = await agent.generate({ prompt });
 
-      const usage = (result as unknown as Record<string, unknown>).usage as
-        | { promptTokens?: number; completionTokens?: number }
-        | undefined;
+      // Access usage from the AI SDK result (not in public types but present at runtime)
+      const resultObj = result as unknown as { usage?: { promptTokens?: number; completionTokens?: number } };
+      const usage = resultObj.usage;
       if (usage) {
         if (usage.promptTokens) this.tokenTracker.addInput(usage.promptTokens);
         if (usage.completionTokens) this.tokenTracker.addOutput(usage.completionTokens);

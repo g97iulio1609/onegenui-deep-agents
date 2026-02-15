@@ -17,6 +17,10 @@ import type { LanguageModel } from "ai";
 
 const VERSION = "0.1.0";
 
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
 // ---------------------------------------------------------------------------
 // Provider resolution (same dynamic import pattern as CLI)
 // ---------------------------------------------------------------------------
@@ -101,7 +105,7 @@ export function handleRun(
     try {
       model = await resolveModel(provider, modelId, body.apiKey);
     } catch (err) {
-      return sendError(res, 400, (err as Error).message);
+      return sendError(res, 400, errorMessage(err));
     }
 
     const start = Date.now();
@@ -122,7 +126,7 @@ export function handleRun(
         duration,
       });
     } catch (err) {
-      return sendError(res, 500, (err as Error).message);
+      return sendError(res, 500, errorMessage(err));
     } finally {
       await agent.dispose();
     }
@@ -156,7 +160,7 @@ export function handleStream(
     try {
       model = await resolveModel(provider, modelId, body.apiKey);
     } catch (err) {
-      return sendError(res, 400, (err as Error).message);
+      return sendError(res, 400, errorMessage(err));
     }
 
     // SSE headers
@@ -200,7 +204,7 @@ export function handleStream(
     } catch (err) {
       const errEvent = JSON.stringify({
         type: "error",
-        error: (err as Error).message,
+        error: errorMessage(err),
       });
       res.write(`data: ${errEvent}\n\n`);
       res.end();
@@ -267,7 +271,7 @@ export function handleGraphRun(
         duration,
       });
     } catch (err) {
-      return sendError(res, 500, (err as Error).message);
+      return sendError(res, 500, errorMessage(err));
     }
   };
 }

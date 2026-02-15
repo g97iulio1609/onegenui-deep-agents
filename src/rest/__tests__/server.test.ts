@@ -326,13 +326,13 @@ describe("GaussFlowServer", () => {
       expect(events.length).toBeGreaterThanOrEqual(2);
 
       // First events are tokens
-      const tokenEvents = events.filter((e: any) => e.type === "token");
+      const tokenEvents = events.filter((e: { type: string }) => e.type === "token");
       expect(tokenEvents.length).toBe(2);
       expect(tokenEvents[0].content).toBe("Hello");
       expect(tokenEvents[1].content).toBe(" World");
 
       // Last event is done
-      const doneEvent = events.find((e: any) => e.type === "done");
+      const doneEvent = events.find((e: { type: string }) => e.type === "done");
       expect(doneEvent).toBeDefined();
       expect(doneEvent.text).toBe("Hello World");
       expect(doneEvent.sessionId).toBe("mock-session-id");

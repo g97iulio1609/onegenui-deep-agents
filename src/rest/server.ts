@@ -102,7 +102,7 @@ export class GaussFlowServer {
       await match.handler(req, res, match.params);
     } catch (err) {
       if (!res.headersSent) {
-        sendError(res, 500, (err as Error).message);
+        sendError(res, 500, err instanceof Error ? err.message : String(err));
       }
     }
   };

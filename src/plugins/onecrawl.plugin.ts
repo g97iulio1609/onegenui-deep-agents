@@ -14,6 +14,16 @@ import { ZodValidationAdapter } from "../adapters/validation/zod-validation.adap
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
+interface CrawlResult {
+  content?: string;
+  text?: string;
+  title?: string;
+  url?: string;
+  link?: string;
+  snippet?: string;
+  description?: string;
+}
+
 export interface OneCrawlPluginOptions {
   /** onecrawl Crawler instance — if not provided, one will be created lazily */
   crawler?: unknown;
@@ -120,8 +130,7 @@ export class OneCrawlPlugin extends BasePlugin {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const results = await crawler.search(query, { limit });
           if (Array.isArray(results)) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            return results.map((r: any) => ({
+            return results.map((r: CrawlResult) => ({
               title: r.title ?? "",
               url: r.url ?? r.link ?? "",
               snippet: r.snippet ?? r.description ?? "",
@@ -145,8 +154,7 @@ export class OneCrawlPlugin extends BasePlugin {
           if (typeof crawler.batchCrawl === "function") {
             const results = await crawler.batchCrawl(urls);
             return Array.isArray(results)
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              ? results.map((r: any, i: number) => ({
+              ? results.map((r: string | CrawlResult, i: number) => ({
                   url: urls[i],
                   content: (
                     typeof r === "string" ? r : (r?.content ?? r?.text ?? "")
@@ -177,10 +185,8 @@ export class OneCrawlPlugin extends BasePlugin {
     if (this.crawlerPromise) {
       try {
         const crawler = await this.crawlerPromise;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (typeof (crawler as any).close === "function") {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (crawler as any).close();
+        if (crawler && typeof crawler.close === "function") {
+          await crawler.close();
         }
       } catch {
         // Ignore errors during cleanup

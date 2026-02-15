@@ -14,6 +14,19 @@ import { ZodValidationAdapter } from "../adapters/validation/zod-validation.adap
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
+interface Entity {
+  name?: string;
+  label?: string;
+  type?: string;
+  category?: string;
+}
+
+interface KnowledgeBase {
+  entities?: Entity[];
+  relations?: unknown[];
+  quotes?: unknown[];
+}
+
 export interface VectorlessPluginOptions {
   /** Pre-configured vectorless instance */
   vectorless?: unknown;
@@ -149,12 +162,11 @@ export class VectorlessPlugin extends BasePlugin {
             return await vl.searchEntities(query, knowledge, { limit });
           }
           // Fallback: filter entities by name match
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const entities = Array.isArray((knowledge as any)?.entities) ? (knowledge as any).entities : [];
+          const kb = knowledge as KnowledgeBase | null;
+          const entities: Entity[] = Array.isArray(kb?.entities) ? kb.entities : [];
           const lower = query.toLowerCase();
           return entities
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            .filter((e: any) => (e.name ?? e.label ?? "").toLowerCase().includes(lower))
+            .filter((e: Entity) => (e.name ?? e.label ?? "").toLowerCase().includes(lower))
             .slice(0, limit);
         },
       }),
@@ -165,10 +177,9 @@ export class VectorlessPlugin extends BasePlugin {
         execute: async () => {
           const knowledge = getKnowledge();
           if (!knowledge) return "No knowledge base loaded. Use knowledge:generate first.";
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const entities = Array.isArray((knowledge as any)?.entities) ? (knowledge as any).entities : [];
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          return entities.map((e: any) => ({
+          const kb = knowledge as KnowledgeBase;
+          const entities: Entity[] = Array.isArray(kb.entities) ? kb.entities : [];
+          return entities.map((e: Entity) => ({
             name: e.name ?? e.label ?? "unknown",
             type: e.type ?? e.category ?? "unknown",
           }));
