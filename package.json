@@ -68,7 +68,7 @@
     "ai": "^6.0.68",
     "zod": "^4.0.0"
   },
-  "optionalDependencies": {
+  "peerDependencies": {
     "@ai-sdk/openai": "^1.0.0",
     "@ai-sdk/anthropic": "^1.0.0",
     "@ai-sdk/google": "^1.0.0",
@@ -76,19 +76,21 @@
     "@ai-sdk/mistral": "^1.0.0",
     "@ai-sdk/mcp": "^1.0.0",
     "@supabase/supabase-js": "^2.0.0",
-    "tiktoken": "^1.0.0"
-  },
-  "peerDependencies": {
+    "tiktoken": "^1.0.0",
     "onecrawl": ">=1.0.0",
     "@giulio-leone/gaussflow-vectorless": ">=1.0.0"
   },
   "peerDependenciesMeta": {
-    "onecrawl": {
-      "optional": true
-    },
-    "@giulio-leone/gaussflow-vectorless": {
-      "optional": true
-    }
+    "@ai-sdk/openai": { "optional": true },
+    "@ai-sdk/anthropic": { "optional": true },
+    "@ai-sdk/google": { "optional": true },
+    "@ai-sdk/groq": { "optional": true },
+    "@ai-sdk/mistral": { "optional": true },
+    "@ai-sdk/mcp": { "optional": true },
+    "@supabase/supabase-js": { "optional": true },
+    "tiktoken": { "optional": true },
+    "onecrawl": { "optional": true },
+    "@giulio-leone/gaussflow-vectorless": { "optional": true }
   },
   "devDependencies": {
     "@ai-sdk/mcp": "^1.0.0",
