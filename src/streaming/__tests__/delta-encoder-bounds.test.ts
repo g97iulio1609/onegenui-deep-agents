@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { createDeltaEncoder } from "../delta-encoder.js";
 import type { AgentEvent } from "../../types.js";
 
-function makeEvent(type: string, data?: unknown): AgentEvent {
-  return { type: type as any, timestamp: Date.now(), sessionId: "s1", data };
+function makeEvent(type: string, data?: unknown, ts = 0): AgentEvent {
+  return { type: type as any, timestamp: ts, sessionId: "s1", data };
 }
 
 describe("DeltaEncoder — maxEntries", () => {

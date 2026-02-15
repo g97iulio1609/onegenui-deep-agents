@@ -29,6 +29,8 @@ import { ApproximateTokenCounter } from "../adapters/token-counter/approximate.a
 import { createFilesystemTools } from "../tools/filesystem/index.js";
 import { createPlanningTools } from "../tools/planning/index.js";
 import { createSubagentTools } from "../tools/subagent/index.js";
+import { CircuitBreaker, RateLimiter, ToolCache, DEFAULT_CIRCUIT_BREAKER_CONFIG, DEFAULT_RATE_LIMITER_CONFIG, DEFAULT_TOOL_CACHE_CONFIG } from "../adapters/resilience/index.js";
+import type { CircuitBreakerConfig, RateLimiterConfig, ToolCacheConfig } from "../adapters/resilience/index.js";
 
 // =============================================================================
 // Result type
@@ -64,6 +66,11 @@ export class DeepAgentBuilder extends AbstractBuilder<DeepAgent> {
   private subagents = false;
   private subagentConfig?: Partial<SubagentConfig>;
   private approvalConfig?: Partial<ApprovalConfig>;
+
+  // Resilience patterns
+  private circuitBreaker?: CircuitBreaker;
+  private rateLimiter?: RateLimiter;
+  private toolCache?: ToolCache;
 
   private extraTools: Record<string, Tool> = {};
   private readonly plugins: DeepAgentPlugin[] = [];
@@ -149,6 +156,24 @@ export class DeepAgentBuilder extends AbstractBuilder<DeepAgent> {
     return this;
   }
 
+  withCircuitBreaker(config?: Partial<CircuitBreakerConfig>): this {
+    const fullConfig = { ...DEFAULT_CIRCUIT_BREAKER_CONFIG, ...config };
+    this.circuitBreaker = new CircuitBreaker(fullConfig);
+    return this;
+  }
+
+  withRateLimiter(config?: Partial<RateLimiterConfig>): this {
+    const fullConfig = { ...DEFAULT_RATE_LIMITER_CONFIG, ...config };
+    this.rateLimiter = new RateLimiter(fullConfig);
+    return this;
+  }
+
+  withToolCache(config?: Partial<ToolCacheConfig>): this {
+    const fullConfig = { ...DEFAULT_TOOL_CACHE_CONFIG, ...config };
+    this.toolCache = new ToolCache(fullConfig);
+    return this;
+  }
+
   protected validate(): void {
     if (!this.agentConfig.model) throw new Error("model is required");
     if (!this.agentConfig.instructions) throw new Error("instructions is required");
@@ -184,6 +209,9 @@ export class DeepAgentBuilder extends AbstractBuilder<DeepAgent> {
       ),
       extraTools: this.extraTools,
       plugins: this.plugins,
+      circuitBreaker: this.circuitBreaker,
+      rateLimiter: this.rateLimiter,
+      toolCache: this.toolCache,
     });
 
     for (const { type, handler } of this.eventHandlers) {
@@ -218,6 +246,9 @@ interface DeepAgentInternalConfig {
   checkpointConfig?: Required<CheckpointConfig>;
   extraTools?: Record<string, Tool>;
   plugins?: DeepAgentPlugin[];
+  circuitBreaker?: CircuitBreaker;
+  rateLimiter?: RateLimiter;
+  toolCache?: ToolCache;
 }
 
 export class DeepAgent {
@@ -229,6 +260,11 @@ export class DeepAgent {
   private _runtimePromise: Promise<RuntimePort> | null = null;
   private readonly tokenTracker: TokenTracker;
   private readonly pluginManager: PluginManager;
+  
+  // Resilience patterns
+  private readonly circuitBreaker?: CircuitBreaker;
+  private readonly rateLimiter?: RateLimiter;
+  private readonly toolCache?: ToolCache;
 
   constructor(config: DeepAgentInternalConfig) {
     this._runtime = config.runtime ?? null;
@@ -245,6 +281,11 @@ export class DeepAgent {
     for (const plugin of config.plugins ?? []) {
       this.pluginManager.register(plugin);
     }
+    
+    // Initialize resilience patterns
+    this.circuitBreaker = config.circuitBreaker;
+    this.rateLimiter = config.rateLimiter;
+    this.toolCache = config.toolCache;
   }
 
   /** Lazy-initialized runtime adapter. Resolves on first use. */
@@ -463,6 +504,94 @@ export class DeepAgent {
     }
   }
 
+  private wrapToolsWithResilience(tools: Record<string, Tool>): void {
+    // Apply circuit breaker if configured  
+    if (this.circuitBreaker) {
+      this.wrapToolsWithCircuitBreaker(tools);
+    }
+    
+    // Apply caching if configured
+    if (this.toolCache) {
+      this.wrapToolsWithCaching(tools);
+    }
+  }
+
+  private wrapToolsWithCircuitBreaker(tools: Record<string, Tool>): void {
+    const circuitBreaker = this.circuitBreaker!;
+    
+    for (const [name, toolDef] of Object.entries(tools)) {
+      if (!toolDef) continue;
+      const maybeExecutable = toolDef as { execute?: (...args: unknown[]) => unknown };
+      if (!maybeExecutable.execute) continue;
+
+      const originalExecute = maybeExecutable.execute.bind(maybeExecutable);
+      
+      maybeExecutable.execute = async (...args: unknown[]): Promise<unknown> => {
+        return circuitBreaker.execute(async () => originalExecute(...args));
+      };
+    }
+  }
+
+  private wrapToolsWithCaching(tools: Record<string, Tool>): void {
+    const toolCache = this.toolCache!;
+    
+    for (const [name, toolDef] of Object.entries(tools)) {
+      if (!toolDef) continue;
+      const maybeExecutable = toolDef as { execute?: (...args: unknown[]) => unknown };
+      if (!maybeExecutable.execute) continue;
+
+      const originalExecute = maybeExecutable.execute.bind(maybeExecutable);
+      
+      maybeExecutable.execute = async (...args: unknown[]): Promise<unknown> => {
+        // Create cache key from tool name and arguments
+        const cacheKey = `${name}:${JSON.stringify(args)}`;
+        
+        // Check cache first (use has() to correctly handle cached undefined values)
+        if (toolCache.has(cacheKey)) {
+          return toolCache.get(cacheKey);
+        }
+        
+        // Execute and cache result
+        const result = await originalExecute(...args);
+        toolCache.set(cacheKey, result);
+        
+        return result;
+      };
+    }
+  }
+
+  private createRateLimitedModel(): LanguageModel {
+    if (!this.rateLimiter) {
+      return this.config.model;
+    }
+
+    const rateLimiter = this.rateLimiter;
+    const originalModel = this.config.model;
+
+    // Create a proxy that wraps LanguageModel methods with rate limiting
+    return new Proxy(originalModel as any, {
+      get(target: any, prop: string | symbol, receiver: any) {
+        const value = Reflect.get(target, prop, receiver);
+        
+        if (typeof value === 'function' && prop === 'doGenerate') {
+          return async function(...args: any[]) {
+            await rateLimiter.acquire();
+            return value.apply(target, args);
+          };
+        }
+        
+        if (typeof value === 'function' && prop === 'doStream') {
+          return async function(...args: any[]) {
+            await rateLimiter.acquire();
+            return value.apply(target, args);
+          };
+        }
+        
+        return value;
+      }
+    }) as LanguageModel;
+  }
+
   private async prepareTools(
     runMetadata?: PluginRunMetadata,
   ): Promise<{ tools: Record<string, Tool>; pluginCtx: PluginContext }> {
@@ -473,6 +602,7 @@ export class DeepAgent {
 
     const pluginCtx = this.createPluginContext(toolNames, runMetadata);
     this.wrapToolsWithApproval(tools);
+    this.wrapToolsWithResilience(tools);
     this.wrapToolsWithPlugins(tools, pluginCtx);
 
     return { tools, pluginCtx };
@@ -519,7 +649,7 @@ export class DeepAgent {
       }
 
       const agent = new ToolLoopAgent({
-        model: this.config.model,
+        model: this.createRateLimitedModel(),
         instructions: this.config.instructions,
         tools,
         stopWhen: stepCountIs(this.config.maxSteps),
@@ -649,7 +779,7 @@ export class DeepAgent {
       this.eventBus.emit("agent:start", { messages: params.messages });
 
       const agent = new ToolLoopAgent({
-        model: this.config.model,
+        model: this.createRateLimitedModel(),
         instructions: this.config.instructions,
         tools,
         stopWhen: stepCountIs(this.config.maxSteps),
