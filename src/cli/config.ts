@@ -5,6 +5,7 @@
 import { readFileSync, writeFileSync, existsSync, unlinkSync, chmodSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import type { McpServerConfig } from "../ports/mcp.port.js";
 
 const CONFIG_FILE = ".gaussflowrc";
 
@@ -12,6 +13,7 @@ export interface GaussFlowConfig {
   keys: Record<string, string>;
   defaultProvider?: string;
   defaultModel?: string;
+  mcpServers?: McpServerConfig[];
 }
 
 function configPath(): string {
@@ -28,6 +30,7 @@ export function loadConfig(): GaussFlowConfig {
       keys: parsed.keys ?? {},
       defaultProvider: parsed.defaultProvider,
       defaultModel: parsed.defaultModel,
+      mcpServers: parsed.mcpServers,
     };
   } catch {
     console.error("Warning: ~/.gaussflowrc is corrupted or unreadable. Using empty config.");
@@ -102,4 +105,25 @@ export function getDefaultProvider(): string | undefined {
 
 export function getDefaultModelFromConfig(): string | undefined {
   return loadConfig().defaultModel;
+}
+
+export function getMcpServers(): McpServerConfig[] {
+  return loadConfig().mcpServers ?? [];
+}
+
+export function addMcpServer(config: McpServerConfig): void {
+  const cfg = loadConfig();
+  cfg.mcpServers = (cfg.mcpServers ?? []).filter((s) => s.id !== config.id);
+  cfg.mcpServers.push(config);
+  saveConfig(cfg);
+}
+
+export function removeMcpServer(serverId: string): boolean {
+  const cfg = loadConfig();
+  const servers = cfg.mcpServers ?? [];
+  const filtered = servers.filter((s) => s.id !== serverId);
+  if (filtered.length === servers.length) return false;
+  cfg.mcpServers = filtered;
+  saveConfig(cfg);
+  return true;
 }

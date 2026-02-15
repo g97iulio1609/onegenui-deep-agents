@@ -4,15 +4,19 @@
 
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
+import { tool as aiTool } from "ai";
 import type { LanguageModel } from "ai";
+import { z } from "zod";
 import { DeepAgent } from "../agent/deep-agent.js";
 import { createModel, getDefaultModel, isValidProvider, SUPPORTED_PROVIDERS } from "./providers.js";
 import type { ProviderName } from "./providers.js";
-import { resolveApiKey, listKeys, ENV_MAP } from "./config.js";
+import { resolveApiKey, listKeys, ENV_MAP, getMcpServers, addMcpServer, removeMcpServer } from "./config.js";
 import { color, bold, createSpinner, formatDuration, maskKey, formatMarkdown } from "./format.js";
 import { createCliTools } from "./tools.js";
 import { readFile } from "./commands/files.js";
 import { runBash } from "./commands/bash.js";
+import { AiSdkMcpAdapter } from "../adapters/mcp/ai-sdk-mcp.adapter.js";
+import type { McpServerConfig } from "../ports/mcp.port.js";
 
 const DEFAULT_SYSTEM_PROMPT =
   "You are GaussFlow, an AI coding assistant. You can read files, write files, search code, list directories, and execute bash commands. Use these tools to help the user accomplish their tasks. Be concise and direct.";
@@ -31,6 +35,19 @@ export async function startRepl(
   let systemPrompt = DEFAULT_SYSTEM_PROMPT;
   let yoloMode = false;
 
+  const mcpAdapter = new AiSdkMcpAdapter();
+
+  // Auto-connect saved MCP servers
+  const savedServers = getMcpServers();
+  for (const server of savedServers) {
+    try {
+      await mcpAdapter.connect(server);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.log(color("yellow", `  ⚠ Failed to connect MCP server "${server.name}": ${msg}`));
+    }
+  }
+
   const history: Array<{ role: "user" | "assistant"; content: string }> = [];
 
   console.log(bold(color("cyan", "\n  ╔══════════════════════════════════════╗")));
@@ -38,6 +55,9 @@ export async function startRepl(
   console.log(bold(color("cyan", "  ╚══════════════════════════════════════╝")));
   console.log(color("dim", `  Provider: ${currentProvider} | Model: ${currentModelId}`));
   console.log(color("dim", "  Tools: readFile, writeFile, bash, listFiles, searchFiles"));
+  if (savedServers.length > 0) {
+    console.log(color("dim", `  MCP Servers: ${savedServers.length} configured`));
+  }
   console.log(color("dim", "  Type /help for commands, /exit to quit\n"));
 
   function promptText(): string {
@@ -74,6 +94,7 @@ export async function startRepl(
     if (!isEof) throw err;
     console.log(color("dim", "\nGoodbye! 👋\n"));
   } finally {
+    await mcpAdapter.closeAll();
     rl.close();
   }
 
@@ -106,6 +127,24 @@ export async function startRepl(
       confirm: confirmAction,
     });
 
+    // Discover MCP tools and merge as regular tools (avoids dispose() closing shared adapter)
+    try {
+      const mcpDefs = await mcpAdapter.discoverTools();
+      for (const [name, def] of Object.entries(mcpDefs)) {
+        tools[`mcp:${name}`] = aiTool({
+          description: def.description,
+          parameters: z.object({}).passthrough(),
+          execute: async (args: unknown) => {
+            const result = await mcpAdapter.executeTool(name, args);
+            if (result.isError) throw new Error(result.content[0]?.text ?? "MCP tool error");
+            return result.content.map((c) => c.text ?? "").join("\n");
+          },
+        });
+      }
+    } catch {
+      // MCP discovery may fail if no servers connected — continue without MCP tools
+    }
+
     const agent = DeepAgent.create({
       model: currentModel,
       instructions: systemPrompt,
@@ -124,14 +163,47 @@ export async function startRepl(
 
       let response = "";
       let firstChunk = true;
-      for await (const chunk of stream.textStream) {
-        if (firstChunk) {
-          spinner.stop();
-          process.stdout.write(color("cyan", "\n🤖 "));
-          firstChunk = false;
+      for await (const part of stream.fullStream) {
+        switch (part.type) {
+          case "text-delta":
+            if (firstChunk) {
+              spinner.stop();
+              process.stdout.write(color("cyan", "\n🤖 "));
+              firstChunk = false;
+            }
+            process.stdout.write(part.text);
+            response += part.text;
+            break;
+          case "tool-input-start":
+            if (firstChunk) {
+              spinner.stop();
+              firstChunk = false;
+            }
+            process.stdout.write(color("magenta", `\n  🔧 ${part.toolName} `));
+            break;
+          case "tool-input-delta":
+            process.stdout.write(color("dim", part.delta.length > 200 ? part.delta.slice(0, 200) + "…" : part.delta));
+            break;
+          case "tool-input-end":
+            process.stdout.write("\n");
+            break;
+          case "tool-result":
+            {
+              const raw = (part as Record<string, unknown>).output ?? (part as Record<string, unknown>).result;
+              const summary = typeof raw === "string" ? raw : JSON.stringify(raw);
+              process.stdout.write(color("dim", `  ↳ ${summary.length > 500 ? summary.slice(0, 500) + "…" : summary}\n`));
+            }
+            break;
+          case "tool-error":
+            process.stdout.write(color("red", `  ✗ Tool error (${(part as Record<string, unknown>).toolName}): ${(part as Record<string, unknown>).error}\n`));
+            break;
+          case "error":
+            if (firstChunk) { spinner.stop(); firstChunk = false; }
+            process.stdout.write(color("red", `\n  ✗ Stream error: ${(part as Record<string, unknown>).error}\n`));
+            break;
+          default:
+            break;
         }
-        process.stdout.write(chunk);
-        response += chunk;
       }
 
       if (response) {
@@ -183,7 +255,14 @@ export async function startRepl(
         console.log("");
         console.log(bold("  History:"));
         console.log("  /history           Show conversation history");
-        console.log("  /clear-history     Clear conversation history\n");
+        console.log("  /clear-history     Clear conversation history");
+        console.log("");
+        console.log(bold("  MCP Servers:"));
+        console.log("  /mcp add <name> <cmd> [args]  Add a stdio MCP server");
+        console.log("  /mcp list                     List configured MCP servers");
+        console.log("  /mcp remove <name>            Remove an MCP server");
+        console.log("  /mcp connect <name>           Connect a configured server");
+        console.log("  /mcp disconnect <name>        Disconnect a server\n");
         break;
 
       case "/clear":
@@ -351,8 +430,110 @@ export async function startRepl(
         console.log(color("green", "  ✓ Conversation history cleared.\n"));
         break;
 
+      case "/mcp":
+        await handleMcpCommand(parts.slice(1));
+        break;
+
       default:
         console.log(color("yellow", `  Unknown command: ${command}. Type /help for available commands.\n`));
+    }
+  }
+
+  async function handleMcpCommand(args: string[]): Promise<void> {
+    const sub = args[0]?.toLowerCase();
+
+    switch (sub) {
+      case "add": {
+        const name = args[1];
+        const command = args[2];
+        if (!name || !command) {
+          console.log(color("red", "  Usage: /mcp add <name> <command> [args...]\n"));
+          break;
+        }
+        const serverArgs = args.slice(3);
+        const config: McpServerConfig = {
+          id: name,
+          name,
+          transport: "stdio",
+          command,
+          args: serverArgs.length > 0 ? serverArgs : undefined,
+        };
+        try {
+          await mcpAdapter.connect(config);
+          addMcpServer(config);
+          console.log(color("green", `  ✓ MCP server "${name}" added and connected.\n`));
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.log(color("red", `  ✗ Failed to connect: ${msg}\n`));
+        }
+        break;
+      }
+
+      case "list": {
+        const servers = await mcpAdapter.listServers();
+        if (servers.length === 0) {
+          console.log(color("dim", "  No MCP servers configured.\n"));
+          break;
+        }
+        console.log(bold("\n  MCP Servers:"));
+        for (const s of servers) {
+          const statusColor = s.status === "connected" ? "green" : s.status === "error" ? "red" : "yellow";
+          console.log(`    ${s.name} (${s.transport}) — ${color(statusColor, s.status)}`);
+        }
+        console.log("");
+        break;
+      }
+
+      case "remove": {
+        const name = args[1];
+        if (!name) {
+          console.log(color("red", "  Usage: /mcp remove <name>\n"));
+          break;
+        }
+        await mcpAdapter.disconnect(name);
+        const removed = removeMcpServer(name);
+        if (removed) {
+          console.log(color("green", `  ✓ MCP server "${name}" removed.\n`));
+        } else {
+          console.log(color("yellow", `  Server "${name}" not found in config.\n`));
+        }
+        break;
+      }
+
+      case "connect": {
+        const name = args[1];
+        if (!name) {
+          console.log(color("red", "  Usage: /mcp connect <name>\n"));
+          break;
+        }
+        const saved = getMcpServers().find((s) => s.id === name);
+        if (!saved) {
+          console.log(color("red", `  ✗ Server "${name}" not found in config. Use /mcp add first.\n`));
+          break;
+        }
+        try {
+          await mcpAdapter.connect(saved);
+          console.log(color("green", `  ✓ Connected to "${name}".\n`));
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.log(color("red", `  ✗ Failed to connect: ${msg}\n`));
+        }
+        break;
+      }
+
+      case "disconnect": {
+        const name = args[1];
+        if (!name) {
+          console.log(color("red", "  Usage: /mcp disconnect <name>\n"));
+          break;
+        }
+        await mcpAdapter.disconnect(name);
+        console.log(color("green", `  ✓ Disconnected from "${name}".\n`));
+        break;
+      }
+
+      default:
+        console.log(color("yellow", "  Usage: /mcp <add|list|remove|connect|disconnect>\n"));
     }
   }
 }
