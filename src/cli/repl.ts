@@ -28,6 +28,7 @@ export async function startRepl(
   providerName: ProviderName,
   apiKey: string,
   modelId?: string,
+  yolo?: boolean,
 ): Promise<void> {
   const SLASH_COMMANDS = [
     "/help", "/exit", "/quit", "/clear", "/model", "/provider",
@@ -72,7 +73,10 @@ export async function startRepl(
   let currentModelId = modelId ?? getDefaultModel(providerName);
   let currentApiKey = apiKey;
   let systemPrompt = DEFAULT_SYSTEM_PROMPT;
-  let yoloMode = false;
+  let yoloMode = yolo ?? false;
+
+  // Serialize tool confirmations to avoid concurrent readline conflicts
+  let confirmLock = Promise.resolve<void>();
 
   const mcpAdapter = new AiSdkMcpAdapter();
 
@@ -147,9 +151,23 @@ export async function startRepl(
     rl.close();
   }
 
+
   async function confirmAction(description: string): Promise<boolean> {
-    const answer = await rl.question(color("yellow", `  ⚠ ${description} — Execute? (y/n) `));
-    return answer.toLowerCase().startsWith("y");
+    const previous = confirmLock;
+    let release!: () => void;
+    confirmLock = new Promise<void>((r) => { release = r; });
+    await previous;
+
+    const { createInterface: createConfirmRl } = await import("node:readline/promises");
+    const confirmRl = createConfirmRl({ input: stdin, output: stdout });
+    try {
+      const answer = await confirmRl.question(color("yellow", `  ⚠ ${description} — Execute? (y/n) `));
+      return answer.toLowerCase().startsWith("y");
+    } finally {
+      confirmRl.close();
+      stdin.resume();
+      release();
+    }
   }
 
   async function handleBash(command: string): Promise<void> {
@@ -197,7 +215,7 @@ export async function startRepl(
     const agent = DeepAgent.create({
       model: currentModel,
       instructions: systemPrompt,
-      maxSteps: 15,
+      maxSteps: 30,
     })
       .withTools(tools)
       .build();

@@ -91,7 +91,7 @@ async function main(): Promise<void> {
       return handleConfig(positionals.slice(1));
 
     case "chat":
-      return handleChat(values as Record<string, string | undefined>);
+      return handleChat(values as Record<string, string | boolean | undefined>);
 
     case "run":
       return handleRun(
@@ -229,10 +229,10 @@ function handleConfig(args: string[]): void {
 // Chat (REPL)
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function handleChat(opts: Record<string, string | undefined>): Promise<void> {
-  const { provider, model, apiKey } = await resolveProviderAndModel(opts);
+async function handleChat(opts: Record<string, string | boolean | undefined>): Promise<void> {
+  const { provider, model, apiKey } = await resolveProviderAndModel(opts as Record<string, string | undefined>);
   const languageModel = await createModel(provider, apiKey, model);
-  await startRepl(languageModel, provider, apiKey, model);
+  await startRepl(languageModel, provider, apiKey, model, !!opts.yolo);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
