@@ -1,26 +1,33 @@
 # OneAgent (@onegenui/agent)
 
-> OneAgent — AI Agent Framework built on Vercel AI SDK v6
+> **OneAgent by OneGenUI** — AI Agent Framework built on Vercel AI SDK v6
 
 A hexagonal-architecture agent framework with built-in planning, context management, subagent orchestration, persistent memory, and MCP integration. Agents operate through a tool-loop powered by AI SDK's `ToolLoopAgent`, with filesystem, planning, and subagent tools composed via a fluent builder API.
 
 ## Features
 
-- **Builder pattern** -- fluent API with `DeepAgent.create()`, `.minimal()`, and `.full()` factory methods
-- **Hexagonal architecture** -- ports and adapters for filesystem, memory, MCP, token counting, and model access
-- **Plugin system** -- deterministic middleware lifecycle with hook-based extensions and tool injection
-- **Built-in planning** -- structured todo management with dependency tracking and priority
-- **Subagent orchestration** -- spawn child agents with configurable depth limits and timeouts
-- **Context management** -- automatic rolling summarization, tool-result offloading, and message truncation
-- **Human-in-the-loop approval** -- configurable per-tool approval gates with allow/deny lists
-- **Checkpointing** -- periodic state snapshots for session resume
-- **Event system** -- typed lifecycle events with wildcard subscriptions
-- **MCP integration** -- discover and execute tools from any MCP server
-- **Cross-session learning** -- user profiles, memories, and shared knowledge persisting across sessions
-- **Guardrails** -- input/output validation with Zod schemas, content filtering, and PII detection
-- **Web scraping tools** -- crawl, search, and batch scrape via OneCrawl plugin
-- **RAG/knowledge tools** -- entity extraction, knowledge queries via Vectorless plugin  
-- **Evaluation metrics** -- latency, token usage, tool frequency, and custom scoring
+- **Builder pattern** — fluent API with `DeepAgent.create()`, `.minimal()`, `.full()`, and `.auto()` factory methods
+- **Hexagonal architecture** — ports and adapters for filesystem, memory, MCP, validation, tracing, metrics, logging, and model access
+- **Plugin system** — deterministic middleware lifecycle with hook-based extensions and tool injection
+- **WorkflowPlugin** — multi-step workflow execution with retry, rollback, and conditional steps
+- **ObservabilityPlugin** — three-pillar observability: distributed tracing, metrics collection, and structured logging
+- **Guardrails** — input/output validation with Zod schemas, content filtering, and PII detection
+- **Web scraping tools** — crawl, search, and batch scrape via OneCrawl plugin
+- **RAG/knowledge tools** — entity extraction, knowledge queries via Vectorless plugin
+- **Evaluation metrics** — latency, token usage, tool frequency, and custom scoring
+- **ValidationPort** — engine-agnostic validation with `ZodValidationAdapter`
+- **BasePlugin** — abstract base class for building custom plugins
+- **AbstractBuilder** — template method pattern for validated, type-safe builders
+- **Multi-agent collaboration** — DAG-based `AgentGraph` with parallel forking and consensus strategies
+- **Built-in planning** — structured todo management with dependency tracking and priority
+- **Subagent orchestration** — spawn child agents with configurable depth limits and timeouts
+- **Context management** — automatic rolling summarization, tool-result offloading, and message truncation
+- **Human-in-the-loop approval** — configurable per-tool approval gates with allow/deny lists
+- **Checkpointing** — periodic state snapshots for session resume
+- **Event system** — typed lifecycle events with wildcard subscriptions
+- **MCP integration** — discover and execute tools from any MCP server
+- **Cross-session learning** — user profiles, memories, and shared knowledge persisting across sessions
+- **Multi-runtime** — runs on Node.js, Deno, Bun, Edge (Cloudflare Workers, Vercel Edge), and Browser
 
 ## Installation
 
@@ -70,33 +77,63 @@ console.log(`Session: ${result.sessionId}`);
 
 ## Architecture
 
+OneAgent follows **hexagonal architecture** (ports & adapters). The core domain (DeepAgent) depends only on port interfaces; adapters implement those interfaces for specific platforms and services. Plugins extend behavior via lifecycle hooks.
+
 ```
-                          DeepAgent (Orchestrator)
-                                  |
-            +----------+----------+----------+----------+
-            |          |          |          |          |
-        EventBus  ApprovalMgr  TokenTracker ContextMgr RollingSummarizer
-            |          |          |          |          |
-            +----------+----------+----------+----------+
-                                  |
-                    +-------------+-------------+
-                    |             |             |
-              FilesystemPort  MemoryPort    McpPort
-              ModelPort       TokenCounterPort
-                    |             |             |
-         +---Adapters---+ +---Adapters---+ +---Adapters---+
-         | VirtualFS    | | InMemory     | | AiSdkMcp     |
-         | LocalFS      | | Supabase     | | OnegenUiMcp  |
-         +------+-------+ +--------------+ +--------------+
-                |
-          +-----+------+
-          |    Tools    |
-          | ls, read,  |
-          | write, edit|
-          | glob, grep |
-          | todos, task|
-          +------------+
+┌──────────────────────────────────────────────────────────────────────┐
+│                     DeepAgent (Orchestrator)                         │
+│                                                                      │
+│  EventBus ─ ApprovalMgr ─ TokenTracker ─ ContextMgr ─ PluginMgr    │
+└──────┬──────────────┬──────────────┬──────────────┬─────────────────┘
+       │              │              │              │
+  ┌────▼────┐   ┌─────▼─────┐  ┌────▼────┐  ┌─────▼─────┐
+  │  Ports  │   │   Ports   │  │  Ports  │  │   Ports   │
+  │(inbound)│   │ (outbound)│  │(observe)│  │ (infra)   │
+  ├─────────┤   ├───────────┤  ├─────────┤  ├───────────┤
+  │PluginPort│  │Filesystem │  │Tracing  │  │RuntimePort│
+  │ModelPort │  │MemoryPort │  │Metrics  │  │Validation │
+  │Consensus │  │McpPort    │  │Logging  │  │TokenCount │
+  │          │  │LearningPt │  │         │  │           │
+  └────┬────┘  └─────┬─────┘  └────┬────┘  └─────┬─────┘
+       │              │              │              │
+  ┌────▼────┐   ┌─────▼─────┐  ┌────▼────┐  ┌─────▼─────┐
+  │Adapters │   │ Adapters  │  │Adapters │  │ Adapters  │
+  ├─────────┤   ├───────────┤  ├─────────┤  ├───────────┤
+  │BasePlugin│  │VirtualFS  │  │InMemory │  │NodeRuntime│
+  │Guardrails│  │LocalFS    │  │ Tracing │  │DenoRuntime│
+  │Workflow  │  │InMemoryMem│  │InMemory │  │BunRuntime │
+  │Observ.   │  │Supabase   │  │ Metrics │  │EdgeRuntime│
+  │OneCrawl  │  │AiSdkMcp   │  │Console  │  │ZodValid. │
+  │Vectorless│  │OnegenUiMcp│  │ Logging │  │Approximate│
+  │Evals     │  │InMemLearn │  │         │  │Tiktoken   │
+  │A2A       │  │           │  │         │  │           │
+  └────┬────┘  └───────────┘  └─────────┘  └───────────┘
+       │
+  ┌────▼────────────────────────┐
+  │          Tools              │
+  │ ls, read, write, edit,     │
+  │ glob, grep, todos, task,   │
+  │ scrape, search, generate,  │
+  │ query, mcp:*               │
+  └────────────────────────────┘
+       │
+  ┌────▼────────────────────────┐
+  │     AgentGraph (DAG)        │
+  │ node() → edge() → fork()   │
+  │ consensus strategies        │
+  │ streaming events            │
+  └────────────────────────────┘
 ```
+
+### Key Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Port** | Interface contract (e.g. `FilesystemPort`, `TracingPort`) — no implementation details |
+| **Adapter** | Concrete implementation of a port (e.g. `VirtualFilesystem`, `InMemoryTracingAdapter`) |
+| **Plugin** | Extends agent behavior via lifecycle hooks and/or tool injection |
+| **AbstractBuilder** | Template method pattern ensuring `validate()` before `construct()` |
+| **BasePlugin** | Abstract class providing `name`, `version`, and `buildHooks()` skeleton |
 
 ### Package Structure
 
@@ -113,6 +150,11 @@ src/
     token-counter.port.ts     TokenCounterPort interface
     learning.port.ts          LearningPort interface
     runtime.port.ts           RuntimePort interface
+    validation.port.ts        ValidationPort interface
+    tracing.port.ts           TracingPort / Span interfaces
+    metrics.port.ts           MetricsPort interface
+    logging.port.ts           LoggingPort / LogLevel / LogEntry
+    consensus.port.ts         ConsensusPort for fork evaluation
   adapters/
     filesystem/
       virtual-fs.adapter.ts   In-memory VFS with optional disk sync
@@ -129,11 +171,24 @@ src/
     learning/
       in-memory-learning.adapter.ts  Map-based learning storage
     runtime/
-      node-runtime.adapter.ts   Node.js runtime (process.env)
-      deno-runtime.adapter.ts   Deno runtime (Deno.env.get)
-      bun-runtime.adapter.ts    Bun runtime (process.env)
-      edge-runtime.adapter.ts   Edge/CF Workers runtime
-      detect-runtime.ts         Auto-detection + factory
+      base-runtime.adapter.ts Base runtime adapter
+      node-runtime.adapter.ts Node.js runtime (process.env)
+      deno-runtime.adapter.ts Deno runtime (Deno.env.get)
+      bun-runtime.adapter.ts  Bun runtime (process.env)
+      edge-runtime.adapter.ts Edge/CF Workers runtime
+      detect-runtime.ts       Auto-detection + factory
+    validation/
+      zod-validation.adapter.ts  Zod-based ValidationPort implementation
+    tracing/
+      in-memory-tracing.adapter.ts  In-memory span storage
+    metrics/
+      in-memory-metrics.adapter.ts  In-memory counters/histograms/gauges
+    logging/
+      console-logging.adapter.ts    Console-based structured logging
+    consensus/
+      llm-judge.adapter.ts    LLM-based consensus evaluation
+      majority-vote.adapter.ts Simple majority vote consensus
+      debate.adapter.ts       Multi-round debate consensus
   agent/
     deep-agent.ts             DeepAgent class and DeepAgentBuilder
     agent-config.ts           Default configs and resolvers
@@ -141,6 +196,7 @@ src/
     event-bus.ts              Typed event emitter
     stop-conditions.ts        Reusable stop predicates
   plugins/
+    base.plugin.ts            Abstract base class for plugins
     plugin-manager.ts         Plugin lifecycle + deterministic hook execution
     agent-card.plugin.ts      AgentCard generation and serving
     a2a.plugin.ts             A2A integration plugin
@@ -149,6 +205,8 @@ src/
     onecrawl.plugin.ts        OneCrawl web scraping integration
     vectorless.plugin.ts      Vectorless RAG/knowledge integration
     evals.plugin.ts           Evaluation metrics collection
+    workflow.plugin.ts        Multi-step workflow with retry/rollback
+    observability.plugin.ts   Tracing + metrics + logging plugin
   tools/
     filesystem/               ls, read_file, write_file, edit_file, glob, grep
     planning/                 write_todos, review_todos
@@ -157,6 +215,17 @@ src/
     context-manager.ts        Offloading and truncation
     rolling-summarizer.ts     LLM-based conversation compression
     token-tracker.ts          Cumulative usage tracking
+  graph/
+    agent-graph.ts            AgentGraph class and AgentGraphBuilder
+    agent-node.ts             Graph node wrapper
+    graph-executor.ts         DAG execution engine
+    shared-context.ts         Shared filesystem context for graph nodes
+  streaming/
+    event-stream.ts           Event stream utilities
+    sse-handler.ts            Server-Sent Events handler
+    ws-handler.ts             WebSocket handler
+    delta-encoder.ts          Delta encoding for efficient streaming
+    graph-stream.ts           Graph event streaming
   domain/
     todo.schema.ts            Todo Zod schemas
     checkpoint.schema.ts      Checkpoint Zod schemas
@@ -164,6 +233,10 @@ src/
     events.schema.ts          Event type schemas
     learning.schema.ts        Learning Zod schemas
     eval.schema.ts            Evaluation Zod schemas
+    workflow.schema.ts        Workflow step, context, result schemas
+    graph.schema.ts           Graph configuration and result schemas
+  utils/
+    abstract-builder.ts       Template method builder base class
 ```
 
 ## API Reference
@@ -307,6 +380,8 @@ const agent = DeepAgent.create({
 | `AgentCardPlugin` | Resolves `agents.md` / `skills.md` with priority `manual file > override > auto-generated` |
 | `A2APlugin` | Exposes an A2A JSON-RPC handler and adds the `a2a:call` tool for remote A2A agents |
 | `GuardrailsPlugin` | Input/output validation with Zod schemas, content filtering, and PII detection |
+| `WorkflowPlugin` | Multi-step workflow execution with retry, rollback, and conditional steps |
+| `ObservabilityPlugin` | Three-pillar observability: distributed tracing, metrics, and structured logging |
 | `OneCrawlPlugin` | Web scraping and search tools via `onecrawl` (tools: `scrape`, `search`, `batch`) |
 | `VectorlessPlugin` | RAG/knowledge tools via `@onegenui/vectorless` (tools: `generate`, `query`, `search-entities`, `list`) |
 | `EvalsPlugin` | Evaluation metrics: latency, tokens, tool usage, custom scorers |
@@ -418,6 +493,196 @@ const agent = DeepAgent.create({
 await agent.run("Hello");
 console.log(evals.getLastResult()); // { metrics: { latencyMs, stepCount, toolCalls, ... } }
 ```
+
+#### WorkflowPlugin
+
+Multi-step workflow execution with automatic retry, rollback on failure, and conditional step skipping:
+
+```typescript
+import { DeepAgent, createWorkflowPlugin } from "@onegenui/agent";
+import type { WorkflowStep } from "@onegenui/agent";
+
+const steps: WorkflowStep[] = [
+  {
+    id: "fetch-data",
+    name: "Fetch Data",
+    execute: async (ctx) => {
+      const res = await fetch("https://api.example.com/data");
+      return { ...ctx, data: await res.json() };
+    },
+    rollback: async (ctx) => {
+      console.log("Rolling back fetch-data");
+    },
+    retry: { maxAttempts: 3, backoffMs: 1000, backoffMultiplier: 2 },
+  },
+  {
+    id: "transform",
+    name: "Transform",
+    condition: (ctx) => ctx.data != null, // Skip if no data
+    execute: async (ctx) => ({ ...ctx, transformed: true }),
+  },
+];
+
+const agent = DeepAgent.create({
+  model: openai("gpt-4o"),
+  instructions: "Process the workflow results.",
+})
+  .use(createWorkflowPlugin({ steps, initialContext: { env: "prod" } }))
+  .build();
+```
+
+**Key API:**
+
+| Type | Description |
+|------|-------------|
+| `WorkflowStep` | `{ id, name, execute, rollback?, condition?, retry? }` |
+| `WorkflowContext` | `Record<string, unknown>` — shared mutable context between steps |
+| `WorkflowResult` | `{ status, context, completedSteps, skippedSteps, failedStep?, error?, totalDurationMs }` |
+| `RetryConfig` | `{ maxAttempts: 3, backoffMs: 1000, backoffMultiplier: 2 }` |
+
+#### ObservabilityPlugin
+
+Three-pillar observability integrating `TracingPort`, `MetricsPort`, and `LoggingPort`:
+
+```typescript
+import {
+  DeepAgent,
+  createObservabilityPlugin,
+  InMemoryTracingAdapter,
+  InMemoryMetricsAdapter,
+  ConsoleLoggingAdapter,
+} from "@onegenui/agent";
+
+const tracer = new InMemoryTracingAdapter();
+const metrics = new InMemoryMetricsAdapter();
+const logger = new ConsoleLoggingAdapter();
+
+const agent = DeepAgent.create({
+  model: openai("gpt-4o"),
+  instructions: "You are a helpful assistant.",
+})
+  .use(createObservabilityPlugin({ tracer, metrics, logger }))
+  .build();
+
+await agent.run("Hello");
+// Tracer: spans for agent.run and each tool.* call
+// Metrics: agent.runs.total, agent.runs.success, agent.tools.total, agent.tool.duration.ms
+// Logger: structured logs with sessionId context at debug/info/error levels
+```
+
+**Observability Ports:**
+
+| Port | Methods |
+|------|---------|
+| `TracingPort` | `startSpan(name, parentSpan?): Span` |
+| `MetricsPort` | `incrementCounter(name, value?, labels?)`, `recordHistogram(name, value, labels?)`, `recordGauge(name, value, labels?)` |
+| `LoggingPort` | `log(level, message, context?)`, `debug()`, `info()`, `warn()`, `error()` |
+
+**Span interface:** `traceId`, `spanId`, `name`, `setAttribute()`, `setStatus()`, `end()`
+
+### BasePlugin
+
+Abstract base class for building plugins. Subclasses provide `name` and implement `buildHooks()`:
+
+```typescript
+import { BasePlugin } from "@onegenui/agent";
+import type { PluginHooks, PluginContext, BeforeRunParams, BeforeRunResult } from "@onegenui/agent";
+
+class TimingPlugin extends BasePlugin {
+  readonly name = "timing";
+  private startTime = 0;
+
+  protected buildHooks(): PluginHooks {
+    return {
+      beforeRun: async (_ctx: PluginContext, _params: BeforeRunParams) => {
+        this.startTime = Date.now();
+      },
+      afterRun: async () => {
+        console.log(`Run took ${Date.now() - this.startTime}ms`);
+      },
+    };
+  }
+}
+
+const agent = DeepAgent.create({ model, instructions: "..." })
+  .use(new TimingPlugin())
+  .build();
+```
+
+### AbstractBuilder
+
+Template method pattern for validated builders. Subclasses implement `validate()` and `construct()`:
+
+```typescript
+import { AbstractBuilder } from "@onegenui/agent";
+
+interface AppConfig {
+  name: string;
+  port: number;
+}
+
+class AppConfigBuilder extends AbstractBuilder<AppConfig> {
+  private name = "";
+  private port = 3000;
+
+  withName(name: string): this { this.name = name; return this; }
+  withPort(port: number): this { this.port = port; return this; }
+
+  protected validate(): void {
+    if (!this.name) throw new Error("name is required");
+    if (this.port < 1 || this.port > 65535) throw new Error("invalid port");
+  }
+
+  protected construct(): AppConfig {
+    return { name: this.name, port: this.port };
+  }
+}
+
+const config = new AppConfigBuilder()
+  .withName("my-app")
+  .withPort(8080)
+  .build(); // Calls validate() then construct()
+```
+
+Used internally by `DeepAgentBuilder` and `AgentGraphBuilder`.
+
+### ValidationPort
+
+Engine-agnostic validation contract. The framework ships with `ZodValidationAdapter` (default):
+
+```typescript
+import { ZodValidationAdapter } from "@onegenui/agent";
+import type { ValidationPort, ValidationResult } from "@onegenui/agent";
+import { z } from "zod";
+
+const validator: ValidationPort = new ZodValidationAdapter();
+
+// Safe validation
+const result: ValidationResult<string> = validator.validate(z.string().email(), "user@example.com");
+if (result.success) {
+  console.log(result.data); // "user@example.com"
+}
+
+// Throwing validation
+const email = validator.validateOrThrow(z.string().email(), "user@example.com");
+```
+
+**Interface:**
+
+```typescript
+interface ValidationPort {
+  validate<T>(schema: unknown, data: unknown): ValidationResult<T>;
+  validateOrThrow<T>(schema: unknown, data: unknown): T;
+}
+
+interface ValidationResult<T = unknown> {
+  readonly success: boolean;
+  readonly data?: T;
+  readonly error?: string;
+}
+```
+
+To use a different validation engine (Yup, Joi, etc.), implement `ValidationPort` and pass it to plugins via their options.
 
 ### Tools
 
@@ -608,6 +873,82 @@ interface TokenCounterPort {
 }
 ```
 
+#### ValidationPort
+
+Engine-agnostic validation contract. Used by `GuardrailsPlugin`, `OneCrawlPlugin`, and `VectorlessPlugin`.
+
+```typescript
+interface ValidationPort {
+  validate<T>(schema: unknown, data: unknown): ValidationResult<T>;
+  validateOrThrow<T>(schema: unknown, data: unknown): T;
+}
+```
+
+#### TracingPort
+
+Distributed tracing contract for span-based instrumentation.
+
+```typescript
+interface Span {
+  readonly traceId: string;
+  readonly spanId: string;
+  readonly name: string;
+  setAttribute(key: string, value: string | number | boolean): void;
+  setStatus(status: "ok" | "error", message?: string): void;
+  end(): void;
+}
+
+interface TracingPort {
+  startSpan(name: string, parentSpan?: Span): Span;
+}
+```
+
+#### MetricsPort
+
+Metrics collection contract for counters, histograms, and gauges.
+
+```typescript
+interface MetricsPort {
+  incrementCounter(name: string, value?: number, labels?: Record<string, string>): void;
+  recordHistogram(name: string, value: number, labels?: Record<string, string>): void;
+  recordGauge(name: string, value: number, labels?: Record<string, string>): void;
+}
+```
+
+#### LoggingPort
+
+Structured logging contract with log levels.
+
+```typescript
+type LogLevel = "debug" | "info" | "warn" | "error";
+
+interface LoggingPort {
+  log(level: LogLevel, message: string, context?: Record<string, unknown>): void;
+  debug(message: string, context?: Record<string, unknown>): void;
+  info(message: string, context?: Record<string, unknown>): void;
+  warn(message: string, context?: Record<string, unknown>): void;
+  error(message: string, context?: Record<string, unknown>): void;
+}
+```
+
+#### ConsensusPort
+
+Strategy for evaluating fork results in `AgentGraph`.
+
+```typescript
+interface ConsensusPort {
+  evaluate(results: Array<{ id: string; output: string }>): Promise<ConsensusResult>;
+}
+
+interface ConsensusResult {
+  winnerId: string;
+  winnerOutput: string;
+  scores?: Record<string, number>;
+  merged?: string;
+  reasoning?: string;
+}
+```
+
 ### Adapters
 
 #### Filesystem
@@ -652,6 +993,38 @@ interface TokenCounterPort {
 |---------|-------------|
 | `AiSdkMcpAdapter` | Bridges `@ai-sdk/mcp` clients to the `McpPort` interface. Supports stdio, HTTP, and SSE transports. |
 | `OnegenUiMcpAdapter` | Bridges `@onegenui/mcp` `McpRegistry` to the `McpPort` interface. |
+
+#### Validation
+
+| Adapter | Description |
+|---------|-------------|
+| `ZodValidationAdapter` | Zod-based implementation of `ValidationPort`. Default validation engine. |
+
+#### Tracing
+
+| Adapter | Description |
+|---------|-------------|
+| `InMemoryTracingAdapter` | In-memory span storage. Useful for testing and development. |
+
+#### Metrics
+
+| Adapter | Description |
+|---------|-------------|
+| `InMemoryMetricsAdapter` | In-memory counters, histograms, and gauges. Useful for testing. |
+
+#### Logging
+
+| Adapter | Description |
+|---------|-------------|
+| `ConsoleLoggingAdapter` | Structured logging via `console.log/warn/error`. |
+
+#### Consensus
+
+| Adapter | Description |
+|---------|-------------|
+| `LlmJudgeConsensus` | LLM-based evaluation of fork results. Uses a model to pick the best output. |
+| `MajorityVoteConsensus` | Simple majority vote across fork outputs. |
+| `DebateConsensus` | Multi-round debate between fork outputs for consensus. |
 
 ### Events
 

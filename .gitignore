@@ -3,3 +3,5 @@ dist/
 .turbo/
 *.tsbuildinfo
 firebase-debug.log
+docs/.docusaurus/
+docs/build/
