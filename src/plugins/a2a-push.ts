@@ -21,7 +21,30 @@ export class A2APushNotifier {
     this.fetchImpl = fetchImpl;
   }
 
+  private static readonly BLOCKED_HEADERS = new Set(['host', 'authorization', 'cookie', 'content-type']);
+  private static readonly LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '0.0.0.0']);
+
   subscribe(taskId: string, config: PushNotificationConfig): void {
+    const parsed = new URL(config.url);
+    const isLocal = A2APushNotifier.LOCAL_HOSTS.has(parsed.hostname)
+      || parsed.hostname.startsWith('127.');
+    if (parsed.protocol !== 'https:' && !isLocal) {
+      throw new Error('Push notification URL must use HTTPS');
+    }
+    // Block non-HTTPS access to any local address except explicit localhost
+    if (parsed.protocol !== 'https:' && isLocal && parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1') {
+      throw new Error('Push notification URL must use HTTPS for non-standard local addresses');
+    }
+
+    // Sanitize headers — block security-sensitive headers
+    if (config.headers) {
+      for (const key of Object.keys(config.headers)) {
+        if (A2APushNotifier.BLOCKED_HEADERS.has(key.toLowerCase())) {
+          throw new Error(`Header "${key}" is not allowed in push notifications`);
+        }
+      }
+    }
+
     const existing = this.subscriptions.get(taskId) ?? [];
     existing.push(config);
     this.subscriptions.set(taskId, existing);

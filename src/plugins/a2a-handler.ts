@@ -232,13 +232,8 @@ export function createA2AJsonRpcHandler(
             return createError(id, -32602, "Invalid params: metadata must be an object");
           }
 
-          // Return initial task creation result, SSE stream is handled separately
-          const eventStream = handlers.sendTaskSubscribe({ prompt, taskId, metadata: metadata ?? undefined });
-          return {
-            jsonrpc: "2.0",
-            id,
-            result: { message: "Task subscription started", stream: true },
-          };
+          // tasks/sendSubscribe is handled via SSE HTTP endpoint, not JSON-RPC
+          return createError(id, -32601, "Use SSE endpoint for tasks/sendSubscribe");
         }
 
         case "health": {
@@ -288,20 +283,29 @@ export function createA2AHttpHandler(
         }
 
         const agentCard = cardResponse.result as any;
+        // Support both AgentCardSnapshot (agentsMd/skillsMd) and plain card (name/instructions/tools)
+        const cardName = agentCard?.name ?? agentCard?.source?.name ?? "Agent";
+        const cardDescription = agentCard?.instructions ?? agentCard?.agentsMd ?? "A2A-compatible agent";
+        const cardTools: string[] = agentCard?.tools ?? [];
+        const cardSkills: string[] = agentCard?.skillsMd 
+          ? agentCard.skillsMd.split('\n').filter((l: string) => l.startsWith('- ')).map((l: string) => l.slice(2))
+          : [];
+        const allSkills = cardTools.length > 0 ? cardTools : cardSkills;
+
         const discoveryCard = {
-          name: agentCard?.name ?? "Agent",
-          description: agentCard?.instructions ?? "A2A-compatible agent",
+          name: cardName,
+          description: cardDescription,
           url: url.origin + "/a2a",
           version: "1.0.0",
           capabilities: {
             streaming: true,
             pushNotifications: true
           },
-          skills: agentCard?.tools?.map((tool: string, index: number) => ({
+          skills: allSkills.map((skill: string, index: number) => ({
             id: `skill-${index}`,
-            name: tool,
-            description: `Skill: ${tool}`
-          })) ?? [],
+            name: skill,
+            description: `Skill: ${skill}`
+          })),
           authentication: { schemes: ["none"] }
         };
 
@@ -317,39 +321,7 @@ export function createA2AHttpHandler(
       }
     }
 
-    // Handle SSE subscription endpoint
-    if (request.method === "POST" && sseHandlers?.sendTaskSubscribe) {
-      try {
-        const parsed = await request.json();
-        const requestObject = asRecord(parsed);
-        
-        if (requestObject?.method === "tasks/sendSubscribe") {
-          const params = asRecord(requestObject.params);
-          if (!params) {
-            return new Response("Invalid params", { status: 400 });
-          }
-
-          const prompt = asString(params.prompt);
-          if (!prompt) {
-            return new Response("Prompt required", { status: 400 });
-          }
-
-          const taskId = params.taskId ? asString(params.taskId) : undefined;
-          const metadata = params.metadata ? asRecord(params.metadata) : undefined;
-
-          const eventStream = sseHandlers.sendTaskSubscribe({
-            prompt,
-            taskId: taskId ?? undefined,
-            metadata: metadata ?? undefined
-          });
-
-          return createSseResponse(eventStream);
-        }
-      } catch {
-        // Fall through to regular JSON-RPC handling
-      }
-    }
-
+    // Parse body once for POST requests
     if (request.method !== "POST") {
       return new Response(null, { status: 405 });
     }
@@ -362,6 +334,33 @@ export function createA2AHttpHandler(
         JSON.stringify(createError(null, -32700, "Parse error")),
         { status: 400, headers: { "Content-Type": "application/json" } },
       );
+    }
+
+    // Handle SSE subscription endpoint
+    if (sseHandlers?.sendTaskSubscribe) {
+      const requestObject = asRecord(parsed);
+      if (requestObject?.method === "tasks/sendSubscribe") {
+        const params = asRecord(requestObject.params);
+        if (!params) {
+          return new Response("Invalid params", { status: 400 });
+        }
+
+        const prompt = asString(params.prompt);
+        if (!prompt) {
+          return new Response("Prompt required", { status: 400 });
+        }
+
+        const taskId = params.taskId ? asString(params.taskId) : undefined;
+        const metadata = params.metadata ? asRecord(params.metadata) : undefined;
+
+        const eventStream = sseHandlers.sendTaskSubscribe({
+          prompt,
+          taskId: taskId ?? undefined,
+          metadata: metadata ?? undefined
+        });
+
+        return createSseResponse(eventStream);
+      }
     }
 
     if (Array.isArray(parsed)) {
@@ -379,14 +378,17 @@ export function createA2AHttpHandler(
       );
     }
 
+    // JSON-RPC notification: request without an id field
+    const hasId = 'id' in requestObject;
+
     const normalizedRequest: A2AJsonRpcRequest = {
       jsonrpc: requestObject.jsonrpc as "2.0",
-      id: (requestObject.id as string | number | null | undefined) ?? null,
+      id: hasId ? (requestObject.id as string | number | null) ?? null : null,
       method: requestObject.method as string,
       params: requestObject.params,
     };
 
-    if (normalizedRequest.id === undefined) {
+    if (!hasId) {
       await jsonRpcHandler({ ...normalizedRequest, id: null });
       return new Response(null, { status: 202 });
     }

@@ -149,7 +149,7 @@ describe("A2APushNotifier", () => {
   it("should subscribe and unsubscribe to push notifications", () => {
     const config = {
       url: "https://webhook.example.com/notify",
-      headers: { "Authorization": "Bearer token" },
+      headers: { "X-Webhook-Secret": "token123" },
       events: ["task:completed" as const]
     };
 

@@ -71,6 +71,8 @@ export class A2APlugin implements DeepAgentPlugin {
   private readonly delegationManager: A2ADelegationManager;
   private readonly pushNotifier: A2APushNotifier;
   private readonly taskEventListeners = new Set<(event: A2ATaskEvent) => void>();
+  private static readonly MAX_COMPLETED_TASKS = 1000;
+  private static readonly TASK_TTL_MS = 3600_000; // 1 hour
 
   private setupCtx?: PluginSetupContext;
   private latestCtx?: PluginContext;
@@ -178,8 +180,6 @@ export class A2APlugin implements DeepAgentPlugin {
     const sendTaskSubscribe = async function* (params: A2ATasksSendParams): AsyncGenerator<A2ATaskEvent, void, unknown> {
       const taskId = params.taskId ?? crypto.randomUUID();
       
-      plugin.queueTask(taskId, params.prompt, params.metadata);
-      
       const events: A2ATaskEvent[] = [];
       let completed = false;
       
@@ -192,7 +192,9 @@ export class A2APlugin implements DeepAgentPlugin {
         }
       };
       
+      // Register listener before queueTask so task:queued event is captured
       plugin.taskEventListeners.add(eventListener);
+      plugin.queueTask(taskId, params.prompt, params.metadata);
       
       try {
         const runMetadata: Record<string, unknown> = {
@@ -306,10 +308,9 @@ export class A2APlugin implements DeepAgentPlugin {
   }
 
   createHttpHandler(agent: A2AAgentRuntime): (request: Request) => Promise<Response> {
-    const plugin = this;
-    return createA2AHttpHandler(plugin.createJsonRpcHandler(agent), {
+    const handler = this.createJsonRpcHandler(agent) as any;
+    return createA2AHttpHandler(handler, {
       sendTaskSubscribe: async function* (params: A2ATasksSendParams): AsyncGenerator<A2ATaskEvent, void, unknown> {
-        const handler = plugin.createJsonRpcHandler(agent) as any;
         for await (const event of handler.sendTaskSubscribe(params)) {
           yield event;
         }
@@ -412,6 +413,10 @@ export class A2APlugin implements DeepAgentPlugin {
     prompt: string,
     metadata?: Record<string, unknown>,
   ): void {
+    this.evictStaleTasks();
+    if (this.tasks.size >= A2APlugin.MAX_COMPLETED_TASKS) {
+      throw new Error('Task queue at capacity. Try again later.');
+    }
     const now = new Date().toISOString();
     this.tasks.set(taskId, {
       id: taskId,
@@ -443,6 +448,7 @@ export class A2APlugin implements DeepAgentPlugin {
     task.completedAt = now;
     task.error = undefined;
     this.emitTaskEvent("task:completed", taskId);
+    this.evictStaleTasks();
   }
 
   private markTaskFailed(taskId: string, error: unknown): void {
@@ -455,6 +461,17 @@ export class A2APlugin implements DeepAgentPlugin {
     task.updatedAt = now;
     task.completedAt = now;
     this.emitTaskEvent("task:failed", taskId);
+    this.evictStaleTasks();
+  }
+
+  private evictStaleTasks(): void {
+    const now = Date.now();
+    for (const [id, task] of this.tasks) {
+      if (task.completedAt && now - new Date(task.completedAt).getTime() > A2APlugin.TASK_TTL_MS) {
+        this.tasks.delete(id);
+        this.pushNotifier.cleanup(id);
+      }
+    }
   }
 
   private emitTaskEvent(type: A2ATaskEvent['type'], taskId: string): void {
@@ -485,18 +502,22 @@ export class A2APlugin implements DeepAgentPlugin {
 
   private async discoverAgent(endpoint: string): Promise<AgentCapability> {
     try {
-      // Try .well-known discovery first
       const discoveryUrl = new URL('/.well-known/agent.json', endpoint).toString();
-      const discoveryResponse = await this.fetchImpl(discoveryUrl);
-      
-      if (discoveryResponse.ok) {
-        const discoveryData = await discoveryResponse.json() as any;
-        return {
-          name: discoveryData.name,
-          description: discoveryData.description,
-          skills: discoveryData.skills?.map((s: any) => s.name) ?? [],
-          endpoint: endpoint
-        };
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.requestTimeoutMs);
+      try {
+        const discoveryResponse = await this.fetchImpl(discoveryUrl, { signal: controller.signal });
+        if (discoveryResponse.ok) {
+          const discoveryData = await discoveryResponse.json() as any;
+          return {
+            name: discoveryData.name,
+            description: discoveryData.description,
+            skills: discoveryData.skills?.map((s: any) => s.name) ?? [],
+            endpoint: endpoint
+          };
+        }
+      } finally {
+        clearTimeout(timer);
       }
     } catch {
       // Fall back to agent/card method
@@ -533,13 +554,20 @@ export class A2APlugin implements DeepAgentPlugin {
       params: { prompt, taskId }
     };
 
+    // SSE streams get 5x the normal timeout
+    const sseTimeoutMs = this.requestTimeoutMs * 5;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), sseTimeoutMs);
+
+    try {
     const response = await this.fetchImpl(sseUrl, {
       method: "POST",
       headers: { 
         "Content-Type": "application/json",
         "Accept": "text/event-stream"
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: controller.signal
     });
 
     if (!response.ok) {
@@ -554,15 +582,18 @@ export class A2APlugin implements DeepAgentPlugin {
       throw new Error("No response body for SSE stream");
     }
 
+    let buffer = '';
     try {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
+        buffer += decoder.decode(value, { stream: true });
+        const segments = buffer.split('\n');
+        // Last segment may be incomplete — keep it in buffer
+        buffer = segments.pop() ?? '';
         
-        for (const line of lines) {
+        for (const line of segments) {
           if (line.startsWith('data: ')) {
             try {
               const eventData = JSON.parse(line.substring(6));
@@ -586,6 +617,9 @@ export class A2APlugin implements DeepAgentPlugin {
       message: "Task subscription completed",
       events 
     };
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   private getTaskIdFromContext(ctx: PluginContext): string | undefined {
