@@ -39,6 +39,7 @@ ${bold("Options:")}
   --provider  AI provider (${SUPPORTED_PROVIDERS.join(", ")})
   --model     Model ID override (e.g. gpt-4o-mini, claude-sonnet-4-20250514)
   --api-key   API key (overrides config file and env vars)
+  --yolo      Skip confirmations for tool execution (bash, file writes)
   --help      Show this help
   --version   Show version
 
@@ -63,6 +64,7 @@ async function main(): Promise<void> {
       "api-key": { type: "string", short: "k" },
       help: { type: "boolean", short: "h" },
       version: { type: "boolean", short: "v" },
+      yolo: { type: "boolean" },
     },
     strict: false,
   });
@@ -94,7 +96,7 @@ async function main(): Promise<void> {
     case "run":
       return handleRun(
         positionals.slice(1).join(" "),
-        values as Record<string, string | undefined>,
+        values as Record<string, string | boolean | undefined>,
       );
 
     case "demo":
@@ -107,7 +109,7 @@ async function main(): Promise<void> {
       // Treat unknown command as a direct prompt (like claude code / opencode)
       return handleRun(
         [command, ...positionals.slice(1)].join(" "),
-        values as Record<string, string | undefined>,
+        values as Record<string, string | boolean | undefined>,
       );
   }
 }
@@ -239,16 +241,16 @@ async function handleChat(opts: Record<string, string | undefined>): Promise<voi
 
 async function handleRun(
   prompt: string,
-  opts: Record<string, string | undefined>,
+  opts: Record<string, string | boolean | undefined>,
 ): Promise<void> {
   if (!prompt.trim()) {
     console.error(color("red", 'Usage: gaussflow run "<prompt>" --provider <name>'));
     process.exitCode = 1;
     return;
   }
-  const { provider, model, apiKey } = await resolveProviderAndModel(opts);
+  const { provider, model, apiKey } = await resolveProviderAndModel(opts as Record<string, string | undefined>);
   const languageModel = await createModel(provider, apiKey, model);
-  await runChat(prompt, languageModel);
+  await runChat(prompt, languageModel, !!opts.yolo);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

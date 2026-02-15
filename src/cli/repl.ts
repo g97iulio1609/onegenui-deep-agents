@@ -1,5 +1,5 @@
 // =============================================================================
-// CLI REPL — Interactive chat mode
+// CLI REPL — Interactive agentic chat mode
 // =============================================================================
 
 import { createInterface } from "node:readline/promises";
@@ -9,7 +9,13 @@ import { DeepAgent } from "../agent/deep-agent.js";
 import { createModel, getDefaultModel, isValidProvider, SUPPORTED_PROVIDERS } from "./providers.js";
 import type { ProviderName } from "./providers.js";
 import { resolveApiKey, listKeys, ENV_MAP } from "./config.js";
-import { color, bold, createSpinner, formatDuration, maskKey } from "./format.js";
+import { color, bold, createSpinner, formatDuration, maskKey, formatMarkdown } from "./format.js";
+import { createCliTools } from "./tools.js";
+import { readFile } from "./commands/files.js";
+import { runBash } from "./commands/bash.js";
+
+const DEFAULT_SYSTEM_PROMPT =
+  "You are GaussFlow, an AI coding assistant. You can read files, write files, search code, list directories, and execute bash commands. Use these tools to help the user accomplish their tasks. Be concise and direct.";
 
 export async function startRepl(
   initialModel: LanguageModel,
@@ -22,6 +28,8 @@ export async function startRepl(
   let currentProvider = providerName;
   let currentModelId = modelId ?? getDefaultModel(providerName);
   let currentApiKey = apiKey;
+  let systemPrompt = DEFAULT_SYSTEM_PROMPT;
+  let yoloMode = false;
 
   const history: Array<{ role: "user" | "assistant"; content: string }> = [];
 
@@ -29,13 +37,26 @@ export async function startRepl(
   console.log(bold(color("cyan", "  ║       🤖 GaussFlow Interactive       ║")));
   console.log(bold(color("cyan", "  ╚══════════════════════════════════════╝")));
   console.log(color("dim", `  Provider: ${currentProvider} | Model: ${currentModelId}`));
+  console.log(color("dim", "  Tools: readFile, writeFile, bash, listFiles, searchFiles"));
   console.log(color("dim", "  Type /help for commands, /exit to quit\n"));
+
+  function promptText(): string {
+    const yoloTag = yoloMode ? color("red", "[YOLO]") : "";
+    return color("green", `gaussflow:${currentProvider}${yoloTag}> `);
+  }
 
   try {
     while (true) {
-      const input = await rl.question(color("green", `gaussflow:${currentProvider}> `));
+      const input = await rl.question(promptText());
       const trimmed = input.trim();
       if (!trimmed) continue;
+
+      // ! shortcut for bash
+      if (trimmed.startsWith("!")) {
+        const cmd = trimmed.slice(1).trim();
+        if (cmd) await handleBash(cmd);
+        continue;
+      }
 
       if (trimmed.startsWith("/")) {
         const handled = await handleSlashCommand(trimmed);
@@ -56,20 +77,49 @@ export async function startRepl(
     rl.close();
   }
 
+  async function confirmAction(description: string): Promise<boolean> {
+    const answer = await rl.question(color("yellow", `  ⚠ ${description} — Execute? (y/n) `));
+    return answer.toLowerCase().startsWith("y");
+  }
+
+  async function handleBash(command: string): Promise<void> {
+    if (!yoloMode) {
+      const ok = await confirmAction(`Run: ${command}`);
+      if (!ok) {
+        console.log(color("dim", "  Cancelled.\n"));
+        return;
+      }
+    }
+    const result = runBash(command);
+    if (result.stdout) process.stdout.write(result.stdout);
+    if (result.stderr) process.stderr.write(color("red", result.stderr));
+    if (result.exitCode !== 0) {
+      console.log(color("red", `  Exit code: ${result.exitCode}\n`));
+    }
+  }
+
   async function chat(prompt: string): Promise<void> {
     history.push({ role: "user", content: prompt });
 
+    const tools = createCliTools({
+      yolo: yoloMode,
+      confirm: confirmAction,
+    });
+
     const agent = DeepAgent.create({
       model: currentModel,
-      instructions: "You are a helpful assistant. Answer clearly and concisely.",
-    }).build();
+      instructions: systemPrompt,
+      maxSteps: 15,
+    })
+      .withTools(tools)
+      .build();
 
     const startTime = Date.now();
     const spinner = createSpinner("Thinking");
 
     try {
       const stream = await agent.stream({
-        messages: history,
+        messages: history as Array<{ role: string; content: unknown }>,
       });
 
       let response = "";
@@ -84,11 +134,14 @@ export async function startRepl(
         response += chunk;
       }
 
-      history.push({ role: "assistant", content: response });
+      if (response) {
+        history.push({ role: "assistant", content: response });
+      }
+
       const elapsed = formatDuration(Date.now() - startTime);
       process.stdout.write(color("dim", `\n\n  ⏱ ${elapsed} | ${history.length} messages\n\n`));
     } catch (err) {
-      history.pop(); // remove failed user message
+      history.pop();
       const msg = err instanceof Error ? err.message : String(err);
       console.error(color("red", `\n✗ Error: ${msg}\n`));
     } finally {
@@ -108,14 +161,27 @@ export async function startRepl(
         return "exit";
 
       case "/help":
-        console.log(bold("\nAvailable commands:"));
+        console.log(bold("\nCommands:"));
         console.log("  /help              Show this help");
         console.log("  /exit              Exit the REPL");
         console.log("  /clear             Clear the screen");
+        console.log("");
+        console.log(bold("  Provider & Model:"));
         console.log("  /model <name>      Switch model (e.g. /model gpt-4o-mini)");
-        console.log("  /provider <name>   Switch provider (openai, anthropic, google, groq, mistral, openrouter)");
+        console.log("  /provider <name>   Switch provider");
         console.log("  /info              Show current provider and model");
         console.log("  /settings          Show all current settings");
+        console.log("");
+        console.log(bold("  Agent:"));
+        console.log("  /system [prompt]   Get/set system prompt");
+        console.log("  /yolo [on|off]     Toggle YOLO mode (skip confirmations)");
+        console.log("");
+        console.log(bold("  File & Shell:"));
+        console.log("  /read <file>       Read and display a file");
+        console.log("  /bash <cmd>        Execute a bash command");
+        console.log("  !<cmd>             Shortcut for /bash");
+        console.log("");
+        console.log(bold("  History:"));
         console.log("  /history           Show conversation history");
         console.log("  /clear-history     Clear conversation history\n");
         break;
@@ -126,7 +192,8 @@ export async function startRepl(
 
       case "/info":
         console.log(color("cyan", `  Provider: ${currentProvider}`));
-        console.log(color("cyan", `  Model: ${currentModelId}\n`));
+        console.log(color("cyan", `  Model: ${currentModelId}`));
+        console.log(color("cyan", `  YOLO: ${yoloMode ? "ON" : "OFF"}\n`));
         break;
 
       case "/model": {
@@ -177,11 +244,69 @@ export async function startRepl(
         break;
       }
 
+      case "/system": {
+        const newPrompt = parts.slice(1).join(" ").trim();
+        if (!newPrompt) {
+          console.log(bold("\n  System prompt:"));
+          console.log(color("dim", `  ${systemPrompt}\n`));
+        } else {
+          systemPrompt = newPrompt;
+          console.log(color("green", "  ✓ System prompt updated.\n"));
+        }
+        break;
+      }
+
+      case "/yolo": {
+        const arg = parts[1]?.toLowerCase();
+        if (arg === "on") {
+          yoloMode = true;
+        } else if (arg === "off") {
+          yoloMode = false;
+        } else {
+          yoloMode = !yoloMode;
+        }
+        const status = yoloMode
+          ? color("red", "ON — commands execute without confirmation")
+          : color("green", "OFF — will ask before executing");
+        console.log(`  YOLO mode: ${status}\n`);
+        break;
+      }
+
+      case "/read": {
+        const filePath = parts[1];
+        if (!filePath) {
+          console.log(color("red", "  Usage: /read <file-path>\n"));
+          break;
+        }
+        try {
+          const result = readFile(filePath);
+          console.log(color("dim", `\n  ─── ${result.path} ───`));
+          console.log(result.content);
+          console.log(color("dim", "  ─────────\n"));
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.log(color("red", `  ✗ ${msg}\n`));
+        }
+        break;
+      }
+
+      case "/bash": {
+        const bashCmd = parts.slice(1).join(" ").trim();
+        if (!bashCmd) {
+          console.log(color("red", "  Usage: /bash <command>\n"));
+          break;
+        }
+        await handleBash(bashCmd);
+        break;
+      }
+
       case "/settings":
         console.log(bold("\n  ⚙ Settings:"));
         console.log(`  Provider:  ${color("cyan", currentProvider)}`);
         console.log(`  Model:     ${color("cyan", currentModelId)}`);
         console.log(`  API Key:   ${color("dim", maskKey(currentApiKey))}`);
+        console.log(`  YOLO:      ${yoloMode ? color("red", "ON") : color("green", "OFF")}`);
+        console.log(`  System:    ${color("dim", systemPrompt.length > 60 ? systemPrompt.slice(0, 57) + "..." : systemPrompt)}`);
         console.log(`  Available: ${color("dim", SUPPORTED_PROVIDERS.join(", "))}`);
         {
           const allKeys = listKeys();

@@ -58,6 +58,24 @@ export function formatDuration(ms: number): string {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
+// Simple markdown formatting for terminal output
+export function formatMarkdown(text: string): string {
+  return text
+    // Code blocks
+    .replace(/```(\w*)\n([\s\S]*?)```/g, (_match, lang: string, code: string) => {
+      const header = lang ? color("dim", `  ─── ${lang} ───`) : "";
+      return `${header}\n${color("cyan", code.trimEnd())}\n${color("dim", "  ─────────")}`;
+    })
+    // Inline code
+    .replace(/`([^`]+)`/g, (_match, code: string) => color("cyan", code))
+    // Bold
+    .replace(/\*\*([^*]+)\*\*/g, (_match, text: string) => bold(text))
+    // Headers
+    .replace(/^(#{1,3})\s+(.+)$/gm, (_match, _hashes: string, text: string) =>
+      bold(color("yellow", text)),
+    );
+}
+
 // Box drawing for nice output
 export function box(title: string, content: string): string {
   const lines = content.split("\n");
