@@ -50,6 +50,16 @@
       "types": "./dist/scraping/index.d.ts",
       "import": "./dist/scraping/index.js",
       "require": "./dist/scraping/index.cjs"
+    },
+    "./workflow": {
+      "types": "./dist/workflow/index.d.ts",
+      "import": "./dist/workflow/index.js",
+      "require": "./dist/workflow/index.cjs"
+    },
+    "./a2a": {
+      "types": "./dist/a2a/index.d.ts",
+      "import": "./dist/a2a/index.js",
+      "require": "./dist/a2a/index.cjs"
     }
   },
   "files": [

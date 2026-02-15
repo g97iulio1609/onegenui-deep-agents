@@ -9,6 +9,8 @@ export default defineConfig([
       "rest/index": "src/rest/index.ts",
       "plugins/index": "src/plugins/index.ts",
       "scraping/index": "src/scraping/index.ts",
+      "workflow/index": "src/workflow/index.ts",
+      "a2a/index": "src/a2a/index.ts",
     },
     format: ["cjs", "esm"],
     dts: true,
