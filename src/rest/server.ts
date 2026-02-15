@@ -11,14 +11,17 @@ import {
   handleRun,
   handleStream,
   handleGraphRun,
+  handleAgentHealth,
 } from "./handlers.js";
+import { DeepAgent } from "../agent/deep-agent.js";
 
 export class GaussFlowServer {
   private readonly options: Required<ServerOptions>;
   private readonly router: Router;
   private server: Server | null = null;
+  private agent?: DeepAgent;
 
-  constructor(options?: ServerOptions) {
+  constructor(options?: ServerOptions, agent?: DeepAgent) {
     this.options = {
       port: options?.port ?? 3456,
       apiKey: options?.apiKey ?? "",
@@ -27,6 +30,7 @@ export class GaussFlowServer {
       cors: options?.cors ?? true,
     };
 
+    this.agent = agent;
     this.router = new Router();
     this.registerRoutes();
   }
@@ -37,6 +41,11 @@ export class GaussFlowServer {
     // Public endpoints
     this.router.get("/api/health", handleHealth);
     this.router.get("/api/info", handleInfo(opts));
+    
+    // Agent health endpoint (if agent is provided)
+    if (this.agent) {
+      this.router.get("/health", handleAgentHealth(this.agent));
+    }
 
     // Protected endpoints
     this.router.post("/api/run", handleRun(opts));
@@ -54,6 +63,9 @@ export class GaussFlowServer {
       this.router.options("/api/graph/run", corsHandler);
       this.router.options("/api/health", corsHandler);
       this.router.options("/api/info", corsHandler);
+      if (this.agent) {
+        this.router.options("/health", corsHandler);
+      }
     }
   }
 
@@ -65,8 +77,8 @@ export class GaussFlowServer {
   }
 
   private authenticate(req: IncomingMessage, pathname: string): boolean {
-    // Health is always public
-    if (pathname === "/api/health") return true;
+    // Health endpoints are always public
+    if (pathname === "/api/health" || pathname === "/health") return true;
     // If no API key configured, auth is disabled
     if (!this.options.apiKey) return true;
 
@@ -107,19 +119,25 @@ export class GaussFlowServer {
     }
   };
 
-  listen(port?: number): Promise<void> {
+  async listen(port?: number): Promise<void> {
+    if (this.agent) {
+      await this.agent.startup();
+    }
     const p = port ?? this.options.port;
-    return new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       this.server = createServer(this.handleRequest);
       this.server.on("error", reject);
       this.server.listen(p, () => resolve());
     });
   }
 
-  close(): Promise<void> {
-    return new Promise((resolve, reject) => {
+  async close(): Promise<void> {
+    await new Promise<void>((resolve, reject) => {
       if (!this.server) return resolve();
       this.server.close((err) => (err ? reject(err) : resolve()));
     });
+    if (this.agent) {
+      await this.agent.shutdown();
+    }
   }
 }

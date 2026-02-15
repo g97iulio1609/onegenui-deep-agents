@@ -79,6 +79,24 @@ export function handleInfo(
 }
 
 // ---------------------------------------------------------------------------
+// GET /health (Agent Health Check)
+// ---------------------------------------------------------------------------
+
+export function handleAgentHealth(
+  agent: DeepAgent,
+): (_req: IncomingMessage, res: ServerResponse) => Promise<void> {
+  return async (_req, res) => {
+    try {
+      const healthStatus = await agent.healthCheck();
+      const statusCode = healthStatus.healthy ? 200 : 503;
+      sendJson(res, statusCode, healthStatus);
+    } catch (err) {
+      sendError(res, 500, errorMessage(err));
+    }
+  };
+}
+
+// ---------------------------------------------------------------------------
 // POST /api/run
 // ---------------------------------------------------------------------------
 

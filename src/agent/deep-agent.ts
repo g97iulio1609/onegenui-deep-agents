@@ -26,6 +26,8 @@ import { CircuitBreaker, RateLimiter, ToolCache, DEFAULT_CIRCUIT_BREAKER_CONFIG,
 import type { CircuitBreakerConfig, RateLimiterConfig, ToolCacheConfig } from "../adapters/resilience/index.js";
 import { ToolManager } from "./tool-manager.js";
 import { ExecutionEngine } from "./execution-engine.js";
+import { LifecycleManager, type LifecycleHooks, type HealthStatus } from "./lifecycle.js";
+import type { PromptTemplate } from "../templates/index.js";
 
 // =============================================================================
 // Result type
@@ -69,6 +71,7 @@ export class DeepAgentBuilder extends AbstractBuilder<DeepAgent> {
 
   private extraTools: Record<string, Tool> = {};
   private readonly plugins: DeepAgentPlugin[] = [];
+  private lifecycleHooks?: LifecycleHooks;
 
   private readonly eventHandlers: Array<{
     type: AgentEventType | "*";
@@ -167,6 +170,22 @@ export class DeepAgentBuilder extends AbstractBuilder<DeepAgent> {
     return this;
   }
 
+  withLifecycle(hooks: LifecycleHooks): this {
+    this.lifecycleHooks = hooks;
+    return this;
+  }
+
+  withInstructions(instructions: string): this;
+  withInstructions(template: PromptTemplate, variables?: Record<string, string>): this;
+  withInstructions(instructionsOrTemplate: string | PromptTemplate, variables?: Record<string, string>): this {
+    if (typeof instructionsOrTemplate === 'string') {
+      this.agentConfig.instructions = instructionsOrTemplate;
+    } else {
+      this.agentConfig.instructions = instructionsOrTemplate.compile(variables);
+    }
+    return this;
+  }
+
   protected validate(): void {
     if (!this.agentConfig.model) throw new Error("model is required");
     if (!this.agentConfig.instructions) throw new Error("instructions is required");
@@ -200,6 +219,7 @@ export class DeepAgentBuilder extends AbstractBuilder<DeepAgent> {
       circuitBreaker: this.circuitBreaker,
       rateLimiter: this.rateLimiter,
       toolCache: this.toolCache,
+      lifecycleHooks: this.lifecycleHooks,
     });
 
     for (const { type, handler } of this.eventHandlers) {
@@ -241,6 +261,7 @@ interface DeepAgentInternalConfig {
   circuitBreaker?: CircuitBreaker;
   rateLimiter?: RateLimiter;
   toolCache?: ToolCache;
+  lifecycleHooks?: LifecycleHooks;
 }
 
 export class DeepAgent {
@@ -254,6 +275,7 @@ export class DeepAgent {
   private readonly pluginManager: PluginManager;
   private readonly toolManager: ToolManager;
   private readonly executionEngine: ExecutionEngine;
+  private readonly lifecycleManager: LifecycleManager;
   
   // Resilience patterns
   private readonly circuitBreaker?: CircuitBreaker;
@@ -280,6 +302,9 @@ export class DeepAgent {
     this.circuitBreaker = config.circuitBreaker;
     this.rateLimiter = config.rateLimiter;
     this.toolCache = config.toolCache;
+
+    // Initialize lifecycle manager
+    this.lifecycleManager = new LifecycleManager(config.lifecycleHooks ?? {});
 
     // Initialize ToolManager and ExecutionEngine
     this.toolManager = new ToolManager(
@@ -370,6 +395,30 @@ export class DeepAgent {
   }
 
   // ---------------------------------------------------------------------------
+  // Lifecycle Management
+  // ---------------------------------------------------------------------------
+
+  async startup(): Promise<void> {
+    return this.lifecycleManager.startup();
+  }
+
+  async shutdown(): Promise<void> {
+    return this.lifecycleManager.shutdown();
+  }
+
+  async healthCheck(): Promise<HealthStatus> {
+    return this.lifecycleManager.healthCheck();
+  }
+
+  get isReady(): boolean {
+    return this.lifecycleManager.isReady;
+  }
+
+  get isShuttingDown(): boolean {
+    return this.lifecycleManager.isShuttingDown;
+  }
+
+  // ---------------------------------------------------------------------------
   // Run & Stream - Delegation to ExecutionEngine
   // ---------------------------------------------------------------------------
 
@@ -392,6 +441,12 @@ export class DeepAgent {
   // ---------------------------------------------------------------------------
 
   async dispose(): Promise<void> {
+    try {
+      await this.lifecycleManager.shutdown();
+    } catch {
+      // Continue with cleanup even if shutdown fails
+    }
+    
     try {
       await this.pluginManager.dispose();
     } finally {

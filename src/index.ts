@@ -244,7 +244,9 @@ export type {
   EvalsPluginOptions,
   EvalScorer,
   WorkflowPluginConfig,
+  ObservabilityConfig,
   ObservabilityPluginConfig,
+  AgentMetrics,
 } from "./plugins/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -395,6 +397,18 @@ export { LlmJudgeConsensus } from "./adapters/consensus/llm-judge.adapter.js";
 export { MajorityVoteConsensus } from "./adapters/consensus/majority-vote.adapter.js";
 export { DebateConsensus } from "./adapters/consensus/debate.adapter.js";
 export type { GraphConfig, GraphResult, GraphStreamEvent } from "./domain/graph.schema.js";
+
+// ---------------------------------------------------------------------------
+// Templates — Prompt Template System
+// ---------------------------------------------------------------------------
+export { PromptTemplate } from "./templates/index.js";
+export type { PromptTemplateConfig } from "./templates/index.js";
+
+// ---------------------------------------------------------------------------
+// Lifecycle — Startup, Shutdown, Health Management
+// ---------------------------------------------------------------------------
+export { LifecycleManager } from "./agent/lifecycle.js";
+export type { LifecycleHooks, HealthStatus } from "./agent/lifecycle.js";
 
 // ---------------------------------------------------------------------------
 // Streaming — Real-Time Event Streaming

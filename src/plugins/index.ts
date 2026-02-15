@@ -66,5 +66,8 @@ export {
 export {
   ObservabilityPlugin,
   createObservabilityPlugin,
+  type ObservabilityConfig,
   type ObservabilityPluginConfig,
+  type Span,
+  type AgentMetrics,
 } from "./observability.plugin.js";

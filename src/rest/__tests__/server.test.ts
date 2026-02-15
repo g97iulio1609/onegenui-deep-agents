@@ -2,7 +2,7 @@
 // REST API — Tests
 // =============================================================================
 
-import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
 import http from "node:http";
 import { Router, parseBody, sendJson, sendError } from "../router.js";
 import { GaussFlowServer } from "../server.js";
@@ -430,6 +430,105 @@ describe("GaussFlowServer (with auth)", () => {
       { Authorization: `Bearer ${API_KEY}` },
     );
     expect(res.status).toBe(200);
+  });
+});
+
+// =============================================================================
+// Agent Health Endpoint Tests
+// =============================================================================
+
+describe("GaussFlowServer with Agent", () => {
+  const API_KEY = "test-key-123";
+  let actualPort: number;
+
+  describe("Agent health endpoint", () => {
+    let server: GaussFlowServer;
+    let mockAgent: any;
+
+    beforeEach(async () => {
+      // Create mock agent with lifecycle methods
+      mockAgent = {
+        startup: vi.fn().mockResolvedValue(undefined),
+        shutdown: vi.fn().mockResolvedValue(undefined),
+        healthCheck: vi.fn().mockResolvedValue({
+          healthy: true,
+          details: {
+            lifecycle: { status: 'up', message: 'Agent is ready' }
+          }
+        }),
+        isReady: vi.fn().mockReturnValue(true),
+        isShuttingDown: vi.fn().mockReturnValue(false),
+      };
+
+      server = new GaussFlowServer(
+        {
+          port: 0,
+          apiKey: API_KEY,
+          defaultProvider: "openai",
+          defaultModel: "gpt-4o",
+          cors: true,
+        },
+        mockAgent
+      );
+
+      await server.listen();
+      const addr = (server as any).server?.address();
+      actualPort = typeof addr === "object" && addr ? addr.port : 3458;
+    });
+
+    afterEach(async () => {
+      try {
+        await server.close();
+      } catch (error) {
+        // Ignore errors if server is already closed
+        if (!(error instanceof Error) || !error.message.includes('Server is not running')) {
+          throw error;
+        }
+      }
+    });
+
+    it("should expose /health endpoint when agent is provided", async () => {
+      const res = await request(actualPort, "GET", "/health");
+      expect(res.status).toBe(200);
+      
+      const body = JSON.parse(res.body);
+      expect(body.healthy).toBe(true);
+      expect(body.details.lifecycle.status).toBe('up');
+      expect(mockAgent.healthCheck).toHaveBeenCalledTimes(1);
+    });
+
+    it("should return 503 for unhealthy agent", async () => {
+      // Mock unhealthy agent
+      mockAgent.healthCheck.mockResolvedValue({
+        healthy: false,
+        details: {
+          lifecycle: { status: 'down', message: 'Agent not started' }
+        }
+      });
+
+      const res = await request(actualPort, "GET", "/health");
+      expect(res.status).toBe(503);
+      
+      const body = JSON.parse(res.body);
+      expect(body.healthy).toBe(false);
+      expect(body.details.lifecycle.status).toBe('down');
+    });
+
+    it("should call agent startup during server start", async () => {
+      // startup should have been called during server.listen()
+      expect(mockAgent.startup).toHaveBeenCalledTimes(1);
+    });
+
+    it("should call agent shutdown during server close", async () => {
+      // Reset the mock to count calls from this test only
+      mockAgent.shutdown.mockClear();
+      
+      // Manually close the server
+      await server.close();
+      
+      // shutdown should be called during server.close()
+      expect(mockAgent.shutdown).toHaveBeenCalledTimes(1);
+    });
   });
 });
 
