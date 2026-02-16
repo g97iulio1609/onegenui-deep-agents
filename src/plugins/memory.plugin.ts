@@ -43,12 +43,17 @@ export class MemoryPlugin implements DeepAgentPlugin {
     return {
       "memory:store": tool({
         description: "Store a memory entry for future recall",
-        parameters: z.object({
+        inputSchema: z.object({
           content: z.string().describe("The content to remember"),
           type: z.enum(["conversation", "fact", "preference", "task", "summary"]).describe("Type of memory"),
           importance: z.number().min(0).max(1).optional().describe("Importance score 0-1"),
         }),
-        execute: async ({ content, type, importance }) => {
+        execute: async (args: unknown) => {
+          const { content, type, importance } = z.object({
+            content: z.string(),
+            type: z.enum(["conversation", "fact", "preference", "task", "summary"]),
+            importance: z.number().optional(),
+          }).parse(args);
           const entry: MemoryEntry = {
             id: crypto.randomUUID(),
             content,
@@ -63,13 +68,19 @@ export class MemoryPlugin implements DeepAgentPlugin {
 
       "memory:recall": tool({
         description: "Recall memories matching a query",
-        parameters: z.object({
+        inputSchema: z.object({
           query: z.string().optional().describe("Keyword search query"),
           type: z.enum(["conversation", "fact", "preference", "task", "summary"]).optional().describe("Filter by type"),
           limit: z.number().optional().describe("Max entries to return (default 10)"),
           minImportance: z.number().min(0).max(1).optional().describe("Minimum importance threshold"),
         }),
-        execute: async ({ query, type, limit, minImportance }) => {
+        execute: async (args: unknown) => {
+          const { query, type, limit, minImportance } = z.object({
+            query: z.string().optional(),
+            type: z.enum(["conversation", "fact", "preference", "task", "summary"]).optional(),
+            limit: z.number().optional(),
+            minImportance: z.number().optional(),
+          }).parse(args);
           const entries = await this.adapter.recall(query ?? "", { query, type, limit, minImportance });
           if (entries.length === 0) return "No memories found.";
           return entries.map((e) => `[${e.type}] ${e.content}`).join("\n");
@@ -78,7 +89,7 @@ export class MemoryPlugin implements DeepAgentPlugin {
 
       "memory:stats": tool({
         description: "Get memory statistics",
-        parameters: z.object({}),
+        inputSchema: z.object({}),
         execute: async () => {
           const stats = await this.adapter.getStats();
           return JSON.stringify(stats, null, 2);
@@ -87,7 +98,7 @@ export class MemoryPlugin implements DeepAgentPlugin {
 
       "memory:clear": tool({
         description: "Clear all stored memories",
-        parameters: z.object({}),
+        inputSchema: z.object({}),
         execute: async () => {
           await this.adapter.clear();
           return "All memories cleared.";
