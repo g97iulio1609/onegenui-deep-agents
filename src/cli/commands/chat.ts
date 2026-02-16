@@ -5,6 +5,7 @@
 import type { LanguageModel } from "ai";
 import { color, createSpinner, formatDuration } from "../format.js";
 import { createCliTools } from "../tools.js";
+import { detectProjectContext, contextToSystemPrompt } from "../project-context.js";
 
 /** Max characters shown for streaming tool-input deltas */
 const MAX_DELTA_DISPLAY_LENGTH = 200;
@@ -39,9 +40,11 @@ export async function runChat(
   const { DefaultCostTrackerAdapter } = await import("../../adapters/cost-tracker/index.js");
   const { persistUsage } = await import("../persist-usage.js");
   const costTracker = new DefaultCostTrackerAdapter();
+  let projectContext = "";
+  try { projectContext = contextToSystemPrompt(detectProjectContext()); } catch { /* fallback to no context */ }
   const agent = DeepAgent.create({
     model,
-    instructions: "You are GaussFlow, an AI coding assistant. You can read files, write files, search code, and execute bash commands. Use these tools to help accomplish the task. Be concise and direct.",
+    instructions: `You are GaussFlow, an AI coding assistant. ${projectContext} You can read files, write files, search code, and execute bash commands. Use these tools to help accomplish the task. Be concise and direct.`,
     maxSteps: 15,
   })
     .withTools(tools)
