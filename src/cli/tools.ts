@@ -257,7 +257,9 @@ export function createCliTools(options: {
           const args = ["diff"];
           if (staged) args.push("--cached");
           if (filePath) args.push("--", filePath);
-          const output = execSync(`git ${args.join(" ")}`, GIT_EXEC_OPTS).trim();
+          const result = spawnSync("git", args, { encoding: "utf8", maxBuffer: 10 * 1024 * 1024 });
+          if (result.status !== 0) return { error: result.stderr || "git diff failed" };
+          const output = (result.stdout || "").trim();
           return { diff: output || "(no changes)" };
         } catch (err) {
           return { error: (err as Error).message };
@@ -273,9 +275,13 @@ export function createCliTools(options: {
       }),
       execute: async ({ message, files }) => {
         try {
+          // Capture pre-existing staged files for rollback
+          const prevStaged = execSync("git diff --cached --name-only", GIT_EXEC_OPTS).trim();
+
           // Stage
           if (files && files.length > 0) {
-            execSync(`git add -- ${files.map((f) => `'${f.replace(/'/g, "'\\''")}'`).join(" ")}`, GIT_EXEC_OPTS);
+            const addResult = spawnSync("git", ["add", "--", ...files], { encoding: "utf8", maxBuffer: 10 * 1024 * 1024 });
+            if (addResult.status !== 0) return { error: addResult.stderr || "git add failed" };
           } else {
             execSync("git add -A", GIT_EXEC_OPTS);
           }
@@ -286,7 +292,12 @@ export function createCliTools(options: {
           if (!options.yolo) {
             const ok = await options.confirm(`Git commit: "${message}"\n${stagedSummary}`);
             if (!ok) {
-              execSync("git reset HEAD", GIT_EXEC_OPTS);
+              // Restore original staging state: unstage all, then re-stage previous
+              execSync("git reset HEAD --quiet", GIT_EXEC_OPTS);
+              if (prevStaged) {
+                const prevFiles = prevStaged.split("\n").filter(Boolean);
+                spawnSync("git", ["add", "--", ...prevFiles], { encoding: "utf8" });
+              }
               return { error: "User cancelled" };
             }
           }

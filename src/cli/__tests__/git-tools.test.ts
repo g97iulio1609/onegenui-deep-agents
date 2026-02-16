@@ -61,28 +61,28 @@ describe("gitStatus", () => {
 
 describe("gitDiff", () => {
   it("calls git diff by default", async () => {
-    mockExecSync.mockReturnValue("diff output");
+    mockSpawnSync.mockReturnValue({ status: 0, stdout: "diff output", stderr: "", pid: 1, output: [], signal: null } as any);
     const tools = makeTools();
     await tools.gitDiff.execute({}, toolOpts);
-    expect(mockExecSync).toHaveBeenCalledWith("git diff", expect.any(Object));
+    expect(mockSpawnSync).toHaveBeenCalledWith("git", ["diff"], expect.any(Object));
   });
 
   it("adds --cached for staged flag", async () => {
-    mockExecSync.mockReturnValue("staged diff");
+    mockSpawnSync.mockReturnValue({ status: 0, stdout: "staged diff", stderr: "", pid: 1, output: [], signal: null } as any);
     const tools = makeTools();
     await tools.gitDiff.execute({ staged: true }, toolOpts);
-    expect(mockExecSync).toHaveBeenCalledWith("git diff --cached", expect.any(Object));
+    expect(mockSpawnSync).toHaveBeenCalledWith("git", ["diff", "--cached"], expect.any(Object));
   });
 
   it("adds file path when provided", async () => {
-    mockExecSync.mockReturnValue("file diff");
+    mockSpawnSync.mockReturnValue({ status: 0, stdout: "file diff", stderr: "", pid: 1, output: [], signal: null } as any);
     const tools = makeTools();
     await tools.gitDiff.execute({ path: "src/a.ts" }, toolOpts);
-    expect(mockExecSync).toHaveBeenCalledWith("git diff -- src/a.ts", expect.any(Object));
+    expect(mockSpawnSync).toHaveBeenCalledWith("git", ["diff", "--", "src/a.ts"], expect.any(Object));
   });
 
   it("returns error on failure", async () => {
-    mockExecSync.mockImplementation(() => { throw new Error("fatal"); });
+    mockSpawnSync.mockReturnValue({ status: 1, stdout: "", stderr: "fatal", pid: 1, output: [], signal: null } as any);
     const tools = makeTools();
     const result = await tools.gitDiff.execute({}, toolOpts);
     expect((result as any).error).toContain("fatal");
@@ -95,6 +95,7 @@ describe("gitCommit", () => {
   it("stages all and commits with message", async () => {
     mockExecSync.mockImplementation((cmd: unknown) => {
       if (typeof cmd === "string" && cmd.includes("diff --cached --stat")) return "1 file changed";
+      if (typeof cmd === "string" && cmd.includes("diff --cached --name-only")) return "";
       return "";
     });
     mockSpawnSync.mockReturnValue({ status: 0, stdout: "[main abc123] test commit", stderr: "", pid: 1, output: [], signal: null } as any);
@@ -108,29 +109,31 @@ describe("gitCommit", () => {
   it("stages specific files when provided", async () => {
     mockExecSync.mockImplementation((cmd: unknown) => {
       if (typeof cmd === "string" && cmd.includes("diff --cached --stat")) return "1 file changed";
+      if (typeof cmd === "string" && cmd.includes("diff --cached --name-only")) return "";
       return "";
     });
     mockSpawnSync.mockReturnValue({ status: 0, stdout: "committed", stderr: "", pid: 1, output: [], signal: null } as any);
     const tools = makeTools();
     await tools.gitCommit.execute({ message: "msg", files: ["a.ts", "b.ts"] }, toolOpts);
-    expect(mockExecSync).toHaveBeenCalledWith(expect.stringContaining("git add -- "), expect.any(Object));
+    expect(mockSpawnSync).toHaveBeenCalledWith("git", ["add", "--", "a.ts", "b.ts"], expect.any(Object));
   });
 
   it("respects confirmation gate — cancel resets and returns error", async () => {
     mockExecSync.mockImplementation((cmd: unknown) => {
       if (typeof cmd === "string" && cmd.includes("diff --cached --stat")) return "1 file changed";
+      if (typeof cmd === "string" && cmd.includes("diff --cached --name-only")) return "";
       return "";
     });
     const tools = makeTools({ yolo: false, confirmResult: false });
     const result = await tools.gitCommit.execute({ message: "msg" }, toolOpts);
     expect((result as any).error).toContain("cancelled");
-    // Should have called git reset HEAD
-    expect(mockExecSync).toHaveBeenCalledWith("git reset HEAD", expect.any(Object));
+    expect(mockExecSync).toHaveBeenCalledWith("git reset HEAD --quiet", expect.any(Object));
   });
 
   it("returns error when nothing to commit", async () => {
     mockExecSync.mockImplementation((cmd: unknown) => {
       if (typeof cmd === "string" && cmd.includes("diff --cached --stat")) return "";
+      if (typeof cmd === "string" && cmd.includes("diff --cached --name-only")) return "";
       return "";
     });
     const tools = makeTools();
