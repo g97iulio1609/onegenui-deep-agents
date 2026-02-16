@@ -308,7 +308,7 @@ export class ExecutionEngine {
           const model = this.config.model;
           const tokenTracker = this.tokenTracker;
           return Promise.resolve(streamResult).then((stream) => {
-            const usagePromise = (stream as Record<string, unknown>).usage ?? (stream as Record<string, unknown>).totalUsage;
+            const usagePromise = (stream as unknown as Record<string, unknown>).usage ?? (stream as unknown as Record<string, unknown>).totalUsage;
             if (usagePromise && typeof (usagePromise as Promise<unknown>).then === "function") {
               (usagePromise as Promise<{ promptTokens?: number; completionTokens?: number }>).then((u) => {
                 if (u) {

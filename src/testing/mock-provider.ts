@@ -2,7 +2,7 @@
 // Mock AI SDK Provider — Canned responses for testing
 // =============================================================================
 
-import type { LanguageModelV3, LanguageModelV3CallOptions } from "@ai-sdk/provider";
+import type { LanguageModel } from "ai";
 
 export interface MockResponse {
   text: string;
@@ -14,7 +14,7 @@ export interface MockResponse {
  * Creates a mock LanguageModelV3 that returns canned responses in order.
  * Compatible with AI SDK v6's ToolLoopAgent.
  */
-export function createMockProvider(responses: MockResponse[]): LanguageModelV3 {
+export function createMockProvider(responses: MockResponse[]): LanguageModel {
   const queue = [...responses];
   let callIndex = 0;
 
@@ -27,13 +27,13 @@ export function createMockProvider(responses: MockResponse[]): LanguageModelV3 {
     return response;
   }
 
-  const model: LanguageModelV3 = {
+  const model = {
     specificationVersion: "v3",
     provider: "mock-provider",
     modelId: "mock-model",
     defaultObjectGenerationMode: "json",
 
-    async doGenerate(options: LanguageModelV3CallOptions) {
+    async doGenerate(options: unknown) {
       const resp = nextResponse();
       const usage = resp.usage ?? { inputTokens: 10, outputTokens: 20 };
 
@@ -67,7 +67,7 @@ export function createMockProvider(responses: MockResponse[]): LanguageModelV3 {
       };
     },
 
-    async doStream(options: LanguageModelV3CallOptions) {
+    async doStream(options: unknown) {
       const resp = nextResponse();
       const usage = resp.usage ?? { inputTokens: 10, outputTokens: 20 };
 
@@ -124,5 +124,5 @@ export function createMockProvider(responses: MockResponse[]): LanguageModelV3 {
     },
   };
 
-  return model;
+  return model as unknown as LanguageModel;
 }
