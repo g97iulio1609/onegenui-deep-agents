@@ -10,6 +10,7 @@ import type { LearningPort } from "../ports/learning.port.js";
 import type { CheckpointConfig } from "../types.js";
 import type { PluginContext, PluginRunMetadata } from "../ports/plugin.port.js";
 import type { RuntimePort } from "../ports/runtime.port.js";
+import type { CostTrackerPort } from "../ports/cost-tracker.port.js";
 import type { UserProfile, UserMemory } from "../domain/learning.schema.js";
 
 import type { EventBus } from "./event-bus.js";
@@ -31,6 +32,7 @@ export interface ExecutionEngineConfig {
   learning?: LearningPort;
   userId?: string;
   checkpointConfig?: Required<CheckpointConfig>;
+  costTracker?: CostTrackerPort;
 }
 
 // =============================================================================
@@ -119,6 +121,19 @@ export class ExecutionEngine {
       if (usage) {
         if (usage.promptTokens) this.tokenTracker.addInput(usage.promptTokens);
         if (usage.completionTokens) this.tokenTracker.addOutput(usage.completionTokens);
+
+        // Record cost tracking if available
+        if (this.config.costTracker && (usage.promptTokens || usage.completionTokens)) {
+          const modelId = (this.config.model as unknown as { modelId?: string }).modelId ?? "unknown";
+          const provider = (this.config.model as unknown as { provider?: string }).provider ?? "unknown";
+          this.config.costTracker.recordUsage({
+            inputTokens: usage.promptTokens ?? 0,
+            outputTokens: usage.completionTokens ?? 0,
+            model: modelId,
+            provider,
+            timestamp: Date.now(),
+          });
+        }
       }
 
       const steps = (result.steps ?? []) as unknown[];

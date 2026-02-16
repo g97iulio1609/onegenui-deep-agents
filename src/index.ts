@@ -108,6 +108,11 @@ export type {
   ToolPipeline,
   ToolMiddleware,
 } from "./ports/tool-composition.port.js";
+export type {
+  CostTrackerPort,
+  CostTokenUsage,
+  CostEstimate,
+} from "./ports/cost-tracker.port.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Schemas
@@ -401,6 +406,13 @@ export { ZodValidationAdapter } from "./adapters/validation/index.js";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { DefaultToolCompositionAdapter } from "./adapters/tool-composition/default-tool-composition.adapter.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Adapters — Cost Tracker
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { DefaultCostTrackerAdapter } from "./adapters/cost-tracker/index.js";
+export type { CostTrackerOptions } from "./adapters/cost-tracker/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Adapters — Partial JSON
