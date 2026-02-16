@@ -92,8 +92,10 @@ export class GitHubRegistryAdapter implements MarketplacePort {
         typeof item === "object" &&
         item !== null &&
         typeof (item as Record<string, unknown>).name === "string" &&
+        typeof (item as Record<string, unknown>).version === "string" &&
         typeof (item as Record<string, unknown>).description === "string" &&
-        typeof (item as Record<string, unknown>).version === "string",
+        typeof (item as Record<string, unknown>).author === "string" &&
+        typeof (item as Record<string, unknown>).entry === "string",
     );
   }
 }
