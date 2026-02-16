@@ -7,6 +7,7 @@ import type { GraphConfig, GraphResult, GraphStreamEvent } from "../domain/graph
 import type { DeepAgentConfig } from "../types.js";
 import type { ConsensusPort } from "../ports/consensus.port.js";
 import type { FilesystemPort } from "../ports/filesystem.port.js";
+import type { TelemetryPort } from "../ports/telemetry.port.js";
 import type { EventBus } from "../agent/event-bus.js";
 import { AbstractBuilder } from "../utils/abstract-builder.js";
 import { AgentNode } from "./agent-node.js";
@@ -25,6 +26,7 @@ export class AgentGraph {
     private readonly config: GraphConfig,
     private readonly fs: FilesystemPort,
     private readonly eventBus?: EventBus,
+    private readonly telemetry?: TelemetryPort,
   ) {}
 
   static create(config?: Partial<GraphConfig>): AgentGraphBuilder {
@@ -40,6 +42,7 @@ export class AgentGraph {
       this.config,
       sharedContext,
       this.eventBus,
+      this.telemetry,
     );
     return executor.execute(prompt);
   }
@@ -53,6 +56,7 @@ export class AgentGraph {
       this.config,
       sharedContext,
       this.eventBus,
+      this.telemetry,
     );
     yield* executor.stream(prompt);
   }
@@ -68,6 +72,7 @@ export class AgentGraphBuilder extends AbstractBuilder<AgentGraph> {
   private readonly config: GraphConfig;
   private fs: FilesystemPort | undefined;
   private eventBus: EventBus | undefined;
+  private telemetryAdapter: TelemetryPort | undefined;
 
   constructor(config?: Partial<GraphConfig>) {
     super();
@@ -137,6 +142,11 @@ export class AgentGraphBuilder extends AbstractBuilder<AgentGraph> {
     return this;
   }
 
+  withTelemetry(adapter: TelemetryPort): this {
+    this.telemetryAdapter = adapter;
+    return this;
+  }
+
   protected validate(): void {
     this.validateEdges();
     this.validateNoCycles();
@@ -150,6 +160,7 @@ export class AgentGraphBuilder extends AbstractBuilder<AgentGraph> {
       this.config,
       this.fs ?? new VirtualFilesystem(),
       this.eventBus,
+      this.telemetryAdapter,
     );
   }
 

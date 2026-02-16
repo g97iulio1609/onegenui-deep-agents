@@ -8,6 +8,7 @@ import type { NodeResult } from "./agent-node.js";
 import type { AgentNode } from "./agent-node.js";
 import type { SharedContext } from "./shared-context.js";
 import type { EventBus } from "../agent/event-bus.js";
+import type { TelemetryPort } from "../ports/telemetry.port.js";
 
 export class GraphExecutor {
   constructor(
@@ -20,6 +21,7 @@ export class GraphExecutor {
     private readonly config: GraphConfig,
     private readonly sharedContext: SharedContext,
     private readonly eventBus?: EventBus,
+    private readonly telemetry?: TelemetryPort,
   ) {}
 
   async execute(prompt: string): Promise<GraphResult> {
@@ -154,6 +156,7 @@ export class GraphExecutor {
   ): Promise<NodeResult> {
     this.eventBus?.emit("node:start", { nodeId });
     events.push({ type: "node:start", nodeId });
+    const nodeSpan = this.telemetry?.startSpan(`graph.node.${nodeId}`, { "node.id": nodeId });
 
     try {
       const fork = this.forks.get(nodeId);
@@ -161,6 +164,8 @@ export class GraphExecutor {
         const result = await this.executeForkWithEvents(nodeId, prompt, fork, previousResults, events);
         this.eventBus?.emit("node:complete", { nodeId, result });
         events.push({ type: "node:complete", nodeId, result });
+        nodeSpan?.setStatus("OK");
+        nodeSpan?.end();
         return result;
       }
 
@@ -171,11 +176,16 @@ export class GraphExecutor {
       const result = await node.run(enrichedPrompt, this.sharedContext);
       this.eventBus?.emit("node:complete", { nodeId, result });
       events.push({ type: "node:complete", nodeId, result });
+      nodeSpan?.setAttribute("node.duration_ms", result.durationMs);
+      nodeSpan?.setStatus("OK");
+      nodeSpan?.end();
       return result;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       this.eventBus?.emit("node:complete", { nodeId, error: errorMsg });
       events.push({ type: "node:error", nodeId, error: errorMsg });
+      nodeSpan?.setStatus("ERROR", errorMsg);
+      nodeSpan?.end();
       throw error;
     }
   }

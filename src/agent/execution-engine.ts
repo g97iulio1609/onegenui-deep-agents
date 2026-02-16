@@ -11,6 +11,7 @@ import type { CheckpointConfig } from "../types.js";
 import type { PluginContext, PluginRunMetadata } from "../ports/plugin.port.js";
 import type { RuntimePort } from "../ports/runtime.port.js";
 import type { UserProfile, UserMemory } from "../domain/learning.schema.js";
+import type { TelemetryPort } from "../ports/telemetry.port.js";
 
 import type { EventBus } from "./event-bus.js";
 import type { ToolManager } from "./tool-manager.js";
@@ -31,6 +32,7 @@ export interface ExecutionEngineConfig {
   learning?: LearningPort;
   userId?: string;
   checkpointConfig?: Required<CheckpointConfig>;
+  telemetry?: TelemetryPort;
 }
 
 // =============================================================================
@@ -111,19 +113,35 @@ export class ExecutionEngine {
         stopWhen: stepCountIs(this.config.maxSteps),
       });
 
+      // Wrap LLM call in telemetry span
+      const llmSpan = this.config.telemetry?.startSpan("llm.generate", { "llm.model": String(this.config.model) });
       const result = await agent.generate({ prompt });
-
+      
       // Track token usage
       const resultObj = result as unknown as { usage?: { promptTokens?: number; completionTokens?: number } };
       const usage = resultObj.usage;
       if (usage) {
-        if (usage.promptTokens) this.tokenTracker.addInput(usage.promptTokens);
-        if (usage.completionTokens) this.tokenTracker.addOutput(usage.completionTokens);
+        if (usage.promptTokens) {
+          this.tokenTracker.addInput(usage.promptTokens);
+          this.config.telemetry?.recordMetric("llm.tokens.input", usage.promptTokens);
+        }
+        if (usage.completionTokens) {
+          this.tokenTracker.addOutput(usage.completionTokens);
+          this.config.telemetry?.recordMetric("llm.tokens.output", usage.completionTokens);
+        }
+        llmSpan?.setAttribute("llm.tokens.input", usage.promptTokens ?? 0);
+        llmSpan?.setAttribute("llm.tokens.output", usage.completionTokens ?? 0);
       }
+      llmSpan?.setStatus("OK");
+      llmSpan?.end();
 
       const steps = (result.steps ?? []) as unknown[];
       for (let i = 0; i < steps.length; i++) {
         let step = steps[i];
+        const stepObj = step as Record<string, unknown> | undefined;
+        const toolName = (stepObj?.toolName as string) ?? `step.${i}`;
+        const toolSpanStart = Date.now();
+        const toolSpan = this.config.telemetry?.startSpan(`tool.${toolName}`, { "tool.name": toolName, "step.index": i });
 
         try {
           const beforeStepResult = await this.pluginManager.runBeforeStep(pluginCtx, {
@@ -131,7 +149,11 @@ export class ExecutionEngine {
             step,
           });
 
-          if (beforeStepResult.skip) continue;
+          if (beforeStepResult.skip) {
+            toolSpan?.setStatus("OK");
+            toolSpan?.end();
+            continue;
+          }
           if (beforeStepResult.step !== undefined) {
             step = beforeStepResult.step;
             steps[i] = step;
@@ -144,7 +166,14 @@ export class ExecutionEngine {
             stepIndex: i,
             step,
           });
+
+          const toolDurationMs = Date.now() - toolSpanStart;
+          this.config.telemetry?.recordMetric("tool.duration_ms", toolDurationMs, { tool: toolName });
+          toolSpan?.setStatus("OK");
+          toolSpan?.end();
         } catch (error) {
+          toolSpan?.setStatus("ERROR", error instanceof Error ? error.message : String(error));
+          toolSpan?.end();
           const onStepError = await this.pluginManager.runOnError(pluginCtx, {
             error,
             phase: "step",

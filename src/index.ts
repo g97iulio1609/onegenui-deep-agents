@@ -80,6 +80,7 @@ export type {
 } from "./ports/token-counter.port.js";
 export type { TracingPort, Span } from "./ports/tracing.port.js";
 export type { MetricsPort } from "./ports/metrics.port.js";
+export type { TelemetryPort, TelemetrySpan } from "./ports/telemetry.port.js";
 export type { LoggingPort, LogLevel, LogEntry } from "./ports/logging.port.js";
 export type {
   ISemanticScrapingPort,
@@ -369,6 +370,13 @@ export { InMemoryTracingAdapter } from "./adapters/tracing/index.js";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { InMemoryMetricsAdapter } from "./adapters/metrics/index.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Adapters — Telemetry (OpenTelemetry-compatible)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { ConsoleTelemetryAdapter } from "./adapters/telemetry/console-telemetry.adapter.js";
+export { OtelTelemetryAdapter } from "./adapters/telemetry/otel-telemetry.adapter.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Adapters — Logging

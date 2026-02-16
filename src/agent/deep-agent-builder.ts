@@ -9,6 +9,7 @@ import type { MemoryPort } from "../ports/memory.port.js";
 import type { LearningPort } from "../ports/learning.port.js";
 import type { TokenCounterPort } from "../ports/token-counter.port.js";
 import type { McpPort } from "../ports/mcp.port.js";
+import type { TelemetryPort } from "../ports/telemetry.port.js";
 import type { AgentEventHandler, AgentEventType, DeepAgentConfig, ApprovalConfig, SubagentConfig } from "../types.js";
 import type { DeepAgentPlugin } from "../ports/plugin.port.js";
 import type { RuntimePort } from "../ports/runtime.port.js";
@@ -44,6 +45,9 @@ export class DeepAgentBuilder extends AbstractBuilder<DeepAgent> {
   private circuitBreaker?: CircuitBreaker;
   private rateLimiter?: RateLimiter;
   private toolCache?: ToolCache;
+  
+  // Telemetry
+  private telemetryAdapter?: TelemetryPort;
 
   private extraTools: Record<string, Tool> = {};
   private readonly plugins: DeepAgentPlugin[] = [];
@@ -151,6 +155,11 @@ export class DeepAgentBuilder extends AbstractBuilder<DeepAgent> {
     return this;
   }
 
+  withTelemetry(adapter: TelemetryPort): this {
+    this.telemetryAdapter = adapter;
+    return this;
+  }
+
   withInstructions(instructions: string): this;
   withInstructions(template: PromptTemplate, variables?: Record<string, string>): this;
   withInstructions(instructionsOrTemplate: string | PromptTemplate, variables?: Record<string, string>): this {
@@ -196,6 +205,7 @@ export class DeepAgentBuilder extends AbstractBuilder<DeepAgent> {
       rateLimiter: this.rateLimiter,
       toolCache: this.toolCache,
       lifecycleHooks: this.lifecycleHooks,
+      telemetry: this.telemetryAdapter,
     });
 
     for (const { type, handler } of this.eventHandlers) {
