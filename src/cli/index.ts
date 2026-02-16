@@ -10,7 +10,7 @@ import type { ProviderName } from "./providers.js";
 // Heavy modules (DeepAgent, plugins, graph) are lazy-loaded inside handlers
 import { color, bold, maskKey } from "./format.js";
 
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 
 const HELP = `
 ${bold("GaussFlow CLI")} — AI Agent Framework
@@ -27,6 +27,9 @@ ${bold("Usage:")}
   gaussflow config delete <provider>           Delete API key
   gaussflow usage                              Show token usage and cost estimate
   gaussflow demo <type> [--provider <name>]    Feature demos
+  gaussflow graph <config.json> [--format]     Visualize agent graph
+  gaussflow dev <config.json> [--provider]     Hot-reload dev mode
+  gaussflow plugin <subcommand>                Plugin management
 
 ${bold("Commands:")}
   chat        Start interactive REPL chat session
@@ -34,11 +37,15 @@ ${bold("Commands:")}
   config      Manage API keys and defaults in ~/.gaussflowrc
   usage       Show token usage and estimated cost
   demo        Run feature demos (guardrails, workflow, graph, observability)
+  graph       Visualize an agent graph from a JSON config file
+  dev         Hot-reload dev mode with interactive REPL
+  plugin      Manage plugins (search, install, uninstall, list)
 
 ${bold("Options:")}
   --provider  AI provider (${SUPPORTED_PROVIDERS.join(", ")})
   --model     Model ID override (e.g. gpt-4o-mini, claude-sonnet-4-20250514)
   --api-key   API key (overrides config file and env vars)
+  --format    Output format for graph command (ascii, mermaid)
   --yolo      Skip confirmations for tool execution (bash, file writes)
   --help      Show this help
   --version   Show version
@@ -53,6 +60,10 @@ ${bold("Examples:")}
   gaussflow run "What is the capital of France?" --provider anthropic
   gaussflow config set openai sk-...
   gaussflow demo guardrails --provider openai
+  gaussflow graph agent-graph.json --format mermaid
+  gaussflow dev agent-config.json --provider openai
+  gaussflow plugin search "code review"
+  gaussflow plugin install my-plugin
 `;
 
 async function main(): Promise<void> {
@@ -62,6 +73,7 @@ async function main(): Promise<void> {
       provider: { type: "string", short: "p" },
       model: { type: "string", short: "m" },
       "api-key": { type: "string", short: "k" },
+      format: { type: "string", short: "f" },
       help: { type: "boolean", short: "h" },
       version: { type: "boolean", short: "v" },
       yolo: { type: "boolean" },
@@ -107,6 +119,21 @@ async function main(): Promise<void> {
         positionals[1],
         values as Record<string, string | undefined>,
       );
+
+    case "graph":
+      return handleGraph(
+        positionals[1],
+        values as Record<string, string | boolean | undefined>,
+      );
+
+    case "dev":
+      return handleDev(
+        positionals[1],
+        values as Record<string, string | boolean | undefined>,
+      );
+
+    case "plugin":
+      return handlePlugin(positionals.slice(1));
 
     default:
       // Treat unknown command as a direct prompt (like claude code / opencode)
@@ -352,6 +379,87 @@ async function handleDemo(
       return demoGraph(languageModel);
     case "observability":
       return demoObservability(languageModel);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Graph
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function handleGraph(
+  configPath: string | undefined,
+  opts: Record<string, string | boolean | undefined>,
+): Promise<void> {
+  if (!configPath) {
+    console.error(color("red", "Usage: gaussflow graph <config.json> [--format ascii|mermaid]"));
+    process.exitCode = 1;
+    return;
+  }
+  const format = (opts.format === "mermaid" ? "mermaid" : "ascii") as "ascii" | "mermaid";
+  const { graphCommand } = await import("./commands/graph.js");
+  await graphCommand(configPath, format);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dev
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function handleDev(
+  configPath: string | undefined,
+  opts: Record<string, string | boolean | undefined>,
+): Promise<void> {
+  if (!configPath) {
+    console.error(color("red", "Usage: gaussflow dev <config.json> [--provider <name>]"));
+    process.exitCode = 1;
+    return;
+  }
+  const { provider, model, apiKey } = await resolveProviderAndModel(opts as Record<string, string | undefined>);
+  const languageModel = await createModel(provider, apiKey, model);
+  const { devCommand } = await import("./commands/dev.js");
+  await devCommand(configPath, languageModel);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Plugin
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function handlePlugin(args: string[]): Promise<void> {
+  const subcommand = args[0];
+  const { pluginSearch, pluginInstall, pluginUninstall, pluginList } = await import("./commands/plugin.js");
+
+  switch (subcommand) {
+    case "search": {
+      const query = args.slice(1).join(" ");
+      if (!query) {
+        console.error(color("red", "Usage: gaussflow plugin search <query>"));
+        process.exitCode = 1;
+        return;
+      }
+      return pluginSearch(query);
+    }
+    case "install": {
+      const name = args[1];
+      if (!name) {
+        console.error(color("red", "Usage: gaussflow plugin install <name>"));
+        process.exitCode = 1;
+        return;
+      }
+      return pluginInstall(name);
+    }
+    case "uninstall": {
+      const name = args[1];
+      if (!name) {
+        console.error(color("red", "Usage: gaussflow plugin uninstall <name>"));
+        process.exitCode = 1;
+        return;
+      }
+      return pluginUninstall(name);
+    }
+    case "list":
+      return pluginList();
+    default:
+      console.error(color("red", "Usage: gaussflow plugin <search|install|uninstall|list>"));
+      process.exitCode = 1;
   }
 }
 
