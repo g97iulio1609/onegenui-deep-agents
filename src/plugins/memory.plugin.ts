@@ -10,6 +10,13 @@ import type { AgentMemoryPort, MemoryEntry } from "../ports/agent-memory.port.js
 import { InMemoryAgentMemoryAdapter } from "../adapters/memory/in-memory-agent-memory.adapter.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Shared schema constants
+// ─────────────────────────────────────────────────────────────────────────────
+
+const memoryTypeSchema = z.enum(["conversation", "fact", "preference", "task", "summary"]);
+const importanceSchema = z.number().min(0).max(1).optional();
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -45,14 +52,14 @@ export class MemoryPlugin implements DeepAgentPlugin {
         description: "Store a memory entry for future recall",
         inputSchema: z.object({
           content: z.string().describe("The content to remember"),
-          type: z.enum(["conversation", "fact", "preference", "task", "summary"]).describe("Type of memory"),
-          importance: z.number().min(0).max(1).optional().describe("Importance score 0-1"),
+          type: memoryTypeSchema.describe("Type of memory"),
+          importance: importanceSchema.describe("Importance score 0-1"),
         }),
         execute: async (args: unknown) => {
           const { content, type, importance } = z.object({
             content: z.string(),
-            type: z.enum(["conversation", "fact", "preference", "task", "summary"]),
-            importance: z.number().optional(),
+            type: memoryTypeSchema,
+            importance: importanceSchema,
           }).parse(args);
           const entry: MemoryEntry = {
             id: crypto.randomUUID(),
@@ -70,16 +77,16 @@ export class MemoryPlugin implements DeepAgentPlugin {
         description: "Recall memories matching a query",
         inputSchema: z.object({
           query: z.string().optional().describe("Keyword search query"),
-          type: z.enum(["conversation", "fact", "preference", "task", "summary"]).optional().describe("Filter by type"),
+          type: memoryTypeSchema.optional().describe("Filter by type"),
           limit: z.number().optional().describe("Max entries to return (default 10)"),
-          minImportance: z.number().min(0).max(1).optional().describe("Minimum importance threshold"),
+          minImportance: importanceSchema.describe("Minimum importance threshold"),
         }),
         execute: async (args: unknown) => {
           const { query, type, limit, minImportance } = z.object({
             query: z.string().optional(),
-            type: z.enum(["conversation", "fact", "preference", "task", "summary"]).optional(),
+            type: memoryTypeSchema.optional(),
             limit: z.number().optional(),
-            minImportance: z.number().optional(),
+            minImportance: importanceSchema,
           }).parse(args);
           const entries = await this.adapter.recall(query ?? "", { query, type, limit, minImportance });
           if (entries.length === 0) return "No memories found.";
