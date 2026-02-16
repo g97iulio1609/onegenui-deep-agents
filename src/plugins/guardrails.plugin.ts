@@ -14,7 +14,7 @@ import type {
 import { BasePlugin } from "./base.plugin.js";
 import type { ZodType } from "zod";
 import type { ValidationPort } from "../ports/validation.port.js";
-import { ZodValidationAdapter } from "../adapters/validation/zod-validation.adapter.js";
+import { getValidator } from "./utils/get-validator.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -74,7 +74,7 @@ export class GuardrailsPlugin extends BasePlugin {
 
   constructor(options: GuardrailsPluginOptions = {}) {
     super();
-    this.validator = options.validator ?? new ZodValidationAdapter();
+    this.validator = getValidator(options);
     this.options = {
       onFailure: options.onFailure ?? "throw",
       contentFilters: options.contentFilters ?? [],

@@ -8,6 +8,7 @@ describe("ToolCache", () => {
     cache = new ToolCache<string>({
       defaultTtlMs: 1000, // 1 second for testing
       maxSize: 3,
+      cleanupIntervalMs: 0, // eager cleanup for tests
     });
   });
 

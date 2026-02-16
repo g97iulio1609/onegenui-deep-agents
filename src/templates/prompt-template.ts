@@ -1,3 +1,6 @@
+const PARTIAL_RE = /\{\{>(\w+)\}\}/g;
+const VARIABLE_RE = /\{\{(\w+)\}\}/g;
+
 export interface PromptTemplateConfig {
   template: string;
   variables?: Record<string, string | number | boolean>;
@@ -12,7 +15,7 @@ export class PromptTemplate {
     let compiled = this.config.template;
 
     // Handle partials first {{>partialName}}
-    compiled = compiled.replace(/\{\{>(\w+)\}\}/g, (match, partialName) => {
+    compiled = compiled.replace(PARTIAL_RE, (match, partialName) => {
       const partial = this.config.partials?.[partialName];
       if (!partial) {
         throw new Error(`Partial "${partialName}" not found`);
@@ -21,7 +24,7 @@ export class PromptTemplate {
     });
 
     // Handle variables {{var}}
-    compiled = compiled.replace(/\{\{(\w+)\}\}/g, (match, varName) => {
+    compiled = compiled.replace(VARIABLE_RE, (match, varName) => {
       if (!(varName in variables)) {
         throw new Error(`Required variable "${varName}" is missing`);
       }
@@ -43,7 +46,7 @@ export class PromptTemplate {
     const variables = new Set<string>();
     
     // Extract variables from template
-    const variableMatches = this.config.template.match(/\{\{(\w+)\}\}/g) || [];
+    const variableMatches = this.config.template.match(VARIABLE_RE) || [];
     variableMatches.forEach(match => {
       const varName = match.slice(2, -2);
       if (!varName.startsWith('>')) { // Skip partials

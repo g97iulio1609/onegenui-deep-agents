@@ -3,6 +3,7 @@
 // =============================================================================
 
 import { BasePlugin } from "./base.plugin.js";
+import { createDefaultMetrics } from "./utils/default-metrics.js";
 import type { 
   PluginContext, 
   PluginHooks, 
@@ -135,12 +136,7 @@ export class ObservabilityPlugin extends BasePlugin {
   private getOrCreateMetrics(sessionId: string): AgentMetrics {
     let metrics = this.sessionMetrics.get(sessionId);
     if (!metrics) {
-      metrics = {
-        totalTokens: { input: 0, output: 0 },
-        totalLatencyMs: 0,
-        toolCalls: [],
-        llmCalls: []
-      };
+      metrics = createDefaultMetrics();
       this.sessionMetrics.set(sessionId, metrics);
     }
     return metrics;
@@ -167,12 +163,7 @@ export class ObservabilityPlugin extends BasePlugin {
 
     if (this.config.enableMetrics) {
       this.sessionStartTimes.set(sessionId, Date.now());
-      this.sessionMetrics.set(sessionId, {
-        totalTokens: { input: 0, output: 0 },
-        totalLatencyMs: 0,
-        toolCalls: [],
-        llmCalls: []
-      });
+      this.sessionMetrics.set(sessionId, createDefaultMetrics());
     }
   }
 
@@ -302,31 +293,16 @@ export class ObservabilityPlugin extends BasePlugin {
 
   public getMetrics(sessionId?: string): AgentMetrics {
     if (!this.config.enableMetrics) {
-      return {
-        totalTokens: { input: 0, output: 0 },
-        totalLatencyMs: 0,
-        toolCalls: [],
-        llmCalls: []
-      };
+      return createDefaultMetrics();
     }
     if (sessionId) {
       const m = this.sessionMetrics.get(sessionId);
-      return m ? this.deepCopyMetrics(m) : {
-        totalTokens: { input: 0, output: 0 },
-        totalLatencyMs: 0,
-        toolCalls: [],
-        llmCalls: []
-      };
+      return m ? this.deepCopyMetrics(m) : createDefaultMetrics();
     }
     // Return last session's metrics for backward compat
     const entries = Array.from(this.sessionMetrics.values());
     const last = entries[entries.length - 1];
-    return last ? this.deepCopyMetrics(last) : {
-      totalTokens: { input: 0, output: 0 },
-      totalLatencyMs: 0,
-      toolCalls: [],
-      llmCalls: []
-    };
+    return last ? this.deepCopyMetrics(last) : createDefaultMetrics();
   }
 
   private deepCopyMetrics(m: AgentMetrics): AgentMetrics {

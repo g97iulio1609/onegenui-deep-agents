@@ -58,20 +58,25 @@ export function formatDuration(ms: number): string {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
+const CODE_BLOCK_RE = /```(\w*)\n([\s\S]*?)```/g;
+const INLINE_CODE_RE = /`([^`]+)`/g;
+const BOLD_RE = /\*\*([^*]+)\*\*/g;
+const HEADER_RE = /^(#{1,3})\s+(.+)$/gm;
+
 // Simple markdown formatting for terminal output
 export function formatMarkdown(text: string): string {
   return text
     // Code blocks
-    .replace(/```(\w*)\n([\s\S]*?)```/g, (_match, lang: string, code: string) => {
+    .replace(CODE_BLOCK_RE, (_match, lang: string, code: string) => {
       const header = lang ? color("dim", `  ─── ${lang} ───`) : "";
       return `${header}\n${color("cyan", code.trimEnd())}\n${color("dim", "  ─────────")}`;
     })
     // Inline code
-    .replace(/`([^`]+)`/g, (_match, code: string) => color("cyan", code))
+    .replace(INLINE_CODE_RE, (_match, code: string) => color("cyan", code))
     // Bold
-    .replace(/\*\*([^*]+)\*\*/g, (_match, text: string) => bold(text))
+    .replace(BOLD_RE, (_match, text: string) => bold(text))
     // Headers
-    .replace(/^(#{1,3})\s+(.+)$/gm, (_match, _hashes: string, text: string) =>
+    .replace(HEADER_RE, (_match, _hashes: string, text: string) =>
       bold(color("yellow", text)),
     );
 }

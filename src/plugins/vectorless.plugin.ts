@@ -8,7 +8,7 @@ import { z } from "zod";
 import type { PluginHooks } from "../ports/plugin.port.js";
 import { BasePlugin } from "./base.plugin.js";
 import type { ValidationPort } from "../ports/validation.port.js";
-import { ZodValidationAdapter } from "../adapters/validation/zod-validation.adapter.js";
+import { getValidator } from "./utils/get-validator.js";
 import type { Chunk, ChunkingPort } from "../ports/chunking.port.js";
 import type { ReRankingPort, ScoredResult, SourceAttribution } from "../ports/reranking.port.js";
 import { DefaultChunkingAdapter } from "../adapters/chunking/index.js";
@@ -67,7 +67,7 @@ export class VectorlessPlugin extends BasePlugin {
     super();
     this.options = options;
     this.currentKnowledge = options.knowledgeBase ?? null;
-    this.validator = options.validator ?? new ZodValidationAdapter();
+    this.validator = getValidator(options);
     this.chunkingAdapter = options.chunkingAdapter ?? new DefaultChunkingAdapter();
     this.rerankingAdapter = options.rerankingAdapter ?? new DefaultReRankingAdapter();
   }

@@ -81,8 +81,8 @@ export class DeepAgent {
   private _runtimePromise: Promise<RuntimePort> | null = null;
   private readonly tokenTracker: TokenTracker;
   private readonly pluginManager: PluginManager;
-  private readonly toolManager: ToolManager;
-  private readonly executionEngine: ExecutionEngine;
+  private _toolManager?: ToolManager;
+  private _executionEngine?: ExecutionEngine;
   private readonly lifecycleManager: LifecycleManager;
   
   // Resilience patterns
@@ -113,39 +113,46 @@ export class DeepAgent {
 
     // Initialize lifecycle manager
     this.lifecycleManager = new LifecycleManager(config.lifecycleHooks ?? {});
+  }
 
-    // Initialize ToolManager and ExecutionEngine
-    this.toolManager = new ToolManager(
+  // ---------------------------------------------------------------------------
+  // Lazy-initialized heavy managers (created on first access)
+  // ---------------------------------------------------------------------------
+
+  private get toolManager(): ToolManager {
+    return this._toolManager ??= new ToolManager(
       {
-        model: config.model,
-        instructions: config.instructions,
-        name: config.name,
-        maxSteps: config.maxSteps,
-        fs: config.fs,
-        memory: config.memory,
-        learning: config.learning,
-        mcp: config.mcp,
-        planning: config.planning,
-        subagents: config.subagents,
-        subagentConfig: config.subagentConfig,
-        approvalConfig: config.approvalConfig,
-        extraTools: config.extraTools,
+        model: this.config.model,
+        instructions: this.config.instructions,
+        name: this.config.name,
+        maxSteps: this.config.maxSteps,
+        fs: this.config.fs,
+        memory: this.config.memory,
+        learning: this.config.learning,
+        mcp: this.config.mcp,
+        planning: this.config.planning,
+        subagents: this.config.subagents,
+        subagentConfig: this.config.subagentConfig,
+        approvalConfig: this.config.approvalConfig,
+        extraTools: this.config.extraTools,
       },
       this.pluginManager,
       this.circuitBreaker,
       this.rateLimiter,
       this.toolCache,
     );
+  }
 
-    this.executionEngine = new ExecutionEngine(
+  private get executionEngine(): ExecutionEngine {
+    return this._executionEngine ??= new ExecutionEngine(
       {
-        model: config.model,
-        instructions: config.instructions,
-        maxSteps: config.maxSteps,
-        memory: config.memory,
-        learning: config.learning,
-        userId: config.userId,
-        checkpointConfig: config.checkpointConfig,
+        model: this.config.model,
+        instructions: this.config.instructions,
+        maxSteps: this.config.maxSteps,
+        memory: this.config.memory,
+        learning: this.config.learning,
+        userId: this.config.userId,
+        checkpointConfig: this.config.checkpointConfig,
       },
       this.toolManager,
       this.pluginManager,

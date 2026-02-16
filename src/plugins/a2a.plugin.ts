@@ -611,6 +611,7 @@ export class A2APlugin implements DeepAgentPlugin {
     }
 
     const events: A2ATaskEvent[] = [];
+    let sseCompleted = false;
     const reader = response.body?.getReader();
     const decoder = new TextDecoder();
 
@@ -634,6 +635,9 @@ export class A2APlugin implements DeepAgentPlugin {
             try {
               const eventData = JSON.parse(line.substring(6));
               events.push(eventData);
+              if (eventData.type === 'task:completed' || eventData.type === 'task:failed' || eventData.type === 'task:cancelled') {
+                sseCompleted = true;
+              }
             } catch {
               // Ignore invalid JSON
             }
@@ -641,7 +645,7 @@ export class A2APlugin implements DeepAgentPlugin {
         }
         
         // Break on completion/failure
-        if (events.some(e => ['task:completed', 'task:failed', 'task:cancelled'].includes(e.type))) {
+        if (sseCompleted) {
           break;
         }
       }

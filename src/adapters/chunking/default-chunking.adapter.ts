@@ -10,7 +10,10 @@ const DEFAULT_OVERLAP = 50;
 const DEFAULT_SEPARATORS = ["\n\n", "\n", ". ", " "];
 
 function wordCount(text: string): number {
-  return text.split(/\s+/).filter(Boolean).length;
+  let count = 0;
+  const re = /\S+/g;
+  while (re.exec(text) !== null) count++;
+  return count;
 }
 
 function makeChunk(text: string, index: number, startOffset: number, source?: string): Chunk {
@@ -86,22 +89,28 @@ function chunkSemantic(text: string, maxTokens: number): string[] {
 
   for (const para of paragraphs) {
     const candidate = current ? `${current}\n\n${para}` : para;
-    if (wordCount(candidate) <= maxTokens) {
+    const candidateWc = wordCount(candidate);
+    if (candidateWc <= maxTokens) {
       current = candidate;
     } else {
       if (current) chunks.push(current);
       // If a single paragraph exceeds maxTokens, split by sentences
-      if (wordCount(para) > maxTokens) {
+      // When current was empty, candidate === para, so reuse candidateWc
+      const paraWc = current ? wordCount(para) : candidateWc;
+      if (paraWc > maxTokens) {
         const sentences = para.split(/(?<=[.!?])\s+/).filter(Boolean);
         let sentBuf = "";
         for (const s of sentences) {
           const next = sentBuf ? `${sentBuf} ${s}` : s;
-          if (wordCount(next) <= maxTokens) {
+          const nextWc = wordCount(next);
+          if (nextWc <= maxTokens) {
             sentBuf = next;
           } else {
             if (sentBuf) chunks.push(sentBuf);
             // If a single sentence exceeds maxTokens, force split by words
-            if (wordCount(s) > maxTokens) {
+            // When sentBuf was empty, next === s, so reuse nextWc
+            const sWc = sentBuf ? wordCount(s) : nextWc;
+            if (sWc > maxTokens) {
               chunks.push(...splitByWordsMax(s, maxTokens));
               sentBuf = "";
             } else {
@@ -120,9 +129,10 @@ function chunkSemantic(text: string, maxTokens: number): string[] {
 }
 
 function chunkRecursive(text: string, maxTokens: number, separators: string[]): string[] {
-  if (wordCount(text) <= maxTokens || separators.length === 0) {
+  const wc = wordCount(text);
+  if (wc <= maxTokens || separators.length === 0) {
     // If no separators left and still too large, force split by words
-    if (wordCount(text) > maxTokens) return splitByWordsMax(text, maxTokens);
+    if (wc > maxTokens) return splitByWordsMax(text, maxTokens);
     return [text];
   }
 
@@ -135,11 +145,14 @@ function chunkRecursive(text: string, maxTokens: number, separators: string[]): 
 
   for (const part of parts) {
     const candidate = buffer ? `${buffer}${sep}${part}` : part;
-    if (wordCount(candidate) <= maxTokens) {
+    const candidateWc = wordCount(candidate);
+    if (candidateWc <= maxTokens) {
       buffer = candidate;
     } else {
       if (buffer) results.push(buffer);
-      if (wordCount(part) > maxTokens) {
+      // When buffer was empty, candidate === part, so reuse candidateWc
+      const partWc = buffer ? wordCount(part) : candidateWc;
+      if (partWc > maxTokens) {
         results.push(...chunkRecursive(part, maxTokens, rest));
         buffer = "";
       } else {

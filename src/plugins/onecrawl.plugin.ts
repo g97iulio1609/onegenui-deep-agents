@@ -8,7 +8,7 @@ import { z } from "zod";
 import type { PluginHooks } from "../ports/plugin.port.js";
 import { BasePlugin } from "./base.plugin.js";
 import type { ValidationPort } from "../ports/validation.port.js";
-import { ZodValidationAdapter } from "../adapters/validation/zod-validation.adapter.js";
+import { getValidator } from "./utils/get-validator.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -50,7 +50,7 @@ export class OneCrawlPlugin extends BasePlugin {
   constructor(options: OneCrawlPluginOptions = {}) {
     super();
     this.options = options;
-    this.validator = options.validator ?? new ZodValidationAdapter();
+    this.validator = getValidator(options);
   }
 
   protected buildHooks(): PluginHooks {

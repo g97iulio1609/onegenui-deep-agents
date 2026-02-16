@@ -5,6 +5,7 @@
 export interface ToolCacheConfig {
   readonly defaultTtlMs: number;
   readonly maxSize: number;
+  readonly cleanupIntervalMs?: number;
 }
 
 export const DEFAULT_TOOL_CACHE_CONFIG: ToolCacheConfig = {
@@ -20,8 +21,12 @@ interface CacheEntry<T> {
 
 export class ToolCache<T = any> {
   private cache = new Map<string, CacheEntry<T>>();
+  private lastCleanup = 0;
+  private readonly cleanupIntervalMs: number;
 
-  constructor(private readonly config: ToolCacheConfig = DEFAULT_TOOL_CACHE_CONFIG) {}
+  constructor(private readonly config: ToolCacheConfig = DEFAULT_TOOL_CACHE_CONFIG) {
+    this.cleanupIntervalMs = config.cleanupIntervalMs ?? 60_000;
+  }
 
   /**
    * Check if a non-expired entry exists for the key
@@ -152,6 +157,9 @@ export class ToolCache<T = any> {
 
   private cleanupExpired(): void {
     const now = Date.now();
+    if (now - this.lastCleanup < this.cleanupIntervalMs) return;
+    this.lastCleanup = now;
+
     const expired: string[] = [];
 
     for (const [key, entry] of this.cache.entries()) {
