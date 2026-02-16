@@ -4,10 +4,11 @@
 
 import { z } from "zod";
 import { tool } from "ai";
-import { readFileSync, readdirSync, realpathSync } from "node:fs";
+import { readFileSync, readdirSync, realpathSync, existsSync } from "node:fs";
 import { resolve, join, relative } from "node:path";
 import { readFile, writeFile } from "./commands/files.js";
 import { runBash } from "./commands/bash.js";
+import { generateUnifiedDiff } from "./diff-utils.js";
 
 function listDir(dirPath: string, pattern?: string): string[] {
   const absDir = resolve(dirPath);
@@ -85,14 +86,28 @@ export function createCliTools(options: {
       },
     }),
     writeFile: tool({
-      description: "Write content to a file",
+      description: "Write content to a file (creates or overwrites)",
       parameters: z.object({
         path: z.string().describe("Path to write to"),
         content: z.string().describe("Content to write"),
       }),
       execute: async ({ path, content }) => {
         if (!options.yolo) {
-          const ok = await options.confirm(`Write to ${path}`);
+          const absPath = resolve(path);
+          let desc: string;
+          if (existsSync(absPath)) {
+            const existing = readFileSync(absPath, "utf-8");
+            const diff = generateUnifiedDiff(existing, content, path);
+            const diffLines = diff.split("\n");
+            const preview = diffLines.length > 30
+              ? diffLines.slice(0, 30).join("\n") + "\n..."
+              : diff;
+            desc = `Write to ${path}\n${preview}`;
+          } else {
+            const lineCount = content.split("\n").length;
+            desc = `Write to ${path} (new file, ${lineCount} lines)`;
+          }
+          const ok = await options.confirm(desc);
           if (!ok) return { error: "User cancelled" };
         }
         const absPath = writeFile(path, content);
@@ -132,6 +147,72 @@ export function createCliTools(options: {
       execute: async ({ pattern, path }) => {
         const matches = searchInFiles(pattern, path);
         return { matches, count: matches.length };
+      },
+    }),
+    editFile: tool({
+      description:
+        "Edit a file by replacing specific text. Use this instead of writeFile when making targeted changes to existing files. The old_str must match exactly one occurrence in the file.",
+      parameters: z.object({
+        path: z.string().describe("Path to the file to edit"),
+        old_str: z.string().min(1).describe("The exact text to find and replace (must match exactly one occurrence)"),
+        new_str: z.string().describe("The replacement text"),
+      }),
+      execute: async ({ path, old_str, new_str }) => {
+        let content: string;
+        try {
+          content = readFile(path).content;
+        } catch (err) {
+          return { error: `Failed to read file: ${(err as Error).message}` };
+        }
+
+        // Count occurrences
+        let count = 0;
+        let idx = 0;
+        while ((idx = content.indexOf(old_str, idx)) !== -1) {
+          count++;
+          idx += old_str.length;
+        }
+
+        if (count === 0) {
+          return { error: `old_str not found in ${path}` };
+        }
+        if (count > 1) {
+          return { error: `old_str found ${count} times in ${path} — must match exactly once` };
+        }
+
+        const replaceIdx = content.indexOf(old_str);
+        const newContent = content.slice(0, replaceIdx) + new_str + content.slice(replaceIdx + old_str.length);
+        const diff = generateUnifiedDiff(content, newContent, path);
+
+        if (!options.yolo) {
+          const ok = await options.confirm(`Edit ${path}\n${diff}`);
+          if (!ok) return { error: "User cancelled" };
+        }
+
+        const absPath = writeFile(path, newContent);
+        return { path: absPath };
+      },
+    }),
+    createFile: tool({
+      description: "Create a new file. Fails if the file already exists. Use editFile for existing files.",
+      parameters: z.object({
+        path: z.string().describe("Path for the new file"),
+        content: z.string().describe("Content for the new file"),
+      }),
+      execute: async ({ path, content }) => {
+        const absPath = resolve(path);
+        if (existsSync(absPath)) {
+          return { error: `File already exists: ${absPath}. Use editFile to modify it.` };
+        }
+
+        if (!options.yolo) {
+          const lineCount = content.split("\n").length;
+          const ok = await options.confirm(`Create ${path} (${lineCount} lines)`);
+          if (!ok) return { error: "User cancelled" };
+        }
+
+        const written = writeFile(path, content);
+        return { path: written, bytesWritten: content.length };
       },
     }),
   };
