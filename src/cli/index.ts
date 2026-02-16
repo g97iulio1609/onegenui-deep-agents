@@ -232,15 +232,15 @@ function handleConfig(args: string[]): void {
 // Usage
 // ─────────────────────────────────────────────────────────────────────────────
 
-function handleUsage(): void {
-  const { readFileSync, existsSync } = require("node:fs") as typeof import("node:fs");
-  const { homedir } = require("node:os") as typeof import("node:os");
-  const { join } = require("node:path") as typeof import("node:path");
+async function handleUsage(): Promise<void> {
+  const { readFileSync, existsSync } = await import("node:fs");
+  const { homedir } = await import("node:os");
+  const { join } = await import("node:path");
 
   const usagePath = join(homedir(), ".gaussflow", "usage.json");
 
   if (!existsSync(usagePath)) {
-    console.log(color("dim", "No usage data found. Usage is recorded after each CLI invocation."));
+    console.log(color("dim", "No usage data found. Usage is recorded after each CLI session."));
     return;
   }
 
@@ -272,8 +272,7 @@ function handleUsage(): void {
     byModel.set(r.model, existing);
   }
 
-  // Lazy-load adapter for cost calculation
-  const { DefaultCostTrackerAdapter } = require("../adapters/cost-tracker/index.js") as typeof import("../adapters/cost-tracker/index.js");
+  const { DefaultCostTrackerAdapter } = await import("../adapters/cost-tracker/index.js");
   const tracker = new DefaultCostTrackerAdapter();
   for (const r of records) tracker.recordUsage(r);
   const estimate = tracker.getEstimate();

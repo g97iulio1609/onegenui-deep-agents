@@ -262,7 +262,39 @@ export class ExecutionEngine {
         stopWhen: stepCountIs(this.config.maxSteps),
       });
 
-      return agent.stream(params as Parameters<typeof agent.stream>[0]);
+      const streamResult = agent.stream(params as Parameters<typeof agent.stream>[0]);
+
+      // Track cost from streaming after completion
+      if (this.config.costTracker) {
+        const costTracker = this.config.costTracker;
+        const model = this.config.model;
+        const tokenTracker = this.tokenTracker;
+        return Promise.resolve(streamResult).then((stream) => {
+          const usagePromise = (stream as Record<string, unknown>).usage ?? (stream as Record<string, unknown>).totalUsage;
+          if (usagePromise && typeof (usagePromise as Promise<unknown>).then === "function") {
+            (usagePromise as Promise<{ promptTokens?: number; completionTokens?: number }>).then((u) => {
+              if (u) {
+                if (u.promptTokens) tokenTracker.addInput(u.promptTokens);
+                if (u.completionTokens) tokenTracker.addOutput(u.completionTokens);
+                if (u.promptTokens || u.completionTokens) {
+                  const modelId = (model as unknown as { modelId?: string }).modelId ?? "unknown";
+                  const provider = (model as unknown as { provider?: string }).provider ?? "unknown";
+                  costTracker.recordUsage({
+                    inputTokens: u.promptTokens ?? 0,
+                    outputTokens: u.completionTokens ?? 0,
+                    model: modelId,
+                    provider,
+                    timestamp: Date.now(),
+                  });
+                }
+              }
+            }).catch(() => { /* ignore usage tracking errors */ });
+          }
+          return stream;
+        });
+      }
+
+      return streamResult;
     } catch (error: unknown) {
       const onErrorResult = await this.pluginManager.runOnError(pluginCtx, {
         error,

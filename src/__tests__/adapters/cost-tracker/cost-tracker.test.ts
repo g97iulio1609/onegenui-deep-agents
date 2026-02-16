@@ -51,13 +51,21 @@ describe("DefaultCostTrackerAdapter", () => {
     expect(est.breakdown[0].outputTokens).toBe(150_000);
   });
 
-  it("returns zero cost for unknown models", () => {
+  it("tracks unknown models as unpriced and warns", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const tracker = new DefaultCostTrackerAdapter();
     tracker.recordUsage(usage("unknown-model", 1_000_000, 1_000_000));
 
     const est = tracker.getEstimate();
     expect(est.totalCost).toBe(0);
     expect(est.totalInputTokens).toBe(1_000_000);
+    expect(tracker.unpricedModels.has("unknown-model")).toBe(true);
+    expect(warnSpy).toHaveBeenCalledOnce();
+
+    // Second call with same model should not warn again
+    tracker.recordUsage(usage("unknown-model", 100, 100));
+    expect(warnSpy).toHaveBeenCalledOnce();
+    warnSpy.mockRestore();
   });
 
   it("enforces budget — isOverBudget", () => {
@@ -89,12 +97,15 @@ describe("DefaultCostTrackerAdapter", () => {
     expect(callback).toHaveBeenCalledTimes(1);
   });
 
-  it("resets all state", () => {
+  it("resets all state including totalCost and unpricedModels", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const callback = vi.fn();
     const tracker = new DefaultCostTrackerAdapter({ budget: 0.01, onBudgetExceeded: callback });
 
     tracker.recordUsage(usage("gpt-4o", 1_000_000, 1_000_000));
+    tracker.recordUsage(usage("mystery-model", 100, 100));
     expect(callback).toHaveBeenCalledTimes(1);
+    expect(tracker.unpricedModels.size).toBe(1);
 
     tracker.reset();
     const est = tracker.getEstimate();
@@ -103,10 +114,12 @@ describe("DefaultCostTrackerAdapter", () => {
     expect(est.totalCost).toBe(0);
     expect(est.breakdown).toHaveLength(0);
     expect(tracker.isOverBudget()).toBe(false);
+    expect(tracker.unpricedModels.size).toBe(0);
 
     // Callback should fire again after reset
     tracker.recordUsage(usage("gpt-4o", 1_000_000, 0));
     expect(callback).toHaveBeenCalledTimes(2);
+    warnSpy.mockRestore();
   });
 
   it("exports usage as JSON", () => {
@@ -121,12 +134,29 @@ describe("DefaultCostTrackerAdapter", () => {
     expect(exported[0].outputTokens).toBe(200);
   });
 
-  it("supports custom currency", () => {
-    const tracker = new DefaultCostTrackerAdapter({ currency: "EUR" });
+  it("always uses USD currency", () => {
+    const tracker = new DefaultCostTrackerAdapter();
     tracker.recordUsage(usage("gpt-4o", 1000, 1000));
+    expect(tracker.getEstimate().currency).toBe("USD");
+  });
+
+  it("clamps negative token counts to 0", () => {
+    const tracker = new DefaultCostTrackerAdapter();
+    tracker.recordUsage(usage("gpt-4o", -500, -1000));
 
     const est = tracker.getEstimate();
-    expect(est.currency).toBe("EUR");
+    expect(est.totalInputTokens).toBe(0);
+    expect(est.totalOutputTokens).toBe(0);
+    expect(est.totalCost).toBe(0);
+  });
+
+  it("clamps NaN and Infinity token counts to 0", () => {
+    const tracker = new DefaultCostTrackerAdapter();
+    tracker.recordUsage(usage("gpt-4o", NaN, Infinity));
+
+    const est = tracker.getEstimate();
+    expect(est.totalInputTokens).toBe(0);
+    expect(est.totalOutputTokens).toBe(0);
   });
 
   it("calculates correct costs for all supported models", () => {

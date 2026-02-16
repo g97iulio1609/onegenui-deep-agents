@@ -25,25 +25,43 @@ const MODEL_PRICING: Record<string, [number, number]> = {
 
 export interface CostTrackerOptions {
   budget?: number;
-  currency?: string;
   onBudgetExceeded?: () => void;
 }
 
 export class DefaultCostTrackerAdapter implements CostTrackerPort {
   private readonly usages: CostTokenUsage[] = [];
   private readonly budget: number | null;
-  private readonly currency: string;
   private readonly onBudgetExceeded?: () => void;
   private budgetExceededFired = false;
+  private totalCost = 0;
+
+  /** Models seen that have no pricing data. */
+  readonly unpricedModels = new Set<string>();
 
   constructor(options: CostTrackerOptions = {}) {
     this.budget = options.budget ?? null;
-    this.currency = options.currency ?? "USD";
     this.onBudgetExceeded = options.onBudgetExceeded;
   }
 
   recordUsage(usage: CostTokenUsage): void {
-    this.usages.push(usage);
+    // Validate: clamp non-finite / negative token counts to 0
+    const inputTokens = Number.isFinite(usage.inputTokens) && usage.inputTokens > 0 ? usage.inputTokens : 0;
+    const outputTokens = Number.isFinite(usage.outputTokens) && usage.outputTokens > 0 ? usage.outputTokens : 0;
+    const sanitized: CostTokenUsage = { ...usage, inputTokens, outputTokens };
+
+    this.usages.push(sanitized);
+
+    // Warn and track unpriced models
+    if (!MODEL_PRICING[sanitized.model]) {
+      if (!this.unpricedModels.has(sanitized.model)) {
+        console.warn(`[CostTracker] Unknown model "${sanitized.model}" — cost will be recorded as $0`);
+        this.unpricedModels.add(sanitized.model);
+      }
+    }
+
+    // Maintain running total for O(1) budget check
+    this.totalCost += this.calculateCost(sanitized.model, inputTokens, outputTokens);
+
     if (this.onBudgetExceeded && !this.budgetExceededFired && this.isOverBudget()) {
       this.budgetExceededFired = true;
       this.onBudgetExceeded();
@@ -62,18 +80,16 @@ export class DefaultCostTrackerAdapter implements CostTrackerPort {
 
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
-    let totalCost = 0;
     const breakdown: CostEstimate["breakdown"] = [];
 
     for (const [model, tokens] of byModel) {
       const cost = this.calculateCost(model, tokens.inputTokens, tokens.outputTokens);
       totalInputTokens += tokens.inputTokens;
       totalOutputTokens += tokens.outputTokens;
-      totalCost += cost;
       breakdown.push({ model, inputTokens: tokens.inputTokens, outputTokens: tokens.outputTokens, cost });
     }
 
-    return { totalInputTokens, totalOutputTokens, totalCost, currency: this.currency, breakdown };
+    return { totalInputTokens, totalOutputTokens, totalCost: this.totalCost, currency: "USD", breakdown };
   }
 
   getSessionBudget(): number | null {
@@ -82,11 +98,13 @@ export class DefaultCostTrackerAdapter implements CostTrackerPort {
 
   isOverBudget(): boolean {
     if (this.budget === null) return false;
-    return this.getEstimate().totalCost > this.budget;
+    return this.totalCost > this.budget;
   }
 
   reset(): void {
     this.usages.length = 0;
+    this.totalCost = 0;
+    this.unpricedModels.clear();
     this.budgetExceededFired = false;
   }
 
