@@ -25,8 +25,6 @@ export class AgentConfigLoader {
       maxSteps: config.maxSteps,
     });
 
-    if (config.maxSteps) builder.withMaxSteps(config.maxSteps);
-
     return builder.build();
   }
 

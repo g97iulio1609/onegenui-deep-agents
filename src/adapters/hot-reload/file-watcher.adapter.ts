@@ -11,9 +11,7 @@ function validateAgentConfig(data: unknown): data is AgentConfig {
   if (typeof obj.name !== "string" || obj.name.length === 0) return false;
   if (typeof obj.model !== "string" || obj.model.length === 0) return false;
   if (obj.systemPrompt !== undefined && typeof obj.systemPrompt !== "string") return false;
-  if (obj.tools !== undefined && !Array.isArray(obj.tools)) return false;
   if (obj.maxSteps !== undefined && typeof obj.maxSteps !== "number") return false;
-  if (obj.temperature !== undefined && typeof obj.temperature !== "number") return false;
   return true;
 }
 

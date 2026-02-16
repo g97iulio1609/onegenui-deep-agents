@@ -25,7 +25,6 @@ const validConfig: AgentConfig = {
   model: "gpt-4o",
   systemPrompt: "You are a helpful assistant.",
   maxSteps: 10,
-  temperature: 0.7,
 };
 
 // ---------------------------------------------------------------------------

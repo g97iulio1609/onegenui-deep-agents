@@ -11,7 +11,5 @@ export interface AgentConfig {
   name: string;
   model: string;
   systemPrompt?: string;
-  tools?: string[];
   maxSteps?: number;
-  temperature?: number;
 }
