@@ -1,10 +1,77 @@
 const PARTIAL_RE = /\{\{>(\w+)\}\}/g;
 const VARIABLE_RE = /\{\{(\w+)\}\}/g;
 
-const EACH_RE = /\{\{#each\s+(\w+)\}\}([\s\S]*?)\{\{\/each\}\}/g;
-const IF_RE = /\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g;
-const UNLESS_RE = /\{\{#unless\s+(\w+)\}\}([\s\S]*?)\{\{\/unless\}\}/g;
 const FILTER_RE = /\{\{(\w+(?:\.\w+)*)\s*\|([^}]+)\}\}/g;
+
+const BLOCKED_PROPS = new Set(['__proto__', 'constructor', 'prototype']);
+const KEYWORDS = new Set(['if', 'else', 'unless', 'each', 'this']);
+
+function findMatchingClose(template: string, openTag: string, closeTag: string, startIndex: number): number {
+  let depth = 1;
+  let i = startIndex;
+  while (i < template.length) {
+    if (template.startsWith(openTag, i)) {
+      depth++;
+      i += openTag.length;
+    } else if (template.startsWith(closeTag, i)) {
+      depth--;
+      if (depth === 0) return i;
+      i += closeTag.length;
+    } else {
+      i++;
+    }
+  }
+  return -1;
+}
+
+function replaceAtDepth0(body: string, regex: RegExp, replacement: string | ((match: string, ...args: string[]) => string)): string {
+  // Protect nested {{#each}}...{{/each}} blocks from replacement
+  const nested: string[] = [];
+  let protected_ = body;
+  const eachOpenRe = /\{\{#each\s+\w+\}\}/;
+  let m: RegExpMatchArray | null;
+  while ((m = eachOpenRe.exec(protected_)) !== null) {
+    const start = m.index!;
+    const bodyStart = start + m[0].length;
+    const closeIndex = findMatchingClose(protected_, '{{#each', '{{/each}}', bodyStart);
+    if (closeIndex === -1) break;
+    const end = closeIndex + '{{/each}}'.length;
+    const block = protected_.slice(start, end);
+    const placeholder = `__NESTED_EACH_${nested.length}__`;
+    nested.push(block);
+    protected_ = protected_.slice(0, start) + placeholder + protected_.slice(end);
+  }
+  // Apply replacement only at depth 0
+  if (typeof replacement === 'string') {
+    protected_ = protected_.replace(regex, replacement);
+  } else {
+    protected_ = protected_.replace(regex, replacement as (...args: string[]) => string);
+  }
+  // Restore nested blocks
+  for (let i = nested.length - 1; i >= 0; i--) {
+    protected_ = protected_.replace(`__NESTED_EACH_${i}__`, nested[i]);
+  }
+  return protected_;
+}
+
+function findElseAtDepth0(body: string): number {
+  let depth = 0;
+  let i = 0;
+  while (i < body.length) {
+    if (body.startsWith('{{#if', i) || body.startsWith('{{#unless', i)) {
+      depth++;
+      i += body.startsWith('{{#if', i) ? 5 : 9;
+    } else if (body.startsWith('{{/if}}', i) || body.startsWith('{{/unless}}', i)) {
+      depth--;
+      i += body.startsWith('{{/if}}', i) ? 7 : 11;
+    } else if (body.startsWith('{{else}}', i) && depth === 0) {
+      return i;
+    } else {
+      i++;
+    }
+  }
+  return -1;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type TemplateValue = string | number | boolean | null | undefined | any[] | Record<string, any>;
@@ -64,49 +131,74 @@ export class PromptTemplate {
   }
 
   private processLoops(template: string, variables: Record<string, TemplateValue>): string {
-    return template.replace(EACH_RE, (_match, varName, body) => {
+    const openRe = /\{\{#each\s+(\w+)\}\}/;
+    let result = template;
+    let match: RegExpMatchArray | null;
+    while ((match = openRe.exec(result)) !== null) {
+      const varName = match[1];
+      const bodyStart = match.index! + match[0].length;
+      const closeIndex = findMatchingClose(result, '{{#each', '{{/each}}', bodyStart);
+      if (closeIndex === -1) break;
+      const body = result.slice(bodyStart, closeIndex);
       const items = variables[varName];
-      if (!Array.isArray(items)) return '';
-      return items.map((item, index) => {
-        let result = body as string;
-        // Replace {{@index}}
-        result = result.replace(/\{\{@index\}\}/g, String(index));
-        // Replace {{this.property}}
-        result = result.replace(/\{\{this\.(\w+)\}\}/g, (_m: string, prop: string) => {
-          if (item != null && typeof item === 'object' && prop in item) {
-            return String(item[prop]);
-          }
-          return '';
-        });
-        // Replace {{this}}
-        result = result.replace(/\{\{this\}\}/g, String(item));
-        // Process nested conditionals inside loop body
-        result = this.processConditionals(result, variables);
-        return result;
-      }).join('');
-    });
+      let replacement = '';
+      if (Array.isArray(items)) {
+        replacement = items.map((item, index) => {
+          let r = body;
+          r = replaceAtDepth0(r, /\{\{@index\}\}/g, String(index));
+          r = replaceAtDepth0(r, /\{\{this\.(\w+)\}\}/g, (_m: string, prop: string) => {
+            if (item != null && typeof item === 'object' && Object.hasOwn(item as object, prop)) {
+              return String(item[prop]);
+            }
+            return '';
+          });
+          r = replaceAtDepth0(r, /\{\{this\}\}/g, String(item));
+          r = this.processConditionals(r, variables);
+          return r;
+        }).join('');
+      }
+      result = result.slice(0, match.index!) + replacement + result.slice(closeIndex + '{{/each}}'.length);
+    }
+    return result;
   }
 
   private processConditionals(template: string, variables: Record<string, TemplateValue>): string {
     let compiled = template;
 
     // Handle {{#unless condition}}...{{/unless}}
-    compiled = compiled.replace(UNLESS_RE, (_match, varName, body) => {
+    const unlessRe = /\{\{#unless\s+(\w+)\}\}/;
+    let match: RegExpMatchArray | null;
+    while ((match = unlessRe.exec(compiled)) !== null) {
+      const varName = match[1];
+      const bodyStart = match.index! + match[0].length;
+      const closeIndex = findMatchingClose(compiled, '{{#unless', '{{/unless}}', bodyStart);
+      if (closeIndex === -1) break;
+      const body = compiled.slice(bodyStart, closeIndex);
       const value = variables[varName];
-      return !value ? body : '';
-    });
+      const replacement = !value ? body : '';
+      compiled = compiled.slice(0, match.index!) + replacement + compiled.slice(closeIndex + '{{/unless}}'.length);
+    }
 
     // Handle {{#if condition}}...{{else}}...{{/if}} and {{#if condition}}...{{/if}}
-    compiled = compiled.replace(IF_RE, (_match, varName, body) => {
+    const ifRe = /\{\{#if\s+(\w+)\}\}/;
+    while ((match = ifRe.exec(compiled)) !== null) {
+      const varName = match[1];
+      const bodyStart = match.index! + match[0].length;
+      const closeIndex = findMatchingClose(compiled, '{{#if', '{{/if}}', bodyStart);
+      if (closeIndex === -1) break;
+      const body = compiled.slice(bodyStart, closeIndex);
       const value = variables[varName];
-      const elseIndex = body.indexOf('{{else}}');
+      const elseIndex = findElseAtDepth0(body);
+      let replacement: string;
       if (elseIndex !== -1) {
         const trueBranch = body.slice(0, elseIndex);
         const falseBranch = body.slice(elseIndex + '{{else}}'.length);
-        return value ? trueBranch : falseBranch;
+        replacement = value ? trueBranch : falseBranch;
+      } else {
+        replacement = value ? body : '';
       }
-      return value ? body : '';
-    });
+      compiled = compiled.slice(0, match.index!) + replacement + compiled.slice(closeIndex + '{{/if}}'.length);
+    }
 
     return compiled;
   }
@@ -119,6 +211,7 @@ export class PromptTemplate {
         const parts = varPath.split('.');
         value = variables[parts[0]];
         for (let i = 1; i < parts.length && value != null; i++) {
+          if (BLOCKED_PROPS.has(parts[i])) { return ''; }
           value = (value as Record<string, TemplateValue>)[parts[i]];
         }
       } else {
@@ -158,7 +251,7 @@ export class PromptTemplate {
     const variableMatches = this.config.template.match(VARIABLE_RE) || [];
     variableMatches.forEach(match => {
       const varName = match.slice(2, -2);
-      if (!varName.startsWith('>')) { // Skip partials
+      if (!varName.startsWith('>') && !KEYWORDS.has(varName)) {
         variables.add(varName);
       }
     });

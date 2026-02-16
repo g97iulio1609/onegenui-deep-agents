@@ -190,6 +190,19 @@ describe("PromptTemplate", () => {
     });
   });
 
+  describe("nested if/else", () => {
+    it("should correctly resolve nested if/else blocks", () => {
+      const tpl = new PromptTemplate({
+        template: "{{#if a}}{{#if b}}X{{else}}Y{{/if}}{{else}}Z{{/if}}",
+      });
+
+      expect(tpl.compile({ a: true, b: true })).toBe("X");
+      expect(tpl.compile({ a: true, b: false })).toBe("Y");
+      expect(tpl.compile({ a: false, b: true })).toBe("Z");
+      expect(tpl.compile({ a: false, b: false })).toBe("Z");
+    });
+  });
+
   describe("DeepAgent integration", () => {
     const mockConfig: DeepAgentConfig = {
       model: mockModel,

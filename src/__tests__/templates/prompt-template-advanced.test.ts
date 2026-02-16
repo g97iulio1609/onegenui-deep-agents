@@ -100,6 +100,13 @@ describe("PromptTemplate Advanced Features", () => {
         people: [{ name: "Alice", age: 30 }, { name: "Bob", age: 25 }]
       })).toBe("Alice is 30. Bob is 25. ");
     });
+
+    it("should not bleed outer {{this}}/{{@index}} into nested {{#each}}", () => {
+      const t = new PromptTemplate({
+        template: "{{#each outer}}[{{#each inner}}{{this}}{{/each}}]{{/each}}"
+      });
+      expect(t.compile({ outer: ["a", "b"], inner: ["1", "2"] })).toBe("[12][12]");
+    });
   });
 
   describe("filters", () => {

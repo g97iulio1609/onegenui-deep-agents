@@ -103,6 +103,11 @@ export type {
   ScoredResult,
   SourceAttribution,
 } from "./ports/reranking.port.js";
+export type {
+  ToolCompositionPort,
+  ToolPipeline,
+  ToolMiddleware,
+} from "./ports/tool-composition.port.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Schemas
@@ -390,6 +395,12 @@ export { DefaultReRankingAdapter } from "./adapters/reranking/index.js";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { ZodValidationAdapter } from "./adapters/validation/index.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Adapters — Tool Composition
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { DefaultToolCompositionAdapter } from "./adapters/tool-composition/default-tool-composition.adapter.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Adapters — Partial JSON
