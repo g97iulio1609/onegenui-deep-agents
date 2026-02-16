@@ -14,20 +14,21 @@ import type { Message } from "../../types.js";
 export class InMemoryAdapter implements MemoryPort {
   private static readonly MAX_SESSIONS = 1000;
 
-  private readonly sessionOrder: string[] = [];
+  private readonly sessionOrder = new Map<string, true>();
   private readonly todosMap = new Map<string, Todo[]>();
   private readonly checkpointsMap = new Map<string, Checkpoint[]>();
   private readonly conversationMap = new Map<string, Message[]>();
   private readonly metadataMap = new Map<string, Map<string, unknown>>();
 
   private trackSession(sessionId: string): void {
-    const idx = this.sessionOrder.indexOf(sessionId);
-    if (idx === -1) {
-      this.sessionOrder.push(sessionId);
-    }
-    while (this.sessionOrder.length > InMemoryAdapter.MAX_SESSIONS) {
-      const oldest = this.sessionOrder.shift();
+    // Delete + re-insert to refresh position (Map preserves insertion order)
+    this.sessionOrder.delete(sessionId);
+    this.sessionOrder.set(sessionId, true);
+
+    while (this.sessionOrder.size > InMemoryAdapter.MAX_SESSIONS) {
+      const oldest = this.sessionOrder.keys().next().value;
       if (oldest !== undefined) {
+        this.sessionOrder.delete(oldest);
         this.todosMap.delete(oldest);
         this.checkpointsMap.delete(oldest);
         this.conversationMap.delete(oldest);
@@ -131,8 +132,7 @@ export class InMemoryAdapter implements MemoryPort {
     this.checkpointsMap.delete(sessionId);
     this.conversationMap.delete(sessionId);
     this.metadataMap.delete(sessionId);
-    const idx = this.sessionOrder.indexOf(sessionId);
-    if (idx !== -1) this.sessionOrder.splice(idx, 1);
+    this.sessionOrder.delete(sessionId);
   }
 
   /** Clear all sessions */
@@ -141,6 +141,6 @@ export class InMemoryAdapter implements MemoryPort {
     this.checkpointsMap.clear();
     this.conversationMap.clear();
     this.metadataMap.clear();
-    this.sessionOrder.length = 0;
+    this.sessionOrder.clear();
   }
 }

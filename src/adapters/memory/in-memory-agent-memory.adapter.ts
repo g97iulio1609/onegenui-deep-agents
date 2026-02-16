@@ -16,7 +16,7 @@ export interface InMemoryAgentMemoryOptions {
 
 export class InMemoryAgentMemoryAdapter implements AgentMemoryPort {
   private readonly entries = new Map<string, MemoryEntry>();
-  private readonly insertionOrder: string[] = [];
+  private readonly insertionOrder = new Map<string, true>();
   private readonly maxEntries: number;
 
   constructor(options: InMemoryAgentMemoryOptions = {}) {
@@ -24,19 +24,19 @@ export class InMemoryAgentMemoryAdapter implements AgentMemoryPort {
   }
 
   async store(entry: MemoryEntry): Promise<void> {
-    // If entry already exists, remove old position from order tracking
-    if (this.entries.has(entry.id)) {
-      const idx = this.insertionOrder.indexOf(entry.id);
-      if (idx !== -1) this.insertionOrder.splice(idx, 1);
-    }
+    // Delete + re-insert for LRU ordering (Map preserves insertion order)
+    this.insertionOrder.delete(entry.id);
+    this.insertionOrder.set(entry.id, true);
 
     this.entries.set(entry.id, { ...entry });
-    this.insertionOrder.push(entry.id);
 
     // LRU eviction
-    while (this.insertionOrder.length > this.maxEntries) {
-      const oldest = this.insertionOrder.shift();
-      if (oldest !== undefined) this.entries.delete(oldest);
+    while (this.insertionOrder.size > this.maxEntries) {
+      const oldest = this.insertionOrder.keys().next().value;
+      if (oldest !== undefined) {
+        this.insertionOrder.delete(oldest);
+        this.entries.delete(oldest);
+      }
     }
   }
 
@@ -71,7 +71,7 @@ export class InMemoryAgentMemoryAdapter implements AgentMemoryPort {
 
   async clear(): Promise<void> {
     this.entries.clear();
-    this.insertionOrder.length = 0;
+    this.insertionOrder.clear();
   }
 
   async getStats(): Promise<MemoryStats> {

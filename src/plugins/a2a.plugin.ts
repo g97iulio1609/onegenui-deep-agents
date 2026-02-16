@@ -68,11 +68,13 @@ export class A2APlugin implements DeepAgentPlugin {
   private readonly requestTimeoutMs: number;
   private readonly agentCardProvider?: AgentCardProvider;
   private readonly tasks = new Map<string, A2ATask>();
+  private readonly completionTimestamps = new Map<string, number>();
   private readonly delegationManager: A2ADelegationManager;
   private readonly pushNotifier: A2APushNotifier;
   private readonly taskEventListeners = new Set<(event: A2ATaskEvent) => void>();
   private static readonly MAX_COMPLETED_TASKS = 1000;
   private static readonly TASK_TTL_MS = 3600_000; // 1 hour
+  private evictionTimer?: ReturnType<typeof setInterval>;
 
   private setupCtx?: PluginSetupContext;
   private latestCtx?: PluginContext;
@@ -114,6 +116,7 @@ export class A2APlugin implements DeepAgentPlugin {
     this.agentCardProvider = options.agentCardProvider;
     this.delegationManager = new A2ADelegationManager(fetchImpl);
     this.pushNotifier = new A2APushNotifier(fetchImpl);
+    this.evictionTimer = setInterval(() => this.evictStaleTasks(), 60_000);
 
     this.tools = {
       "a2a:call": tool({
@@ -170,6 +173,13 @@ export class A2APlugin implements DeepAgentPlugin {
 
   setup(ctx: PluginSetupContext): void {
     this.setupCtx = ctx;
+  }
+
+  dispose(): void {
+    if (this.evictionTimer) {
+      clearInterval(this.evictionTimer);
+      this.evictionTimer = undefined;
+    }
   }
 
   createJsonRpcHandler(
@@ -301,6 +311,7 @@ export class A2APlugin implements DeepAgentPlugin {
           task.status = "cancelled";
           task.updatedAt = now;
           task.completedAt = now;
+          plugin.completionTimestamps.set(taskId, Date.now());
           plugin.emitTaskEvent("task:cancelled", taskId);
         }
 
@@ -423,7 +434,9 @@ export class A2APlugin implements DeepAgentPlugin {
     prompt: string,
     metadata?: Record<string, unknown>,
   ): void {
-    this.evictStaleTasks();
+    if (this.tasks.size >= A2APlugin.MAX_COMPLETED_TASKS) {
+      this.evictStaleTasks();
+    }
     if (this.tasks.size >= A2APlugin.MAX_COMPLETED_TASKS) {
       throw new Error('Task queue at capacity. Try again later.');
     }
@@ -457,8 +470,8 @@ export class A2APlugin implements DeepAgentPlugin {
     task.updatedAt = now;
     task.completedAt = now;
     task.error = undefined;
+    this.completionTimestamps.set(taskId, Date.now());
     this.emitTaskEvent("task:completed", taskId);
-    this.evictStaleTasks();
   }
 
   private markTaskFailed(taskId: string, error: unknown): void {
@@ -470,16 +483,29 @@ export class A2APlugin implements DeepAgentPlugin {
     task.error = error instanceof Error ? error.message : String(error);
     task.updatedAt = now;
     task.completedAt = now;
+    this.completionTimestamps.set(taskId, Date.now());
     this.emitTaskEvent("task:failed", taskId);
-    this.evictStaleTasks();
   }
 
   private evictStaleTasks(): void {
     const now = Date.now();
-    for (const [id, task] of this.tasks) {
-      if (task.completedAt && now - new Date(task.completedAt).getTime() > A2APlugin.TASK_TTL_MS) {
+    for (const [id, ts] of this.completionTimestamps) {
+      if (now - ts > A2APlugin.TASK_TTL_MS) {
         this.tasks.delete(id);
+        this.completionTimestamps.delete(id);
         this.pushNotifier.cleanup(id);
+      }
+    }
+
+    // Evict orphaned running/queued tasks older than 2x TTL
+    const orphanThreshold = A2APlugin.TASK_TTL_MS * 2;
+    for (const [id, task] of this.tasks) {
+      if (
+        (task.status === "running" || task.status === "queued") &&
+        now - new Date(task.createdAt).getTime() > orphanThreshold
+      ) {
+        this.tasks.delete(id);
+        this.completionTimestamps.delete(id);
       }
     }
   }

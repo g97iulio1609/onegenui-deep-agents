@@ -38,6 +38,7 @@ export type McpToolExecutor = (
 
 export class DefaultMcpServerAdapter implements McpServerPort {
   private tools: McpToolServerDefinition[] = [];
+  private toolsByName = new Map<string, McpToolServerDefinition>();
   private executor: McpToolExecutor;
   private options?: McpServerOptions;
 
@@ -54,7 +55,15 @@ export class DefaultMcpServerAdapter implements McpServerPort {
     executor: McpToolExecutor,
   ) {
     this.tools = tools;
+    this.rebuildToolIndex();
     this.executor = executor;
+  }
+
+  private rebuildToolIndex(): void {
+    this.toolsByName.clear();
+    for (const t of this.tools) {
+      this.toolsByName.set(t.name, t);
+    }
   }
 
   // ── Public API ──────────────────────────────────────────────────────────
@@ -65,6 +74,7 @@ export class DefaultMcpServerAdapter implements McpServerPort {
 
   setTools(tools: McpToolServerDefinition[]): void {
     this.tools = tools;
+    this.rebuildToolIndex();
   }
 
   async start(options: McpServerOptions): Promise<void> {
@@ -74,6 +84,7 @@ export class DefaultMcpServerAdapter implements McpServerPort {
       ? this.tools.filter((t) => options.toolFilter!.includes(t.name))
       : this.tools;
     this.tools = filtered;
+    this.rebuildToolIndex();
 
     if (options.transport === "stdio") {
       this.startStdio();
@@ -140,7 +151,7 @@ export class DefaultMcpServerAdapter implements McpServerPort {
         const toolName = (params?.name as string) ?? "";
         const toolArgs = (params?.arguments as Record<string, unknown>) ?? {};
 
-        const toolDef = this.tools.find((t) => t.name === toolName);
+        const toolDef = this.toolsByName.get(toolName);
         if (!toolDef) {
           return {
             jsonrpc: "2.0",

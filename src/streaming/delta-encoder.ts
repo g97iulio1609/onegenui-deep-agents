@@ -16,31 +16,39 @@ export interface DeltaEncoderOptions {
   maxEntries?: number;
 }
 
+function fieldsEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a === null || b === null || a === undefined || b === undefined) return false;
+  if (typeof a !== typeof b) return false;
+  if (typeof a !== "object") return false;
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 export function createDeltaEncoder(options?: DeltaEncoderOptions): DeltaEncoder {
   const maxEntries = options?.maxEntries ?? 1000;
-  const lastSeen = new Map<string, string>();
+  const lastSeen = new Map<string, { serialized: string; event: AgentEvent }>();
 
   return {
     encode(event: AgentEvent): string | null {
       const serialized = JSON.stringify(event);
       const prev = lastSeen.get(event.type);
 
-      if (prev === serialized) return null;
+      if (prev !== undefined && prev.serialized === serialized) return null;
 
       // Evict oldest entry when at capacity and inserting new key
       if (prev === undefined && lastSeen.size >= maxEntries) {
         const oldest = lastSeen.keys().next().value as string;
         lastSeen.delete(oldest);
       }
-      lastSeen.set(event.type, serialized);
+      lastSeen.set(event.type, { serialized, event: JSON.parse(serialized) as AgentEvent });
 
       if (prev === undefined) return serialized;
 
-      // Delta: only changed fields
-      const prevObj = JSON.parse(prev) as Record<string, unknown>;
+      // Delta: only changed fields (structural comparison, no re-serialization)
+      const prevEvent = prev.event as Record<string, unknown>;
       const delta: Record<string, unknown> = { type: event.type };
       for (const key of Object.keys(event) as (keyof AgentEvent)[]) {
-        if (JSON.stringify(event[key]) !== JSON.stringify(prevObj[key])) {
+        if (!fieldsEqual(event[key], prevEvent[key])) {
           delta[key] = event[key];
         }
       }

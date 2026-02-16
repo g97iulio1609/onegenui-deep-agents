@@ -20,6 +20,7 @@ export interface FileMemoryAdapterOptions {
 export class FileMemoryAdapter implements AgentMemoryPort {
   private readonly directory: string;
   private readonly fileLocks = new Map<string, Promise<void>>();
+  private dirReady = false;
 
   constructor(options: FileMemoryAdapterOptions = {}) {
     this.directory = options.directory ?? ".gaussflow/memory";
@@ -39,17 +40,23 @@ export class FileMemoryAdapter implements AgentMemoryPort {
     const prev = this.fileLocks.get(filePath) ?? Promise.resolve();
     let release: () => void;
     const next = new Promise<void>(r => { release = r; });
-    this.fileLocks.set(filePath, prev.then(() => next));
+    const chain = prev.then(() => next);
+    this.fileLocks.set(filePath, chain);
     await prev;
     try {
       return await fn();
     } finally {
       release!();
+      if (this.fileLocks.get(filePath) === chain) {
+        this.fileLocks.delete(filePath);
+      }
     }
   }
 
   private async ensureDirectory(): Promise<void> {
+    if (this.dirReady) return;
     await fs.mkdir(this.directory, { recursive: true });
+    this.dirReady = true;
   }
 
   private async loadFile(filePath: string): Promise<MemoryEntry[]> {
@@ -76,12 +83,10 @@ export class FileMemoryAdapter implements AgentMemoryPort {
     }
 
     const jsonFiles = files.filter((f) => f.endsWith(".json"));
-    const all: MemoryEntry[] = [];
-    for (const file of jsonFiles) {
-      const entries = await this.loadFile(path.join(this.directory, file));
-      all.push(...entries);
-    }
-    return all;
+    const results = await Promise.all(
+      jsonFiles.map((file) => this.loadFile(path.join(this.directory, file)))
+    );
+    return results.flat();
   }
 
   async store(entry: MemoryEntry): Promise<void> {
