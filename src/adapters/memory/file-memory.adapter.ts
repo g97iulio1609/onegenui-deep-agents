@@ -18,6 +18,7 @@ export interface FileMemoryAdapterOptions {
 
 export class FileMemoryAdapter implements AgentMemoryPort {
   private readonly directory: string;
+  private readonly fileLocks = new Map<string, Promise<void>>();
 
   constructor(options: FileMemoryAdapterOptions = {}) {
     this.directory = options.directory ?? ".gaussflow/memory";
@@ -25,7 +26,25 @@ export class FileMemoryAdapter implements AgentMemoryPort {
 
   private getFilePath(sessionId?: string): string {
     const filename = sessionId ? `${sessionId}.json` : "global.json";
-    return path.join(this.directory, filename);
+    const resolved = path.resolve(path.join(this.directory, filename));
+    const dirResolved = path.resolve(this.directory);
+    if (!resolved.startsWith(dirResolved + path.sep)) {
+      throw new Error("Invalid sessionId: path traversal detected");
+    }
+    return resolved;
+  }
+
+  private async withLock<T>(filePath: string, fn: () => Promise<T>): Promise<T> {
+    const prev = this.fileLocks.get(filePath) ?? Promise.resolve();
+    let release: () => void;
+    const next = new Promise<void>(r => { release = r; });
+    this.fileLocks.set(filePath, prev.then(() => next));
+    await prev;
+    try {
+      return await fn();
+    } finally {
+      release!();
+    }
   }
 
   private async ensureDirectory(): Promise<void> {
@@ -66,17 +85,16 @@ export class FileMemoryAdapter implements AgentMemoryPort {
 
   async store(entry: MemoryEntry): Promise<void> {
     const filePath = this.getFilePath(entry.sessionId);
-    const entries = await this.loadFile(filePath);
-
-    // Replace if same id exists
-    const idx = entries.findIndex((e) => e.id === entry.id);
-    if (idx !== -1) {
-      entries[idx] = { ...entry };
-    } else {
-      entries.push({ ...entry });
-    }
-
-    await this.saveFile(filePath, entries);
+    await this.withLock(filePath, async () => {
+      const entries = await this.loadFile(filePath);
+      const idx = entries.findIndex((e) => e.id === entry.id);
+      if (idx !== -1) {
+        entries[idx] = { ...entry };
+      } else {
+        entries.push({ ...entry });
+      }
+      await this.saveFile(filePath, entries);
+    });
   }
 
   async recall(_query: string, options: RecallOptions = {}): Promise<MemoryEntry[]> {

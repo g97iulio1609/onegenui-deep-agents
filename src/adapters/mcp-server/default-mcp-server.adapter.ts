@@ -3,6 +3,7 @@
 // =============================================================================
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { randomUUID } from "node:crypto";
 
 import type {
   McpServerPort,
@@ -46,7 +47,7 @@ export class DefaultMcpServerAdapter implements McpServerPort {
 
   // sse
   private httpServer?: Server;
-  private sseClients = new Set<ServerResponse>();
+  private sseClients = new Map<string, ServerResponse>();
 
   constructor(
     tools: McpToolServerDefinition[],
@@ -89,7 +90,7 @@ export class DefaultMcpServerAdapter implements McpServerPort {
     }
 
     if (this.httpServer) {
-      for (const client of this.sseClients) {
+      for (const [, client] of this.sseClients) {
         client.end();
       }
       this.sseClients.clear();
@@ -236,13 +237,12 @@ export class DefaultMcpServerAdapter implements McpServerPort {
       });
 
       this.httpServer.once("error", reject);
-      this.httpServer.listen(port, () => resolve());
+      this.httpServer.listen(port, "127.0.0.1", () => resolve());
     });
   }
 
   private async handleHttpRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    // CORS headers
-    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Origin", "http://localhost");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
@@ -255,14 +255,15 @@ export class DefaultMcpServerAdapter implements McpServerPort {
     const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
 
     if (url.pathname === "/sse" && req.method === "GET") {
+      const clientId = randomUUID();
       res.writeHead(200, {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         Connection: "keep-alive",
       });
-      res.write(`data: ${JSON.stringify({ type: "endpoint", url: "/message" })}\n\n`);
-      this.sseClients.add(res);
-      req.on("close", () => this.sseClients.delete(res));
+      res.write(`data: ${JSON.stringify({ type: "endpoint", url: `/message?clientId=${clientId}` })}\n\n`);
+      this.sseClients.set(clientId, res);
+      req.on("close", () => this.sseClients.delete(clientId));
       return;
     }
 
@@ -280,12 +281,13 @@ export class DefaultMcpServerAdapter implements McpServerPort {
       const response = await this.handleRequest(request);
       const responseJson = JSON.stringify(response);
 
-      // Send via SSE to all connected clients
-      for (const client of this.sseClients) {
-        client.write(`data: ${responseJson}\n\n`);
+      // Send via SSE only to the originating client
+      const clientId = url.searchParams.get("clientId");
+      if (clientId) {
+        const client = this.sseClients.get(clientId);
+        if (client) client.write(`data: ${responseJson}\n\n`);
       }
 
-      // Also respond directly
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(responseJson);
       return;
@@ -295,10 +297,20 @@ export class DefaultMcpServerAdapter implements McpServerPort {
     res.end(JSON.stringify({ error: "Not found" }));
   }
 
+  private static readonly MAX_BODY_SIZE = 1_048_576; // 1 MB
+
   private readBody(req: IncomingMessage): Promise<string> {
     return new Promise((resolve, reject) => {
       const chunks: Buffer[] = [];
-      req.on("data", (chunk: Buffer) => chunks.push(chunk));
+      let size = 0;
+      req.on("data", (chunk: Buffer) => {
+        size += chunk.length;
+        if (size > DefaultMcpServerAdapter.MAX_BODY_SIZE) {
+          req.destroy(new Error("Request body too large"));
+          return;
+        }
+        chunks.push(chunk);
+      });
       req.on("end", () => resolve(Buffer.concat(chunks).toString("utf-8")));
       req.on("error", reject);
     });
