@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-02-16
+
+### Added
+
+- **Structured Code Editing**: `editFile` tool with old_str→new_str pattern, diff preview, and confirmation gate
+- **File Creation**: `createFile` tool that fails if file exists (clean separation from writeFile)
+- **Unified Diff Generator**: LCS-based colored diff with context lines (red/green/dim/cyan)
+- **Git Integration**: gitStatus, gitDiff, gitCommit, gitLog, gitBranch tools + `/git` slash command
+- **Streaming Run Command**: Token-by-token output for `gaussflow "<prompt>"` (was batch)
+- **Slash Commands**: `/test`, `/lint`, `/fix` for quick development workflow
+- **Project Context Awareness**: Auto-detect project type, framework, language, and dependencies
+- **`.gaussflowignore`**: Exclude files from search/list operations (gitignore-like format)
+- **Diff Preview for writeFile**: Shows colored unified diff before confirming overwrites
+
+### Security
+
+- Index-based string splice in editFile (prevents `String.replace` dollar-sign injection)
+- `spawnSync` for all git commands with user input (prevents shell injection)
+- Staging state preservation on gitCommit cancel (restores pre-existing staged files)
+- Segment-boundary matching in shouldIgnore (no false positive prefix matches)
+
+### Changed
+
+- System prompts now include project context (type, framework, key deps, structure)
+- `listFiles` and `searchFiles` respect `.gaussflowignore` patterns
+- `z.string().min(1)` on editFile's `old_str` (prevents empty-string infinite loop)
+- MAX_DIFF_LINES=1000 guard against OOM on large file diffs
+
 ## [1.0.0] - 2026-02-16
 
 ### Added
