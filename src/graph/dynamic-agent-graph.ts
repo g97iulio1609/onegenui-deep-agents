@@ -110,6 +110,11 @@ export class DynamicAgentGraph {
       ]);
     }
     const deps = this.edges.get(to) ?? [];
+    if (deps.includes(from)) {
+      return this.recordReject("add-edge", actorId, { from, to }, [
+        { invariant: "no-duplicate", description: `Edge "${from}"→"${to}" already exists` },
+      ]);
+    }
     deps.push(from);
     this.edges.set(to, deps);
     return this.recordApply("add-edge", actorId, { from, to });

@@ -338,6 +338,8 @@ export class GraphExecutor {
     let results: NodeResult[];
     try {
       results = await coordinator.promise;
+      // Ensure all fork node promises settle (prevents orphaned executions)
+      await Promise.allSettled(promises);
     } catch (error) {
       await Promise.allSettled(promises);
       coordinator.dispose();

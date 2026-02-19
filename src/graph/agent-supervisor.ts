@@ -205,10 +205,20 @@ export class AgentSupervisor {
     }
 
     state.status = "restarting";
-    const node = await spec.factory();
-    state.node = node;
-    state.status = "running";
-    this.emit("supervisor:child-started", { supervisorId: this.id, childId: spec.id });
+    try {
+      const node = await spec.factory();
+      state.node = node;
+      state.status = "running";
+      this.emit("supervisor:child-started", { supervisorId: this.id, childId: spec.id });
+    } catch (err) {
+      state.status = "crashed";
+      this.emit("supervisor:child-crashed", {
+        supervisorId: this.id,
+        childId: spec.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
 
     if (spec.heartbeatIntervalMs) {
       this.scheduleHeartbeat(spec.id, spec.heartbeatIntervalMs, spec.heartbeatTimeoutMs ?? 5000);
@@ -220,10 +230,20 @@ export class AgentSupervisor {
     if (!state) return;
 
     state.status = "restarting";
-    const node = await state.spec.factory();
-    state.node = node;
-    state.status = "running";
-    this.emit("supervisor:child-restarted", { supervisorId: this.id, childId });
+    try {
+      const node = await state.spec.factory();
+      state.node = node;
+      state.status = "running";
+      this.emit("supervisor:child-restarted", { supervisorId: this.id, childId });
+    } catch (err) {
+      state.status = "crashed";
+      this.emit("supervisor:child-crashed", {
+        supervisorId: this.id,
+        childId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
 
     if (state.spec.heartbeatIntervalMs) {
       this.scheduleHeartbeat(
@@ -241,9 +261,13 @@ export class AgentSupervisor {
       state.status = "stopped";
       state.node = null;
     }
-    // Restart in declaration order
+    // Restart in declaration order, continue on individual failures
     for (const spec of this.childSpecs) {
-      await this.restartChild(spec.id);
+      try {
+        await this.restartChild(spec.id);
+      } catch {
+        // Factory failure already handled inside restartChild (status set to crashed)
+      }
     }
   }
 
@@ -262,9 +286,13 @@ export class AgentSupervisor {
       }
     }
 
-    // Restart in order
+    // Restart in order, continue on individual failures
     for (const spec of toRestart) {
-      await this.restartChild(spec.id);
+      try {
+        await this.restartChild(spec.id);
+      } catch {
+        // Factory failure already handled inside restartChild (status set to crashed)
+      }
     }
   }
 
@@ -293,10 +321,10 @@ export class AgentSupervisor {
           ),
         ]);
       } catch (err) {
-        await this.handleChildCrash(
+        this.handleChildCrash(
           childId,
           err instanceof Error ? err : new Error(String(err)),
-        );
+        ).catch(() => { /* crash handler errors are emitted as events */ });
       }
     }, intervalMs);
   }

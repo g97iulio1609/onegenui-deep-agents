@@ -322,7 +322,7 @@ export class SubagentScheduler {
     try {
       const result = await agent.generate({
         prompt: handle.prompt,
-        signal: handle.abortController.signal,
+        abortSignal: handle.abortController.signal,
       });
 
       const output =

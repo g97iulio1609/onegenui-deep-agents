@@ -173,27 +173,53 @@ export class SharedContext {
     value: unknown,
     expectedVersion: number,
   ): Promise<void> {
+    // Synchronous check-and-bump to avoid TOCTOU race
     const actual = this.getVersion(key);
     if (actual !== expectedVersion) {
       throw new VersionConflictError(key, expectedVersion, actual);
     }
-    await this.set(key, value);
+    // Bump version synchronously before async write to prevent concurrent setVersioned
+    // from passing the same version check
+    this.bumpVersion(key);
+    const oldValue = await this.get(key);
+    await this.fs.write(this.keyPath(key), JSON.stringify(value));
+    this.notify({
+      key,
+      oldValue,
+      newValue: value,
+      version: this.getVersion(key),
+      source: this.namespace,
+      timestamp: Date.now(),
+    });
   }
 
   // ---- CRDT merge ---------------------------------------------------------
 
   /**
-   * Atomically read-then-write with a merge function.
+   * Read-then-write with a merge function using optimistic locking.
    * Default mergeFn is Last-Writer-Wins (returns newValue).
+   * Retries on version conflict (CAS pattern).
    */
   async merge<T>(
     key: string,
     value: T,
     mergeFn: (oldValue: T | null, newValue: T) => T = (_old, nw) => nw,
   ): Promise<void> {
-    const current = await this.get<T>(key);
-    const merged = mergeFn(current, value);
-    await this.set(key, merged);
+    const maxRetries = 3;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const currentVersion = this.getVersion(key);
+      const current = await this.get<T>(key);
+      const merged = mergeFn(current, value);
+      try {
+        await this.setVersioned(key, merged, currentVersion);
+        return;
+      } catch (err) {
+        if (err instanceof VersionConflictError && attempt < maxRetries) {
+          continue; // retry
+        }
+        throw err;
+      }
+    }
   }
 
   // ---- scoping ------------------------------------------------------------

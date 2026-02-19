@@ -52,6 +52,8 @@ export class ForkCoordinator {
     if (this.results.size === this.total) {
       this.settle();
       this.resolveAll([...this.results.values()]);
+    } else {
+      this.tryEagerResolve();
     }
   }
 
@@ -66,6 +68,17 @@ export class ForkCoordinator {
           `Fork "${this.forkId}": too many failures (${this.errors.size}/${this.total})`,
         ),
       );
+    } else {
+      this.tryEagerResolve();
+    }
+  }
+
+  /** Eagerly resolve when all nodes reported and we have enough successes */
+  private tryEagerResolve(): void {
+    if (this.settled) return;
+    if (this.results.size + this.errors.size === this.total && this.results.size >= this.minResults) {
+      this.settle();
+      this.resolveAll([...this.results.values()]);
     }
   }
 

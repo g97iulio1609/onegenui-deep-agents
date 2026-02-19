@@ -81,6 +81,7 @@ export class WorkerPool<T, R> {
   private readonly onEvent?: (event: WorkerPoolEvent<T, R>) => void;
   private readonly latencies: number[] = [];
   private readonly completionTimestamps: number[] = [];
+  private static readonly MAX_METRICS_ENTRIES = 1000;
 
   private nextWorkerId = 0;
   private draining = false;
@@ -294,6 +295,12 @@ export class WorkerPool<T, R> {
 
         this.latencies.push(durationMs);
         this.completionTimestamps.push(Date.now());
+        if (this.latencies.length > WorkerPool.MAX_METRICS_ENTRIES) {
+          this.latencies.splice(0, this.latencies.length - WorkerPool.MAX_METRICS_ENTRIES);
+        }
+        if (this.completionTimestamps.length > WorkerPool.MAX_METRICS_ENTRIES) {
+          this.completionTimestamps.splice(0, this.completionTimestamps.length - WorkerPool.MAX_METRICS_ENTRIES);
+        }
         this.totalCompleted++;
 
         this.emit({
