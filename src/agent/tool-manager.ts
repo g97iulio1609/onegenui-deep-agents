@@ -16,10 +16,13 @@ import { PluginManager } from "../plugins/plugin-manager.js";
 import { ApprovalManager } from "./approval-manager.js";
 import { createFilesystemTools } from "../tools/filesystem/index.js";
 import { createPlanningTools } from "../tools/planning/index.js";
-import { createSubagentTools } from "../tools/subagent/index.js";
+import { createAsyncSubagentTools } from "../tools/subagent/index.js";
+import { SubagentRegistry } from "../tools/subagent/subagent-registry.js";
+import { SubagentScheduler } from "../tools/subagent/subagent-scheduler.js";
+import { DEFAULT_LIMITS } from "../tools/subagent/subagent-registry.js";
 import { CircuitBreaker, RateLimiter, ToolCache } from "../adapters/resilience/index.js";
 
-import type { EventBus } from "./event-bus.js";
+import { EventBus } from "./event-bus.js";
 import type { MemoryPort } from "../ports/memory.port.js";
 import type { LearningPort } from "../ports/learning.port.js";
 
@@ -101,14 +104,24 @@ export class ToolManager {
     }
 
     if (this.config.subagents) {
+      const limits = {
+        ...DEFAULT_LIMITS,
+        maxDepth: this.config.subagentConfig?.maxDepth ?? DEFAULT_LIMITS.maxDepth,
+        defaultTimeoutMs: this.config.subagentConfig?.timeoutMs ?? DEFAULT_LIMITS.defaultTimeoutMs,
+      };
+      const eventBus = new EventBus("subagent-bus");
+      const registry = new SubagentRegistry(eventBus, { limits });
+      const scheduler = new SubagentScheduler(registry, this.config.model, limits);
+      scheduler.start();
+
       this.registerTools(
         tools,
-        { ...createSubagentTools({
-          parentModel: this.config.model,
-          parentFilesystem: this.config.fs,
-          maxDepth: this.config.subagentConfig?.maxDepth,
-          timeoutMs: this.config.subagentConfig?.timeoutMs,
-        }) },
+        createAsyncSubagentTools({
+          registry,
+          parentId: "root",
+          maxDepth: limits.maxDepth,
+          currentDepth: 0,
+        }),
         "subagents",
       );
     }

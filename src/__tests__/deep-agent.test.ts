@@ -201,7 +201,9 @@ describe("DeepAgent", () => {
       // Full includes planning + subagent tools
       expect(toolKeys).toContain("write_todos");
       expect(toolKeys).toContain("review_todos");
-      expect(toolKeys).toContain("task");
+      expect(toolKeys).toContain("dispatch_subagent");
+      expect(toolKeys).toContain("poll_subagent");
+      expect(toolKeys).toContain("await_subagent");
     });
   });
 

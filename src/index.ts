@@ -563,8 +563,6 @@ export {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export {
-  createSubagentTools,
-  createTaskTool,
   createAsyncSubagentTools,
   SubagentRegistry,
   SubagentScheduler,
@@ -573,7 +571,6 @@ export {
   createAwaitTool,
 } from "./tools/subagent/index.js";
 
-export type { TaskToolConfig } from "./tools/subagent/index.js";
 export type {
   AsyncSubagentToolsConfig,
   SubagentHandle,
