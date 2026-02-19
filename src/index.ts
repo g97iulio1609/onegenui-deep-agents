@@ -148,6 +148,72 @@ export {
 } from "./domain/todo.schema.js";
 
 export {
+  // Enums & Primitivi
+  StepExecutionModeSchema,
+  StepStatusSchema as PlanStepStatusSchema,
+  StepPrioritySchema,
+  PlanStatusSchema,
+  PlanEventTypeSchema,
+  // Schemas
+  ResourceRequirementsSchema,
+  IOFieldSchema,
+  StepContractSchema,
+  StepResultSchema,
+  StepConditionSchema,
+  LoopConfigSchema,
+  SubStepSchema,
+  StepSchema as PlanStepSchema,
+  PhaseSchema,
+  PlanMetadataSchema,
+  PlanSchema,
+  PlanEventSchema,
+  PlanProgressSchema,
+  PhaseProgressSchema,
+  StepProgressSchema,
+  // State machine
+  STEP_STATUS_TRANSITIONS,
+  PLAN_STATUS_TRANSITIONS,
+  isValidStepTransition,
+  isValidPlanTransition,
+  transitionStep,
+  // Factory functions
+  createStep,
+  createPhase,
+  createSubStep,
+  createPlan,
+  generateStepId,
+  // Validation & progress
+  validatePlan,
+  calculateProgress,
+  // Migration
+  todosToplan as todosToPlan,
+  // Example
+  createExamplePlan,
+  // Types
+  type StepExecutionMode,
+  type StepStatus as PlanStepStatus,
+  type StepPriority,
+  type PlanStatus,
+  type ResourceRequirements,
+  type IOField,
+  type StepContract,
+  type StepResult,
+  type StepCondition,
+  type LoopConfig,
+  type SubStep,
+  type Step as PlanStep,
+  type Phase,
+  type PlanMetadata,
+  type Plan,
+  type PlanEvent,
+  type PlanEventType,
+  type PlanProgress,
+  type PhaseProgress,
+  type StepProgress,
+  type PlanValidationResult,
+} from "./domain/plan.schema.js";
+
+export {
   CheckpointSchema,
   type Checkpoint,
 } from "./domain/checkpoint.schema.js";
@@ -511,6 +577,12 @@ export {
   createPlanningTools,
   createWriteTodosTool,
   createReviewTodosTool,
+  createPlanCreateTool,
+  createPlanUpdateTool,
+  createPlanStatusTool,
+  createPlanVisualizeTool,
+  planToGraph,
+  type PlanToGraphOptions,
 } from "./tools/planning/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
