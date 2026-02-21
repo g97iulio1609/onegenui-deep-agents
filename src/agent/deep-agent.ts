@@ -31,10 +31,12 @@ import { DeepAgentBuilder } from "./deep-agent-builder.js";
 // Result type
 // =============================================================================
 
-export interface DeepAgentResult {
+export interface DeepAgentResult<TOutput = unknown> {
   text: string;
   steps: unknown[];
   sessionId: string;
+  /** Parsed structured output when `output` is configured via builder or run options. */
+  output?: TOutput;
 }
 
 export interface DeepAgentRunOptions {
@@ -74,6 +76,9 @@ interface DeepAgentInternalConfig {
   toolCache?: ToolCache;
   lifecycleHooks?: LifecycleHooks;
   telemetry?: TelemetryPort;
+  /** AI SDK Output specification for structured output (passthrough to ToolLoopAgent). */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  output?: any;
 }
 
 export class DeepAgent {
@@ -165,6 +170,7 @@ export class DeepAgent {
         checkpointConfig: this.config.checkpointConfig,
         telemetry: this.config.telemetry,
         costTracker: this.config.costTracker,
+        output: this.config.output,
       },
       this.toolManager,
       this.pluginManager,

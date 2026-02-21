@@ -60,6 +60,10 @@ export class DeepAgentBuilder extends AbstractBuilder<DeepAgent> {
     handler: AgentEventHandler;
   }> = [];
 
+  /** AI SDK Output specification (e.g. Output.object({schema})) */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private outputSpec?: any;
+
   constructor(config: DeepAgentConfig) {
     super();
     this.agentConfig = config;
@@ -167,6 +171,16 @@ export class DeepAgentBuilder extends AbstractBuilder<DeepAgent> {
     return this;
   }
 
+  /**
+   * Set structured output specification (AI SDK passthrough).
+   * Usage: `.withOutput(Output.object({ schema: z.object({...}) }))`
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  withOutput(output: any): this {
+    this.outputSpec = output;
+    return this;
+  }
+
   withInstructions(instructions: string): this;
   withInstructions(template: PromptTemplate, variables?: Record<string, string>): this;
   withInstructions(instructionsOrTemplate: string | PromptTemplate, variables?: Record<string, string>): this {
@@ -214,6 +228,7 @@ export class DeepAgentBuilder extends AbstractBuilder<DeepAgent> {
       toolCache: this.toolCache,
       lifecycleHooks: this.lifecycleHooks,
       telemetry: this.telemetryAdapter,
+      output: this.outputSpec,
     });
 
     for (const { type, handler } of this.eventHandlers) {

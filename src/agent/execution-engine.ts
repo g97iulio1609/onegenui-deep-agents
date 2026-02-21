@@ -35,6 +35,9 @@ export interface ExecutionEngineConfig {
   checkpointConfig?: Required<CheckpointConfig>;
   telemetry?: TelemetryPort;
   costTracker?: CostTrackerPort;
+  /** AI SDK Output specification for structured output (passthrough to ToolLoopAgent). */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  output?: any;
 }
 
 // =============================================================================
@@ -126,16 +129,20 @@ export class ExecutionEngine {
         if (cp) this.eventBus.emit("checkpoint:load", { checkpoint: cp });
       }
 
-      const agent = new ToolLoopAgent({
+      const agentOptions: Record<string, unknown> = {
         model: this.toolManager.createRateLimitedModel(),
         instructions: this.config.instructions,
         tools,
         stopWhen: stepCountIs(this.config.maxSteps),
-      });
+      };
+      if (this.config.output) agentOptions.output = this.config.output;
+
+      const agent = new ToolLoopAgent(agentOptions as ConstructorParameters<typeof ToolLoopAgent>[0]);
 
       // Wrap LLM call in telemetry span (safe on exception via withSpan)
-      const result = await this.withSpan("llm.generate", { "llm.model": String(this.config.model) }, () =>
-        agent.generate({ prompt }),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result: any = await this.withSpan("llm.generate", { "llm.model": String(this.config.model) }, () =>
+        (agent as any).generate({ prompt }),
       );
 
       // Track token usage
@@ -230,6 +237,7 @@ export class ExecutionEngine {
         text: result.text ?? "",
         steps,
         sessionId,
+        output: (result as unknown as { output?: unknown }).output,
       };
 
       this.eventBus.emit("agent:stop", { result: agentResult });
@@ -293,12 +301,15 @@ export class ExecutionEngine {
       this.eventBus.emit("agent:start", { messages: params.messages });
 
       return this.withSpan("stream", { "stream.messages": params.messages.length }, async () => {
-        const agent = new ToolLoopAgent({
+        const streamAgentOptions: Record<string, unknown> = {
           model: this.toolManager.createRateLimitedModel(),
           instructions: this.config.instructions,
           tools,
           stopWhen: stepCountIs(this.config.maxSteps),
-        });
+        };
+        if (this.config.output) streamAgentOptions.output = this.config.output;
+
+        const agent = new ToolLoopAgent(streamAgentOptions as ConstructorParameters<typeof ToolLoopAgent>[0]);
 
         const streamResult = agent.stream(params as Parameters<typeof agent.stream>[0]);
 
