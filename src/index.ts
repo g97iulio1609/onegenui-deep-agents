@@ -763,6 +763,10 @@ export { GaussFlowMcpAdapter as OnegenUiMcpAdapter } from "./adapters/mcp/gaussf
 // ---------------------------------------------------------------------------
 export {
   StructuredDeclarationSchema,
+  CompilerOutputSchema,
+  SkillDeclarationSchema,
+  AgentDeclarationSchema,
+  A2ARouteSchema,
   TriggerSchema,
   ChannelSchema,
   PolicySchema,
@@ -795,13 +799,6 @@ export type {
   A2ARoute,
   CompilerOutput,
   LLMCompilerOutput,
-} from "./domain/compiler.schema.js";
-export {
-  StructuredDeclarationSchema,
-  CompilerOutputSchema,
-  SkillDeclarationSchema,
-  AgentDeclarationSchema,
-  A2ARouteSchema,
 } from "./domain/compiler.schema.js";
 export type {
   NLParserPort,
