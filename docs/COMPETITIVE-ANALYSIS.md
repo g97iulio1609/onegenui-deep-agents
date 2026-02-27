@@ -15,6 +15,7 @@ GaussFlow now **covers or exceeds** every capability offered by both Mastra and 
 | **Core Architecture** |||||
 | Hexagonal Ports & Adapters | ✅ 31+ ports | ❌ | ❌ | Unique — swap any adapter |
 | Plugin System (lifecycle hooks) | ✅ | ❌ | ❌ | Deterministic init, rollback |
+| Plugin Marketplace | ✅ GitHub + npm + Composite | ⚠️ Local only | ❌ | Multi-source discovery, path-safe loader |
 | Multi-Runtime | ✅ Node/Deno/Edge/Browser/Bun | ❌ Node only | ❌ Node only | Unique |
 | **Middleware** |||||
 | Composable Middleware Chain | ✅ Priority-ordered, typed | ❌ | ✅ | GaussFlow: enum priorities + compose() |
@@ -99,7 +100,7 @@ GaussFlow now **covers or exceeds** every capability offered by both Mastra and 
 | Evaluation | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ |
 | Resilience | ⭐⭐⭐⭐⭐ | ⭐ | ⭐ |
 | Multi-Runtime | ⭐⭐⭐⭐⭐ | ⭐ | ⭐ |
-| **Overall** | **49/50** | **30/50** | **22/50** |
+| **Overall** | **50/50** | **30/50** | **22/50** |
 
 ---
 
