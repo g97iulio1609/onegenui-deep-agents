@@ -11,7 +11,7 @@ import type {
   InfoResponse,
 } from "./types.js";
 import { parseBody, sendJson, sendError } from "./router.js";
-import { DeepAgent } from "../agent/deep-agent.js";
+import { Agent } from "../agent/agent.js";
 import { AgentGraph } from "../graph/agent-graph.js";
 import type { LanguageModel } from "ai";
 
@@ -83,7 +83,7 @@ export function handleInfo(
 // ---------------------------------------------------------------------------
 
 export function handleAgentHealth(
-  agent: DeepAgent,
+  agent: Agent,
 ): (_req: IncomingMessage, res: ServerResponse) => Promise<void> {
   return async (_req, res) => {
     try {
@@ -127,7 +127,7 @@ export function handleRun(
     }
 
     const start = Date.now();
-    const agent = DeepAgent.auto({
+    const agent = Agent.auto({
       instructions: body.instructions ?? "You are a helpful assistant.",
       model,
       maxSteps: body.maxSteps ?? 10,
@@ -188,7 +188,7 @@ export function handleStream(
       Connection: "keep-alive",
     });
 
-    const agent = DeepAgent.auto({
+    const agent = Agent.auto({
       instructions: body.instructions ?? "You are a helpful assistant.",
       model,
       maxSteps: body.maxSteps ?? 10,

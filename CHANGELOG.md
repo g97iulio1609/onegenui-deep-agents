@@ -143,7 +143,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Advanced RAG pipeline — chunking, re-ranking, hybrid search
-- A2A Full protocol enhancements for GaussFlow
+- A2A Full protocol enhancements for Gauss
 - WorkflowEngine with parallel, conditional, and loop steps
 - `/scraping` sub-path export for browser/extension contexts
 - Semantic scraping capabilities ported from mcp-inspector-openrouter
@@ -180,7 +180,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Split DeepAgent into ToolManager + ExecutionEngine (SRP)
+- Split Agent into ToolManager + ExecutionEngine (SRP)
 
 ## [0.2.0] - 2026-02-15
 
@@ -212,8 +212,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Rename package to `@giulio-leone/gaussflow-agent`
-- Standardize naming to GaussFlow brand
+- Rename package to `gauss`
+- Standardize naming to Gauss brand
 - Extract AbstractBuilder template method pattern
 - Add ValidationPort with ZodValidationAdapter
 - Extract BasePlugin abstract class for DRY plugin pattern

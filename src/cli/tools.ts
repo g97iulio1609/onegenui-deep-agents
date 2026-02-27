@@ -10,7 +10,7 @@ import { resolve, join, relative } from "node:path";
 import { readFile, writeFile } from "./commands/files.js";
 import { runBash } from "./commands/bash.js";
 import { generateUnifiedDiff } from "./diff-utils.js";
-import { loadIgnorePatterns, shouldIgnore } from "./gaussflow-ignore.js";
+import { loadIgnorePatterns, shouldIgnore } from "./gauss-ignore.js";
 
 const GIT_EXEC_OPTS = { encoding: "utf8" as const, maxBuffer: 10 * 1024 * 1024 };
 

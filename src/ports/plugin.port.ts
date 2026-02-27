@@ -1,5 +1,5 @@
 // =============================================================================
-// Plugin Port — Contract for DeepAgent plugins
+// Plugin Port — Contract for Agent plugins
 // =============================================================================
 
 import type { Tool } from "ai";
@@ -98,7 +98,7 @@ export interface PluginHooks {
   onError?(ctx: PluginContext, params: OnErrorParams): Promise<OnErrorResult | void> | OnErrorResult | void;
 }
 
-export interface DeepAgentPlugin {
+export interface Plugin {
   readonly name: string;
   readonly version?: string;
   readonly hooks?: PluginHooks;

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { DeepAgent } from "../../../agent/deep-agent.js";
+import { Agent } from "../../../agent/agent.js";
 import { CircuitBreakerState } from "../../../adapters/resilience/circuit-breaker.js";
 
 // Mock the AI SDK ToolLoopAgent
@@ -23,7 +23,7 @@ vi.mock("ai", () => {
   };
 });
 
-describe("DeepAgent with Resilience Patterns", () => {
+describe("Agent with Resilience Patterns", () => {
   const mockModel = {
     generateText: vi.fn(),
     generateObject: vi.fn(),
@@ -37,8 +37,8 @@ describe("DeepAgent with Resilience Patterns", () => {
   });
 
   describe("Circuit Breaker Integration", () => {
-    it("should build DeepAgent with circuit breaker", () => {
-      const agent = DeepAgent.create({
+    it("should build Agent with circuit breaker", () => {
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test instructions",
       })
@@ -49,11 +49,11 @@ describe("DeepAgent with Resilience Patterns", () => {
       })
       .build();
 
-      expect(agent).toBeInstanceOf(DeepAgent);
+      expect(agent).toBeInstanceOf(Agent);
     });
 
     it("should apply circuit breaker to tools", async () => {
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test instructions",
       })
@@ -82,8 +82,8 @@ describe("DeepAgent with Resilience Patterns", () => {
   });
 
   describe("Rate Limiter Integration", () => {
-    it("should build DeepAgent with rate limiter", () => {
-      const agent = DeepAgent.create({
+    it("should build Agent with rate limiter", () => {
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test instructions",
       })
@@ -93,11 +93,11 @@ describe("DeepAgent with Resilience Patterns", () => {
       })
       .build();
 
-      expect(agent).toBeInstanceOf(DeepAgent);
+      expect(agent).toBeInstanceOf(Agent);
     });
 
     it("should apply rate limiting to model calls", async () => {
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test instructions",
       })
@@ -164,7 +164,7 @@ describe("DeepAgent with Resilience Patterns", () => {
     });
 
     it("should apply rate limiting to model calls (not tools)", async () => {
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test instructions",
       })
@@ -192,8 +192,8 @@ describe("DeepAgent with Resilience Patterns", () => {
   });
 
   describe("Tool Cache Integration", () => {
-    it("should build DeepAgent with tool cache", () => {
-      const agent = DeepAgent.create({
+    it("should build Agent with tool cache", () => {
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test instructions",
       })
@@ -203,11 +203,11 @@ describe("DeepAgent with Resilience Patterns", () => {
       })
       .build();
 
-      expect(agent).toBeInstanceOf(DeepAgent);
+      expect(agent).toBeInstanceOf(Agent);
     });
 
     it("should cache tool results", async () => {
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test instructions",
       })
@@ -236,7 +236,7 @@ describe("DeepAgent with Resilience Patterns", () => {
 
   describe("Combined Resilience Patterns", () => {
     it("should support all patterns together", () => {
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test instructions",
       })
@@ -245,11 +245,11 @@ describe("DeepAgent with Resilience Patterns", () => {
       .withToolCache()
       .build();
 
-      expect(agent).toBeInstanceOf(DeepAgent);
+      expect(agent).toBeInstanceOf(Agent);
     });
 
     it("should apply patterns in correct order: cache -> rate limit -> circuit breaker", async () => {
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test instructions",
       })
@@ -287,7 +287,7 @@ describe("DeepAgent with Resilience Patterns", () => {
 
   describe("Configuration Defaults", () => {
     it("should use default configurations when not specified", () => {
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test instructions",
       })
@@ -296,11 +296,11 @@ describe("DeepAgent with Resilience Patterns", () => {
       .withToolCache() // No config - should use defaults
       .build();
 
-      expect(agent).toBeInstanceOf(DeepAgent);
+      expect(agent).toBeInstanceOf(Agent);
     });
 
     it("should merge partial configurations with defaults", () => {
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test instructions",
       })
@@ -309,7 +309,7 @@ describe("DeepAgent with Resilience Patterns", () => {
       .withToolCache({ maxSize: 500 }) // Partial config
       .build();
 
-      expect(agent).toBeInstanceOf(DeepAgent);
+      expect(agent).toBeInstanceOf(Agent);
     });
   });
 });

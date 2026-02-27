@@ -1,12 +1,12 @@
 ---
 sidebar_position: 6
 title: Port Interfaces
-description: Complete reference for all GaussFlow port interfaces
+description: Complete reference for all Gauss port interfaces
 ---
 
 # Port Interfaces
 
-Ports define the contracts for GaussFlow's hexagonal architecture. Implement any port to provide a custom adapter.
+Ports define the contracts for Gauss's hexagonal architecture. Implement any port to provide a custom adapter.
 
 ## FilesystemPort
 
@@ -217,7 +217,7 @@ interface ConsensusResult {
 Plugin contracts and lifecycle hooks.
 
 ```typescript
-interface DeepAgentPlugin {
+interface Plugin {
   readonly name: string;
   readonly version?: string;
   readonly hooks?: PluginHooks;

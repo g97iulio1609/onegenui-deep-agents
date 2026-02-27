@@ -12,8 +12,8 @@
 // import { openai } from "@ai-sdk/openai";
 // const model = openai("gpt-4o");
 
-import { DeepAgent, SupabaseMemoryAdapter } from "@giulio-leone/gaussflow-agent";
-import type { CheckpointConfig } from "@giulio-leone/gaussflow-agent";
+import { Agent, SupabaseMemoryAdapter } from "gauss";
+import type { CheckpointConfig } from "gauss";
 
 const model = {} as import("ai").LanguageModel;
 
@@ -37,7 +37,7 @@ async function main(): Promise<void> {
   };
 
   // -- Build agent with persistent memory ------------------------------------
-  const agent = DeepAgent.create({
+  const agent = Agent.create({
     model,
     id: "session-abc-123",  // fixed ID allows resuming later
     instructions: "You are a research assistant. Take notes as you work.",
@@ -59,7 +59,7 @@ async function main(): Promise<void> {
   console.log("Result:", result.text);
 
   // Later: a new agent with the same session ID resumes from checkpoint
-  const resumed = DeepAgent.create({
+  const resumed = Agent.create({
     model,
     id: "session-abc-123",
     instructions: "You are a research assistant. Continue your prior work.",

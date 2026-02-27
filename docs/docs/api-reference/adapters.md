@@ -1,7 +1,7 @@
 ---
 sidebar_position: 7
 title: Adapter Classes
-description: Complete reference for all GaussFlow adapter implementations
+description: Complete reference for all Gauss adapter implementations
 ---
 
 # Adapter Classes
@@ -15,7 +15,7 @@ Adapters are concrete implementations of [port interfaces](./ports). The framewo
 In-memory filesystem with optional disk persistence. **Default adapter.**
 
 ```typescript
-import { VirtualFilesystem } from "@giulio-leone/gaussflow-agent";
+import { VirtualFilesystem } from "gauss";
 
 const vfs = new VirtualFilesystem();
 await vfs.write("/hello.txt", "Hello, world!");
@@ -29,7 +29,7 @@ Supports transient and persistent zones, optional disk sync via `syncToPersisten
 Sandboxed wrapper over Node.js `fs`. Restricts operations to a configured base path.
 
 ```typescript
-import { LocalFilesystem } from "@giulio-leone/gaussflow-agent/node";
+import { LocalFilesystem } from "gauss/node";
 
 const fs = new LocalFilesystem("/path/to/project");
 const content = await fs.read("src/index.ts");
@@ -42,7 +42,7 @@ const content = await fs.read("src/index.ts");
 `Map`-based in-process storage. **Default adapter.** Suitable for testing and ephemeral sessions.
 
 ```typescript
-import { InMemoryAdapter } from "@giulio-leone/gaussflow-agent";
+import { InMemoryAdapter } from "gauss";
 
 const memory = new InMemoryAdapter();
 await memory.saveTodos("session-1", [{ id: "1", title: "Task", status: "pending" }]);
@@ -53,7 +53,7 @@ await memory.saveTodos("session-1", [{ id: "1", title: "Task", status: "pending"
 Supabase-backed persistent storage using `deep_agent_todos`, `deep_agent_checkpoints`, `deep_agent_conversations`, and `deep_agent_metadata` tables.
 
 ```typescript
-import { SupabaseMemoryAdapter } from "@giulio-leone/gaussflow-agent";
+import { SupabaseMemoryAdapter } from "gauss";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_KEY!);
@@ -65,7 +65,7 @@ const memory = new SupabaseMemoryAdapter(supabase);
 ### Auto-Detection
 
 ```typescript
-import { detectRuntimeName, createRuntimeAdapter } from "@giulio-leone/gaussflow-agent";
+import { detectRuntimeName, createRuntimeAdapter } from "gauss";
 
 const runtimeName = detectRuntimeName(); // "node" | "deno" | "bun" | "edge"
 const runtime = createRuntimeAdapter();  // Auto-selects based on environment
@@ -74,7 +74,7 @@ const runtime = createRuntimeAdapter();  // Auto-selects based on environment
 ### NodeRuntimeAdapter
 
 ```typescript
-import { NodeRuntimeAdapter } from "@giulio-leone/gaussflow-agent";
+import { NodeRuntimeAdapter } from "gauss";
 const runtime = new NodeRuntimeAdapter();
 runtime.getEnv("NODE_ENV"); // process.env.NODE_ENV
 ```
@@ -82,7 +82,7 @@ runtime.getEnv("NODE_ENV"); // process.env.NODE_ENV
 ### DenoRuntimeAdapter
 
 ```typescript
-import { DenoRuntimeAdapter } from "@giulio-leone/gaussflow-agent";
+import { DenoRuntimeAdapter } from "gauss";
 const runtime = new DenoRuntimeAdapter();
 runtime.getEnv("DENO_ENV"); // Deno.env.get("DENO_ENV")
 ```
@@ -90,7 +90,7 @@ runtime.getEnv("DENO_ENV"); // Deno.env.get("DENO_ENV")
 ### BunRuntimeAdapter
 
 ```typescript
-import { BunRuntimeAdapter } from "@giulio-leone/gaussflow-agent";
+import { BunRuntimeAdapter } from "gauss";
 const runtime = new BunRuntimeAdapter();
 ```
 
@@ -99,7 +99,7 @@ const runtime = new BunRuntimeAdapter();
 For Cloudflare Workers and Vercel Edge. Environment variables are bound via request context, so `getEnv()` returns `undefined`.
 
 ```typescript
-import { EdgeRuntimeAdapter } from "@giulio-leone/gaussflow-agent";
+import { EdgeRuntimeAdapter } from "gauss";
 const runtime = new EdgeRuntimeAdapter();
 ```
 
@@ -110,7 +110,7 @@ const runtime = new EdgeRuntimeAdapter();
 Fast estimation using ~4 characters per token. **Default adapter.** Includes context window sizes for common models.
 
 ```typescript
-import { ApproximateTokenCounter } from "@giulio-leone/gaussflow-agent";
+import { ApproximateTokenCounter } from "gauss";
 
 const counter = new ApproximateTokenCounter();
 counter.count("Hello, world!"); // ~3
@@ -121,7 +121,7 @@ counter.count("Hello, world!"); // ~3
 BPE-accurate counting via the `tiktoken` library.
 
 ```typescript
-import { TiktokenTokenCounter } from "@giulio-leone/gaussflow-agent/node";
+import { TiktokenTokenCounter } from "gauss/node";
 
 const counter = new TiktokenTokenCounter();
 counter.count("Hello, world!", "gpt-4o"); // Exact token count
@@ -134,7 +134,7 @@ counter.count("Hello, world!", "gpt-4o"); // Exact token count
 Zod-based implementation of `ValidationPort`. **Default adapter.**
 
 ```typescript
-import { ZodValidationAdapter } from "@giulio-leone/gaussflow-agent";
+import { ZodValidationAdapter } from "gauss";
 import { z } from "zod";
 
 const validator = new ZodValidationAdapter();
@@ -155,7 +155,7 @@ const email = validator.validateOrThrow(z.string().email(), "bad");
 In-memory span storage. Useful for testing and development.
 
 ```typescript
-import { InMemoryTracingAdapter } from "@giulio-leone/gaussflow-agent";
+import { InMemoryTracingAdapter } from "gauss";
 
 const tracer = new InMemoryTracingAdapter();
 const span = tracer.startSpan("my-operation");
@@ -171,7 +171,7 @@ span.end();
 In-memory counters, histograms, and gauges.
 
 ```typescript
-import { InMemoryMetricsAdapter } from "@giulio-leone/gaussflow-agent";
+import { InMemoryMetricsAdapter } from "gauss";
 
 const metrics = new InMemoryMetricsAdapter();
 metrics.incrementCounter("requests.total");
@@ -186,7 +186,7 @@ metrics.recordGauge("connections.active", 5);
 Structured logging via `console.log`, `console.warn`, and `console.error`.
 
 ```typescript
-import { ConsoleLoggingAdapter } from "@giulio-leone/gaussflow-agent";
+import { ConsoleLoggingAdapter } from "gauss";
 
 const logger = new ConsoleLoggingAdapter();
 logger.info("Server started", { port: 3000 });
@@ -200,7 +200,7 @@ logger.error("Connection failed", { host: "db.example.com" });
 `Map`-based in-process learning storage.
 
 ```typescript
-import { InMemoryLearningAdapter } from "@giulio-leone/gaussflow-agent";
+import { InMemoryLearningAdapter } from "gauss";
 
 const learning = new InMemoryLearningAdapter();
 await learning.updateProfile("user-1", { style: "concise", language: "en" });
@@ -214,7 +214,7 @@ await learning.addMemory("user-1", { content: "Prefers TypeScript", tags: ["pref
 Bridges `@ai-sdk/mcp` clients to the `McpPort` interface. Supports stdio, HTTP, and SSE transports.
 
 ```typescript
-import { AiSdkMcpAdapter } from "@giulio-leone/gaussflow-agent";
+import { AiSdkMcpAdapter } from "gauss";
 
 const mcp = new AiSdkMcpAdapter({
   servers: [
@@ -229,14 +229,14 @@ const mcp = new AiSdkMcpAdapter({
 });
 ```
 
-### GaussFlowMcpAdapter
+### GaussMcpAdapter
 
 Bridges `@giulio-leone/gaussflow-mcp` `McpRegistry` to the `McpPort` interface.
 
 ```typescript
-import { GaussFlowMcpAdapter } from "@giulio-leone/gaussflow-agent";
+import { GaussMcpAdapter } from "gauss";
 
-const mcp = new GaussFlowMcpAdapter(mcpRegistry);
+const mcp = new GaussMcpAdapter(mcpRegistry);
 ```
 
 ## Consensus Adapters
@@ -246,7 +246,7 @@ const mcp = new GaussFlowMcpAdapter(mcpRegistry);
 Uses an LLM to evaluate fork results and pick the best output.
 
 ```typescript
-import { LlmJudgeConsensus } from "@giulio-leone/gaussflow-agent";
+import { LlmJudgeConsensus } from "gauss";
 
 const consensus = new LlmJudgeConsensus({ model: openai("gpt-4o") });
 ```
@@ -256,7 +256,7 @@ const consensus = new LlmJudgeConsensus({ model: openai("gpt-4o") });
 Simple majority vote across fork outputs.
 
 ```typescript
-import { MajorityVoteConsensus } from "@giulio-leone/gaussflow-agent";
+import { MajorityVoteConsensus } from "gauss";
 
 const consensus = new MajorityVoteConsensus();
 ```
@@ -266,7 +266,7 @@ const consensus = new MajorityVoteConsensus();
 Multi-round debate between fork outputs.
 
 ```typescript
-import { DebateConsensus } from "@giulio-leone/gaussflow-agent";
+import { DebateConsensus } from "gauss";
 
 const consensus = new DebateConsensus({ model: openai("gpt-4o"), rounds: 3 });
 ```
@@ -278,7 +278,7 @@ const consensus = new DebateConsensus({ model: openai("gpt-4o"), rounds: 3 });
 Implements the circuit breaker pattern to prevent cascading failures by temporarily blocking operations that are likely to fail.
 
 ```typescript
-import { CircuitBreaker, DEFAULT_CIRCUIT_BREAKER_CONFIG } from "@giulio-leone/gaussflow-agent";
+import { CircuitBreaker, DEFAULT_CIRCUIT_BREAKER_CONFIG } from "gauss";
 
 // With custom configuration
 const circuitBreaker = new CircuitBreaker({
@@ -307,7 +307,7 @@ console.log("Failure count:", circuitBreaker.getFailureCount());
 Controls request rate using token bucket algorithm to prevent overwhelming services.
 
 ```typescript
-import { RateLimiter, DEFAULT_RATE_LIMITER_CONFIG } from "@giulio-leone/gaussflow-agent";
+import { RateLimiter, DEFAULT_RATE_LIMITER_CONFIG } from "gauss";
 
 // With custom configuration
 const rateLimiter = new RateLimiter({
@@ -335,7 +335,7 @@ if (rateLimiter.tryAcquire()) {
 LRU cache with TTL support for tool execution results.
 
 ```typescript
-import { ToolCache, DEFAULT_TOOL_CACHE_CONFIG } from "@giulio-leone/gaussflow-agent";
+import { ToolCache, DEFAULT_TOOL_CACHE_CONFIG } from "gauss";
 
 // With custom configuration
 const toolCache = new ToolCache({
@@ -366,19 +366,19 @@ console.log("Cache stats:", toolCache.getStats());
 toolCache.clear();
 ```
 
-### Combined Usage with DeepAgent
+### Combined Usage with Agent
 
 All resilience adapters can be used together for maximum robustness:
 
 ```typescript
 import { 
-  DeepAgent, 
+  Agent, 
   CircuitBreaker, 
   RateLimiter, 
   ToolCache 
-} from "@giulio-leone/gaussflow-agent";
+} from "gauss";
 
-const agent = DeepAgent.create({
+const agent = Agent.create({
   model: openai("gpt-4o"),
   instructions: "You are a resilient assistant.",
 })

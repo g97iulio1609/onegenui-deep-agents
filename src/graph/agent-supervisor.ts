@@ -1,5 +1,5 @@
 // =============================================================================
-// AgentSupervisor — Erlang-style OTP supervisor for GaussFlow
+// AgentSupervisor — Erlang-style OTP supervisor for Gauss
 // =============================================================================
 
 import type { AgentEventType } from "../types.js";

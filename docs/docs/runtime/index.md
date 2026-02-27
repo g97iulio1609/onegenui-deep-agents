@@ -1,12 +1,12 @@
 ---
 sidebar_position: 4
 title: Multi-Runtime Support
-description: Run GaussFlow on Node.js, Deno, Bun, Edge, and Browser
+description: Run Gauss on Node.js, Deno, Bun, Edge, and Browser
 ---
 
 # Multi-Runtime Support
 
-GaussFlow runs on **Node.js**, **Deno**, **Bun**, **Edge** (Cloudflare Workers, Vercel Edge), and **Browser**. The core API is runtime-agnostic; platform-specific adapters live in dedicated sub-path exports.
+Gauss runs on **Node.js**, **Deno**, **Bun**, **Edge** (Cloudflare Workers, Vercel Edge), and **Browser**. The core API is runtime-agnostic; platform-specific adapters live in dedicated sub-path exports.
 
 ## RuntimePort
 
@@ -26,18 +26,18 @@ interface RuntimePort {
 The framework auto-detects your runtime and selects the appropriate adapter:
 
 ```typescript
-import { DeepAgent } from "@giulio-leone/gaussflow-agent";
+import { Agent } from "gauss";
 
 // Auto-detect runtime
-const agent = DeepAgent.create({ model, instructions: "..." }).build();
+const agent = Agent.create({ model, instructions: "..." }).build();
 ```
 
 Or specify explicitly:
 
 ```typescript
-import { DenoRuntimeAdapter } from "@giulio-leone/gaussflow-agent";
+import { DenoRuntimeAdapter } from "gauss";
 
-const agent = DeepAgent.create({ model, instructions: "..." })
+const agent = Agent.create({ model, instructions: "..." })
   .withRuntime(new DenoRuntimeAdapter())
   .build();
 ```
@@ -55,28 +55,28 @@ const agent = DeepAgent.create({ model, instructions: "..." })
 
 ```typescript
 // Node.js / Bun — core + Node-specific adapters
-import { DeepAgent } from "@giulio-leone/gaussflow-agent";
-import { LocalFilesystem, TiktokenTokenCounter } from "@giulio-leone/gaussflow-agent/node";
+import { Agent } from "gauss";
+import { LocalFilesystem, TiktokenTokenCounter } from "gauss/node";
 
 // Deno — Deno-specific adapters
-import { DenoFilesystem, DenoKvMemoryAdapter } from "@giulio-leone/gaussflow-agent/deno";
+import { DenoFilesystem, DenoKvMemoryAdapter } from "gauss/deno";
 
 // Edge / Cloudflare Workers
-import { OpfsFilesystem, IndexedDbMemoryAdapter } from "@giulio-leone/gaussflow-agent/edge";
+import { OpfsFilesystem, IndexedDbMemoryAdapter } from "gauss/edge";
 
 // Browser
-import { OpfsFilesystem, IndexedDbMemoryAdapter } from "@giulio-leone/gaussflow-agent/browser";
+import { OpfsFilesystem, IndexedDbMemoryAdapter } from "gauss/browser";
 ```
 
 ## Universal Mode
 
-`DeepAgent.auto()` creates an agent using universal adapters that work in **any** runtime:
+`Agent.auto()` creates an agent using universal adapters that work in **any** runtime:
 
 ```typescript
-import { DeepAgent } from "@giulio-leone/gaussflow-agent";
+import { Agent } from "gauss";
 import { openai } from "@ai-sdk/openai";
 
-const agent = DeepAgent.auto({
+const agent = Agent.auto({
   model: openai("gpt-4o"),
   instructions: "You are a helpful assistant.",
 });
@@ -90,10 +90,10 @@ const result = await agent.run("Hello");
 Expose agent tools as an MCP-compatible HTTP server:
 
 ```typescript
-import { DeepAgent } from "@giulio-leone/gaussflow-agent";
-import { McpServer, createStreamableHttpHandler } from "@giulio-leone/gaussflow-agent/server";
+import { Agent } from "gauss";
+import { McpServer, createStreamableHttpHandler } from "gauss/server";
 
-const agent = DeepAgent.minimal({
+const agent = Agent.minimal({
   model: openai("gpt-4o"),
   instructions: "You are a coding assistant.",
 });
@@ -113,9 +113,9 @@ Bun.serve({ port: 3000, fetch: handler });
 Stream agent events via SSE:
 
 ```typescript
-import { DeepAgent, createSseHandler } from "@giulio-leone/gaussflow-agent";
+import { Agent, createSseHandler } from "gauss";
 
-const agent = DeepAgent.minimal({ model, instructions: "..." });
+const agent = Agent.minimal({ model, instructions: "..." });
 const handler = createSseHandler({ eventBus: agent.eventBus });
 
 Bun.serve({ port: 3001, fetch: handler });

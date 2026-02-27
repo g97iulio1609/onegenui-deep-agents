@@ -11,8 +11,8 @@ The `WorkflowPlugin` executes a sequence of steps before the agent runs. Each st
 ## Quick Start
 
 ```typescript
-import { DeepAgent, createWorkflowPlugin } from "@giulio-leone/gaussflow-agent";
-import type { WorkflowStep } from "@giulio-leone/gaussflow-agent";
+import { Agent, createWorkflowPlugin } from "gauss";
+import type { WorkflowStep } from "gauss";
 
 const steps: WorkflowStep[] = [
   {
@@ -46,7 +46,7 @@ const steps: WorkflowStep[] = [
   },
 ];
 
-const agent = DeepAgent.create({
+const agent = Agent.create({
   model: openai("gpt-4o"),
   instructions: "Summarize the provisioned resources.",
 })
@@ -107,7 +107,7 @@ Access the result via `plugin.getLastResult()`:
 ```typescript
 const workflow = createWorkflowPlugin({ steps });
 
-const agent = DeepAgent.create({ model, instructions: "..." })
+const agent = Agent.create({ model, instructions: "..." })
   .use(workflow)
   .build();
 
@@ -137,7 +137,7 @@ interface WorkflowResult {
 Failed workflows throw a `WorkflowError`:
 
 ```typescript
-import { WorkflowError } from "@giulio-leone/gaussflow-agent";
+import { WorkflowError } from "gauss";
 
 try {
   await agent.run("Go");

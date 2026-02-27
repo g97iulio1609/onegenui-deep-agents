@@ -21,7 +21,7 @@ import { PluginManager } from "../plugins/plugin-manager.js";
 import { TokenTracker } from "../context/token-tracker.js";
 import type { MiddlewareChain } from "../middleware/chain.js";
 
-import type { DeepAgentResult, DeepAgentRunOptions } from "./deep-agent.js";
+import type { AgentResult, AgentRunOptions } from "./agent.js";
 
 // =============================================================================
 // Config subset needed by ExecutionEngine
@@ -165,8 +165,8 @@ export class ExecutionEngine {
     prompt: string,
     sessionId: string,
     runtime: RuntimePort,
-    options: DeepAgentRunOptions = {},
-  ): Promise<DeepAgentResult> {
+    options: AgentRunOptions = {},
+  ): Promise<AgentResult> {
     const runMetadata: PluginRunMetadata = {
       ...(options.pluginMetadata ?? {}),
       ...(options.mcpToolset ? { mcpToolset: options.mcpToolset } : {}),
@@ -410,7 +410,7 @@ export class ExecutionEngine {
         }
       }
 
-      const agentResult: DeepAgentResult = {
+      const agentResult: AgentResult = {
         text: result.text ?? "",
         steps,
         sessionId,
@@ -452,7 +452,7 @@ export class ExecutionEngine {
     params: { messages: Array<{ role: string; content: unknown }> },
     sessionId: string,
     runtime: RuntimePort,
-    options: DeepAgentRunOptions = {},
+    options: AgentRunOptions = {},
   ): Promise<any> {
     let pluginCtx = this.toolManager.createPluginContext(sessionId, [], options.pluginMetadata);
 

@@ -4,7 +4,7 @@
 
 import { GraphConfigSchema } from "../domain/graph.schema.js";
 import type { GraphConfig, GraphResult, GraphStreamEvent } from "../domain/graph.schema.js";
-import type { DeepAgentConfig } from "../types.js";
+import type { AgentConfig } from "../types.js";
 import type { ConsensusPort } from "../ports/consensus.port.js";
 import type { FilesystemPort } from "../ports/filesystem.port.js";
 import type { TelemetryPort } from "../ports/telemetry.port.js";
@@ -120,7 +120,7 @@ export class AgentGraphBuilder extends AbstractBuilder<AgentGraph> {
     this.config = GraphConfigSchema.parse(config ?? {});
   }
 
-  node(id: string, config: DeepAgentConfig): this {
+  node(id: string, config: AgentConfig): this {
     if (this.nodeMap.has(id)) {
       throw new Error(`Node "${id}" already exists`);
     }
@@ -138,7 +138,7 @@ export class AgentGraphBuilder extends AbstractBuilder<AgentGraph> {
     return this;
   }
 
-  fork(id: string, configs: DeepAgentConfig[]): this {
+  fork(id: string, configs: AgentConfig[]): this {
     if (configs.length < 2) {
       throw new Error(`Fork "${id}" requires at least 2 configs`);
     }

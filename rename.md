@@ -1,8 +1,8 @@
-# GaussFlow — Rename & Standardization Plan
+# Gauss — Rename & Standardization Plan
 
 ## Overview
 
-The package was renamed from `@onegenui/agent` to `@giulio-leone/gaussflow-agent` but internal class names, filenames, and references are still inconsistent. This plan covers the complete standardization.
+The package was renamed from `@onegenui/agent` to `gauss` but internal class names, filenames, and references are still inconsistent. This plan covers the complete standardization.
 
 ---
 
@@ -10,18 +10,18 @@ The package was renamed from `@onegenui/agent` to `@giulio-leone/gaussflow-agent
 
 | Current | New | File | Lines |
 |---------|-----|------|-------|
-| `OneAgentServer` | `GaussFlowServer` | `src/rest/server.ts` | 16 |
-| `OneAgentServer` | `GaussFlowServer` | `src/rest/index.ts` | 5 |
-| `OneAgentServer` | `GaussFlowServer` | `src/index.ts` | 399 |
-| `OneAgentConfig` | `GaussFlowConfig` | `src/cli/config.ts` | 11, 21, 26, 37 |
-| `OnegenUiMcpAdapter` | `GaussFlowMcpAdapter` | `src/adapters/mcp/onegenui-mcp.adapter.ts` | 17 |
-| `OnegenUiMcpAdapter` | `GaussFlowMcpAdapter` | `src/adapters/mcp/index.ts` | 1 |
-| `OnegenUiMcpAdapter` | `GaussFlowMcpAdapter` | `src/index.ts` | 245 |
+| `OneAgentServer` | `GaussServer` | `src/rest/server.ts` | 16 |
+| `OneAgentServer` | `GaussServer` | `src/rest/index.ts` | 5 |
+| `OneAgentServer` | `GaussServer` | `src/index.ts` | 399 |
+| `OneAgentConfig` | `GaussConfig` | `src/cli/config.ts` | 11, 21, 26, 37 |
+| `OnegenUiMcpAdapter` | `GaussMcpAdapter` | `src/adapters/mcp/onegenui-mcp.adapter.ts` | 17 |
+| `OnegenUiMcpAdapter` | `GaussMcpAdapter` | `src/adapters/mcp/index.ts` | 1 |
+| `OnegenUiMcpAdapter` | `GaussMcpAdapter` | `src/index.ts` | 245 |
 
 > ⚠️ These are breaking changes. Consider re-exporting old names as deprecated aliases:
 > ```typescript
-> /** @deprecated Use GaussFlowServer */
-> export const OneAgentServer = GaussFlowServer;
+> /** @deprecated Use GaussServer */
+> export const OneAgentServer = GaussServer;
 > ```
 
 ---
@@ -41,8 +41,8 @@ All imports referencing these files must be updated accordingly.
 
 | File | Line(s) | Current | New |
 |------|---------|---------|-----|
-| `src/rest/server.ts` | 2 | `// REST API — OneAgentServer` | `// REST API — GaussFlowServer` |
-| `src/adapters/mcp/onegenui-mcp.adapter.ts` | 1 | `// OnegenUiMcpAdapter — Adapter bridging…` | `// GaussFlowMcpAdapter — Adapter bridging…` |
+| `src/rest/server.ts` | 2 | `// REST API — OneAgentServer` | `// REST API — GaussServer` |
+| `src/adapters/mcp/onegenui-mcp.adapter.ts` | 1 | `// OnegenUiMcpAdapter — Adapter bridging…` | `// GaussMcpAdapter — Adapter bridging…` |
 
 ---
 
@@ -50,7 +50,7 @@ All imports referencing these files must be updated accordingly.
 
 | File | Lines | What to change |
 |------|-------|----------------|
-| `src/rest/__tests__/server.test.ts` | 8, 192, 193, 198, 382, 383, 388 | `OneAgentServer` → `GaussFlowServer` |
+| `src/rest/__tests__/server.test.ts` | 8, 192, 193, 198, 382, 383, 388 | `OneAgentServer` → `GaussServer` |
 
 ---
 
@@ -58,7 +58,7 @@ All imports referencing these files must be updated accordingly.
 
 | File | Lines | What to change |
 |------|-------|----------------|
-| `examples/09-cli-and-rest.ts` | 7, 9 | `OneAgentServer` → `GaussFlowServer` |
+| `examples/09-cli-and-rest.ts` | 7, 9 | `OneAgentServer` → `GaussServer` |
 
 ---
 
@@ -66,11 +66,11 @@ All imports referencing these files must be updated accordingly.
 
 | Line | Current | New |
 |------|---------|-----|
-| 109 | `│OnegenUiMcp│` | `│GaussFlowMcp│` |
+| 109 | `│OnegenUiMcp│` | `│GaussMcp│` |
 | 169 | `onegenui-mcp.adapter.ts` | `gaussflow-mcp.adapter.ts` |
-| 997 | `OnegenUiMcpAdapter` | `GaussFlowMcpAdapter` |
-| 1433 | `import { OneAgentServer }` | `import { GaussFlowServer }` |
-| 1435 | `new OneAgentServer({` | `new GaussFlowServer({` |
+| 997 | `OnegenUiMcpAdapter` | `GaussMcpAdapter` |
+| 1433 | `import { OneAgentServer }` | `import { GaussServer }` |
+| 1435 | `new OneAgentServer({` | `new GaussServer({` |
 
 ---
 
@@ -81,9 +81,9 @@ All imports referencing these files must be updated accordingly.
 | `docs/docusaurus.config.ts:15` | `baseUrl: '/onegenui-deep-agents/'` → update se il repo viene rinominato |
 | `docs/docusaurus.config.ts:18` | `projectName: 'onegenui-deep-agents'` → idem |
 | `docs/docusaurus.config.ts:34,63,90` | URL GitHub: `g97iulio1609/onegenui-deep-agents` → `giulio-leone/...` |
-| `docs/docs/api-reference/adapters.md:232,237,239` | `OnegenUiMcpAdapter` → `GaussFlowMcpAdapter` |
-| `docs/docs/architecture.md:38` | `│OnegenUiMcp│` → `│GaussFlowMcp│` |
-| `docs/docs/rest-api.md:12,14` | `OneAgentServer` → `GaussFlowServer` |
+| `docs/docs/api-reference/adapters.md:232,237,239` | `OnegenUiMcpAdapter` → `GaussMcpAdapter` |
+| `docs/docs/architecture.md:38` | `│OnegenUiMcp│` → `│GaussMcp│` |
+| `docs/docs/rest-api.md:12,14` | `OneAgentServer` → `GaussServer` |
 
 ---
 
@@ -102,9 +102,9 @@ All imports referencing these files must be updated accordingly.
 
 | Nome | Motivo |
 |------|--------|
-| `DeepAgent` (classe) | Nome del core agent, intenzionalmente diverso dal brand del pacchetto |
+| `Agent` (classe) | Nome del core agent, intenzionalmente diverso dal brand del pacchetto |
 | `deep-agent.ts` (file) | Coerente con il nome della classe |
-| `DeepAgentBuilder` | Idem |
+| `AgentBuilder` | Idem |
 | Nomi di port/adapter generici | Già corretti (`RuntimePort`, `MemoryPort`, etc.) |
 
 ---
@@ -113,9 +113,9 @@ All imports referencing these files must be updated accordingly.
 
 - [ ] Rename file `onegenui-mcp.adapter.ts` → `gaussflow-mcp.adapter.ts`
 - [ ] Rename file `onegenui-mcp.d.ts` → `gaussflow-mcp.d.ts`
-- [ ] Rename class `OnegenUiMcpAdapter` → `GaussFlowMcpAdapter`
-- [ ] Rename class `OneAgentServer` → `GaussFlowServer`
-- [ ] Rename interface `OneAgentConfig` → `GaussFlowConfig`
+- [ ] Rename class `OnegenUiMcpAdapter` → `GaussMcpAdapter`
+- [ ] Rename class `OneAgentServer` → `GaussServer`
+- [ ] Rename interface `OneAgentConfig` → `GaussConfig`
 - [ ] Update all imports/re-exports
 - [ ] Update all tests
 - [ ] Update examples

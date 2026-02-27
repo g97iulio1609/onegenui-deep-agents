@@ -6,9 +6,9 @@
 // const model = openai("gpt-4o");
 
 import {
-  DeepAgent, LocalFilesystem, SupabaseMemoryAdapter, AiSdkMcpAdapter,
-} from "@giulio-leone/gaussflow-agent";
-import type { AgentEvent, ApprovalRequest } from "@giulio-leone/gaussflow-agent";
+  Agent, LocalFilesystem, SupabaseMemoryAdapter, AiSdkMcpAdapter,
+} from "gauss";
+import type { AgentEvent, ApprovalRequest } from "gauss";
 
 const model = {} as import("ai").LanguageModel;
 
@@ -30,7 +30,7 @@ async function main(): Promise<void> {
   });
 
   // Build with filesystem, memory, MCP, planning, subagents, and approval
-  const agent = DeepAgent.create({
+  const agent = Agent.create({
     model,
     instructions: [
       "You are a senior engineer working on a real codebase.",

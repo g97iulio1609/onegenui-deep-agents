@@ -11,7 +11,7 @@ description: Multi-agent collaboration with DAG execution, forking, and consensu
 ## Quick Start
 
 ```typescript
-import { AgentGraph, LlmJudgeConsensus } from "@giulio-leone/gaussflow-agent";
+import { AgentGraph, LlmJudgeConsensus } from "gauss";
 import { openai } from "@ai-sdk/openai";
 
 const model = openai("gpt-4o");
@@ -117,7 +117,7 @@ Validates the graph (no cycles, all edge targets exist) and constructs the `Agen
 Implement `ConsensusPort`:
 
 ```typescript
-import type { ConsensusPort, ConsensusResult } from "@giulio-leone/gaussflow-agent";
+import type { ConsensusPort, ConsensusResult } from "gauss";
 
 class CustomConsensus implements ConsensusPort {
   async evaluate(

@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { readFileSync, watch, type FSWatcher } from "node:fs";
-import type { HotReloadPort, AgentConfig } from "../../ports/hot-reload.port.js";
+import type { HotReloadPort, HotReloadAgentConfig as AgentConfig } from "../../ports/hot-reload.port.js";
 
 /** Default debounce interval for file-change events in ms */
 const DEFAULT_DEBOUNCE_MS = 300;

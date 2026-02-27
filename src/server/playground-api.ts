@@ -1,5 +1,5 @@
 // =============================================================================
-// PlaygroundAPI — REST endpoints for the GaussFlow Playground
+// PlaygroundAPI — REST endpoints for the Gauss Playground
 // =============================================================================
 
 import type { HttpServerPort } from "../ports/http-server.port.js";

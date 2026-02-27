@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { LanguageModel } from "ai";
 
-import { DeepAgent } from "../agent/deep-agent.js";
+import { Agent } from "../agent/agent.js";
 import { VirtualFilesystem } from "../adapters/filesystem/virtual-fs.adapter.js";
 import { InMemoryAdapter } from "../adapters/memory/in-memory.adapter.js";
 import { ApproximateTokenCounter } from "../adapters/token-counter/approximate.adapter.js";
@@ -46,7 +46,7 @@ const mockModel = {
 // Tests
 // =============================================================================
 
-describe("DeepAgent", () => {
+describe("Agent", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     generateFn.mockResolvedValue({
@@ -60,8 +60,8 @@ describe("DeepAgent", () => {
   // ===========================================================================
 
   describe("Builder", () => {
-    it("DeepAgent.create returns a builder", () => {
-      const builder = DeepAgent.create({
+    it("Agent.create returns a builder", () => {
+      const builder = Agent.create({
         model: mockModel,
         instructions: "Test instructions",
       });
@@ -75,13 +75,13 @@ describe("DeepAgent", () => {
       expect(builder).toHaveProperty("withSubagents");
     });
 
-    it("builder.build() creates a DeepAgent with defaults (VFS, InMemory, ApproximateCounter)", () => {
-      const agent = DeepAgent.create({
+    it("builder.build() creates a Agent with defaults (VFS, InMemory, ApproximateCounter)", () => {
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test instructions",
       }).build();
 
-      expect(agent).toBeInstanceOf(DeepAgent);
+      expect(agent).toBeInstanceOf(Agent);
       expect(agent.sessionId).toBeDefined();
       expect(typeof agent.sessionId).toBe("string");
       expect(agent.eventBus).toBeDefined();
@@ -92,7 +92,7 @@ describe("DeepAgent", () => {
       const memory = new InMemoryAdapter();
       const counter = new ApproximateTokenCounter();
 
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test",
       })
@@ -104,12 +104,12 @@ describe("DeepAgent", () => {
         .withApproval({ defaultMode: "deny-all" })
         .build();
 
-      expect(agent).toBeInstanceOf(DeepAgent);
+      expect(agent).toBeInstanceOf(Agent);
       expect(agent.sessionId).toBeDefined();
     });
 
     it("builder.withMaxSteps sets max steps", async () => {
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test",
       })
@@ -129,7 +129,7 @@ describe("DeepAgent", () => {
     it("builder.on registers event handlers", async () => {
       const handler = vi.fn();
 
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test",
       })
@@ -152,13 +152,13 @@ describe("DeepAgent", () => {
   // ===========================================================================
 
   describe("Presets", () => {
-    it("DeepAgent.minimal creates agent with VFS + planning tools", async () => {
-      const agent = DeepAgent.minimal({
+    it("Agent.minimal creates agent with VFS + planning tools", async () => {
+      const agent = Agent.minimal({
         model: mockModel,
         instructions: "Minimal agent",
       });
 
-      expect(agent).toBeInstanceOf(DeepAgent);
+      expect(agent).toBeInstanceOf(Agent);
       expect(agent.sessionId).toBeDefined();
 
       await agent.run("Hello");
@@ -175,18 +175,18 @@ describe("DeepAgent", () => {
       expect(toolKeys).toContain("review_todos");
     });
 
-    it("DeepAgent.full creates agent with all features", async () => {
+    it("Agent.full creates agent with all features", async () => {
       const memory = new InMemoryAdapter();
       const counter = new ApproximateTokenCounter();
 
-      const agent = DeepAgent.full({
+      const agent = Agent.full({
         model: mockModel,
         instructions: "Full agent",
         memory,
         tokenCounter: counter,
       });
 
-      expect(agent).toBeInstanceOf(DeepAgent);
+      expect(agent).toBeInstanceOf(Agent);
 
       await agent.run("Hello");
 
@@ -213,7 +213,7 @@ describe("DeepAgent", () => {
 
   describe("run", () => {
     it("agent.run calls ToolLoopAgent.generate", async () => {
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test",
       }).build();
@@ -226,7 +226,7 @@ describe("DeepAgent", () => {
     });
 
     it("agent.run returns text, steps, sessionId", async () => {
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test",
       }).build();
@@ -243,7 +243,7 @@ describe("DeepAgent", () => {
       const events: AgentEvent[] = [];
       const handler = (event: AgentEvent) => events.push(event);
 
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test",
       })
@@ -270,7 +270,7 @@ describe("DeepAgent", () => {
     it("agent.dispose cleans up event listeners", async () => {
       const handler = vi.fn();
 
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test",
       })
@@ -297,7 +297,7 @@ describe("DeepAgent", () => {
       });
 
       const events: AgentEvent[] = [];
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test",
       })
@@ -347,7 +347,7 @@ describe("DeepAgent", () => {
         .mockResolvedValue({ allow: false, reason: "policy-filter" });
 
       const events: AgentEvent[] = [];
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test",
       })
@@ -378,7 +378,7 @@ describe("DeepAgent", () => {
     it("agent.run saves checkpoint after completion", async () => {
       const memory = new InMemoryAdapter();
 
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test",
         checkpoint: { enabled: true },
@@ -397,7 +397,7 @@ describe("DeepAgent", () => {
     it("agent.run emits checkpoint:save event", async () => {
       const events: AgentEvent[] = [];
 
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test",
         checkpoint: { enabled: true },
@@ -414,7 +414,7 @@ describe("DeepAgent", () => {
     it("agent.run skips checkpoint when disabled", async () => {
       const events: AgentEvent[] = [];
 
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test",
         checkpoint: { enabled: false },
@@ -447,7 +447,7 @@ describe("DeepAgent", () => {
         closeAll: vi.fn(),
       };
 
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test",
       })
@@ -473,15 +473,15 @@ describe("DeepAgent", () => {
   // ===========================================================================
 
   describe("approval", () => {
-    it("builder passes resolved approval config to DeepAgent", () => {
-      const agent = DeepAgent.create({
+    it("builder passes resolved approval config to Agent", () => {
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test",
       })
         .withApproval({ defaultMode: "deny-all" })
         .build();
 
-      expect(agent).toBeInstanceOf(DeepAgent);
+      expect(agent).toBeInstanceOf(Agent);
     });
   });
 
@@ -491,7 +491,7 @@ describe("DeepAgent", () => {
 
   describe("withTools", () => {
     it("should merge extra tools from withTools into agent", async () => {
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "test",
       })
@@ -503,7 +503,7 @@ describe("DeepAgent", () => {
         })
         .build();
 
-      expect(agent).toBeInstanceOf(DeepAgent);
+      expect(agent).toBeInstanceOf(Agent);
       expect(agent.sessionId).toBeDefined();
 
       await agent.run("Hello");
@@ -519,7 +519,7 @@ describe("DeepAgent", () => {
     });
 
     it("withTools returns the builder for chaining", () => {
-      const builder = DeepAgent.create({
+      const builder = Agent.create({
         model: mockModel,
         instructions: "test",
       });
@@ -529,7 +529,7 @@ describe("DeepAgent", () => {
     });
 
     it("withTools merges multiple calls", async () => {
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "test",
       })

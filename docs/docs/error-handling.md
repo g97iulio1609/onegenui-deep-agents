@@ -1,30 +1,30 @@
 ---
 sidebar_position: 9
 title: Error Handling
-description: Complete reference for GaussFlow's hierarchical error system
+description: Complete reference for Gauss's hierarchical error system
 ---
 
 # Error Handling
 
-GaussFlow provides a comprehensive, hierarchical error system with structured error classes, error codes, and event-based error handling. This allows for precise error identification, handling, and debugging.
+Gauss provides a comprehensive, hierarchical error system with structured error classes, error codes, and event-based error handling. This allows for precise error identification, handling, and debugging.
 
 ## Error Hierarchy
 
-All GaussFlow errors extend the base `GaussFlowError` class, which provides structured error information including error codes and root cause tracking.
+All Gauss errors extend the base `GaussError` class, which provides structured error information including error codes and root cause tracking.
 
 ### Base Error Class
 
 ```typescript
-import { GaussFlowError } from "@giulio-leone/gaussflow-agent";
+import { GaussError } from "gauss";
 
-class GaussFlowError extends Error {
+class GaussError extends Error {
   constructor(
     message: string,
     public readonly code: string,
     public readonly cause?: unknown,
   ) {
     super(message);
-    this.name = "GaussFlowError";
+    this.name = "GaussError";
   }
 }
 ```
@@ -39,7 +39,7 @@ All errors include:
 
 ```typescript
 import {
-  GaussFlowError,          // Base error class
+  GaussError,          // Base error class
   ToolExecutionError,      // Tool execution failures
   PluginError,            // Plugin lifecycle errors  
   McpConnectionError,     // MCP server connection issues
@@ -48,7 +48,7 @@ import {
   ConfigurationError,     // Invalid configuration
   CircuitBreakerError,    // Circuit breaker failures
   RateLimiterError,       // Rate limiting errors
-} from "@giulio-leone/gaussflow-agent";
+} from "gauss";
 ```
 
 ### Error Codes Reference
@@ -70,14 +70,14 @@ import {
 
 ```typescript
 import { 
-  DeepAgent, 
+  Agent, 
   ToolExecutionError, 
   McpConnectionError,
   ConfigurationError 
-} from "@giulio-leone/gaussflow-agent";
+} from "gauss";
 import { openai } from "@ai-sdk/openai";
 
-const agent = DeepAgent.create({
+const agent = Agent.create({
   model: openai("gpt-4o"),
   instructions: "You are a helpful assistant.",
 });
@@ -93,8 +93,8 @@ try {
     console.error("MCP connection failed:", error.message);
   } else if (error instanceof ConfigurationError) {
     console.error("Configuration error:", error.message);
-  } else if (error instanceof GaussFlowError) {
-    console.error("GaussFlow error:", error.code, error.message);
+  } else if (error instanceof GaussError) {
+    console.error("Gauss error:", error.code, error.message);
   } else {
     console.error("Unexpected error:", error);
   }
@@ -103,12 +103,12 @@ try {
 
 ### Event-Based Error Handling
 
-GaussFlow's event system provides centralized error handling:
+Gauss's event system provides centralized error handling:
 
 ```typescript
-import { DeepAgent, GaussFlowError } from "@giulio-leone/gaussflow-agent";
+import { Agent, GaussError } from "gauss";
 
-const agent = DeepAgent.create({
+const agent = Agent.create({
   model: openai("gpt-4o"),
   instructions: "You are a resilient assistant.",
 })
@@ -143,7 +143,7 @@ function handleMcpError(error: McpConnectionError) {
 ### Async Error Handling with Event Listeners
 
 ```typescript
-const agent = DeepAgent.create({ model, instructions: "..." })
+const agent = Agent.create({ model, instructions: "..." })
   .on("*", (event) => {
     // Listen to all events for comprehensive error monitoring
     if (event.type === "error") {
@@ -157,9 +157,9 @@ async function logError(error: Error, source: string) {
     timestamp: new Date().toISOString(),
     source,
     type: error.constructor.name,
-    code: error instanceof GaussFlowError ? error.code : "UNKNOWN",
+    code: error instanceof GaussError ? error.code : "UNKNOWN",
     message: error.message,
-    cause: error instanceof GaussFlowError ? error.cause : null,
+    cause: error instanceof GaussError ? error.cause : null,
     stack: error.stack,
   };
   
@@ -173,9 +173,9 @@ async function logError(error: Error, source: string) {
 ### Retry with Exponential Backoff
 
 ```typescript
-import { DeepAgent, ToolExecutionError } from "@giulio-leone/gaussflow-agent";
+import { Agent, ToolExecutionError } from "gauss";
 
-async function runWithRetry(agent: DeepAgent, prompt: string, maxRetries = 3) {
+async function runWithRetry(agent: Agent, prompt: string, maxRetries = 3) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       return await agent.run(prompt);
@@ -204,12 +204,12 @@ try {
 
 ```typescript
 import { 
-  DeepAgent, 
+  Agent, 
   McpConnectionError, 
   ToolExecutionError 
-} from "@giulio-leone/gaussflow-agent";
+} from "gauss";
 
-async function runWithFallback(agent: DeepAgent, prompt: string) {
+async function runWithFallback(agent: Agent, prompt: string) {
   try {
     // Attempt with full functionality
     return await agent.run(prompt);
@@ -218,7 +218,7 @@ async function runWithFallback(agent: DeepAgent, prompt: string) {
       console.warn("MCP unavailable, using local tools only");
       
       // Create agent without MCP tools
-      const fallbackAgent = DeepAgent.create({
+      const fallbackAgent = Agent.create({
         model: agent.config.model,
         instructions: agent.config.instructions + " (Note: External tools unavailable)"
       }).withPlanning().build();
@@ -243,11 +243,11 @@ Combine error handling with resilience patterns:
 
 ```typescript
 import { 
-  DeepAgent, 
+  Agent, 
   CircuitBreaker, 
   CircuitBreakerError,
   ToolExecutionError 
-} from "@giulio-leone/gaussflow-agent";
+} from "gauss";
 
 const circuitBreaker = new CircuitBreaker({
   failureThreshold: 3,
@@ -255,7 +255,7 @@ const circuitBreaker = new CircuitBreaker({
   monitorWindowMs: 60000,
 });
 
-const agent = DeepAgent.create({ model, instructions: "..." })
+const agent = Agent.create({ model, instructions: "..." })
   .withCircuitBreaker(circuitBreaker)
   .on("error", (event) => {
     const error = event.data;
@@ -289,9 +289,9 @@ async function resilientRun(prompt: string) {
 Plugins can implement error handling in their hooks:
 
 ```typescript
-import { DeepAgentPlugin, PluginError } from "@giulio-leone/gaussflow-agent";
+import { Plugin, PluginError } from "gauss";
 
-const errorHandlingPlugin: DeepAgentPlugin = {
+const errorHandlingPlugin: Plugin = {
   name: "error-handler",
   hooks: {
     onError: async (ctx, { error, step, tool }) => {
@@ -337,7 +337,7 @@ function isValidData(data: any): boolean {
 For production applications, implement comprehensive error tracking:
 
 ```typescript
-import { DeepAgent, GaussFlowError } from "@giulio-leone/gaussflow-agent";
+import { Agent, GaussError } from "gauss";
 
 interface ErrorReport {
   id: string;
@@ -359,7 +359,7 @@ class ErrorTracker {
       id: crypto.randomUUID(),
       timestamp: new Date().toISOString(),
       errorType: error.constructor.name,
-      errorCode: error instanceof GaussFlowError ? error.code : undefined,
+      errorCode: error instanceof GaussError ? error.code : undefined,
       message: error.message,
       source,
       context,
@@ -401,7 +401,7 @@ class ErrorTracker {
 
 const errorTracker = new ErrorTracker();
 
-const agent = DeepAgent.create({ model, instructions: "..." })
+const agent = Agent.create({ model, instructions: "..." })
   .on("error", (event) => {
     errorTracker.trackError(event.data, event.source, {
       sessionId: agent.config.id,
@@ -418,10 +418,10 @@ Test error handling with mock failures:
 
 ```typescript
 import { 
-  DeepAgent, 
+  Agent, 
   ToolExecutionError, 
   McpConnectionError 
-} from "@giulio-leone/gaussflow-agent";
+} from "gauss";
 
 // Mock filesystem that fails on specific paths
 class FailingFilesystem {
@@ -442,7 +442,7 @@ class FailingFilesystem {
 // Test error handling
 describe("Agent Error Handling", () => {
   test("handles tool execution errors gracefully", async () => {
-    const agent = DeepAgent.create({ model, instructions: "..." })
+    const agent = Agent.create({ model, instructions: "..." })
       .withFilesystem(new FailingFilesystem())
       .build();
     
@@ -487,12 +487,12 @@ describe("Agent Error Handling", () => {
 
 ```typescript
 // Example production error monitoring setup
-const agent = DeepAgent.create({ model, instructions: "..." })
+const agent = Agent.create({ model, instructions: "..." })
   .on("error", (event) => {
     // Increment error counter metric
     metrics.increment("agent.errors", {
       type: event.data.constructor.name,
-      code: event.data instanceof GaussFlowError ? event.data.code : "unknown",
+      code: event.data instanceof GaussError ? event.data.code : "unknown",
     });
     
     // Log to structured logging system

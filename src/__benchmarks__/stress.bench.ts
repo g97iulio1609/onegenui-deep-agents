@@ -1,5 +1,5 @@
 // =============================================================================
-// Stress benchmarks for core GaussFlow modules
+// Stress benchmarks for core Gauss modules
 // =============================================================================
 
 import { describe, bench, beforeAll } from "vitest";

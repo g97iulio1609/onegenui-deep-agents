@@ -2,7 +2,7 @@
 // 01 — Basic agent with planning (minimal setup)
 // =============================================================================
 //
-// The simplest way to create a DeepAgent. Uses `DeepAgent.minimal()` which
+// The simplest way to create a Agent. Uses `Agent.minimal()` which
 // wires up an in-memory filesystem, planning tools, and sensible defaults.
 //
 // Usage: npx tsx examples/01-basic-agent.ts
@@ -10,19 +10,19 @@
 // import { openai } from "@ai-sdk/openai";
 // const model = openai("gpt-4o");
 
-import { DeepAgent } from "@giulio-leone/gaussflow-agent";
-import type { DeepAgentResult } from "@giulio-leone/gaussflow-agent";
+import { Agent } from "gauss";
+import type { AgentResult } from "gauss";
 
 // -- Placeholder model (replace with a real provider) ------------------------
 const model = {} as import("ai").LanguageModel;
 
 async function main(): Promise<void> {
-  // DeepAgent.minimal() creates an agent with:
+  // Agent.minimal() creates an agent with:
   //   - VirtualFilesystem (in-memory)
   //   - InMemoryAdapter for persistence
   //   - Planning tools (write_todos, review_todos)
   //   - ApproximateTokenCounter
-  const agent = DeepAgent.minimal({
+  const agent = Agent.minimal({
     model,
     instructions: [
       "You are a helpful coding assistant.",
@@ -35,7 +35,7 @@ async function main(): Promise<void> {
   console.log(`Session: ${agent.sessionId}`);
 
   // Run the agent with a simple prompt
-  const result: DeepAgentResult = await agent.run(
+  const result: AgentResult = await agent.run(
     "List three best practices for writing unit tests.",
   );
 

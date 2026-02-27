@@ -6,7 +6,7 @@ import { tool, type Tool } from "ai";
 import { z } from "zod";
 
 import type {
-  DeepAgentPlugin,
+  Plugin,
   PluginContext,
   PluginSetupContext,
 } from "../ports/plugin.port.js";
@@ -62,7 +62,7 @@ const DEFAULT_AGENTS_PATH = "agents.md";
 const DEFAULT_SKILLS_PATH = "skills.md";
 const DEFAULT_ZONES: FilesystemZone[] = ["persistent", "transient"];
 
-export class AgentCardPlugin implements DeepAgentPlugin, AgentCardProvider {
+export class AgentCardPlugin implements Plugin, AgentCardProvider {
   readonly name = "agent-card";
   readonly version = "1.0.0";
   readonly tools: Record<string, Tool>;
@@ -143,7 +143,7 @@ export class AgentCardPlugin implements DeepAgentPlugin, AgentCardProvider {
   async getAgentCard(): Promise<AgentCardSnapshot> {
     const ctx = this.latestCtx ?? this.setupCtx;
     if (!ctx) {
-      throw new Error("AgentCardPlugin has not been initialized by a DeepAgent instance");
+      throw new Error("AgentCardPlugin has not been initialized by a Agent instance");
     }
 
     const agents = await this.resolveAgentsMarkdown(ctx);
@@ -219,7 +219,7 @@ export class AgentCardPlugin implements DeepAgentPlugin, AgentCardProvider {
   }
 
   private createAutoAgentCard(ctx: PluginContext | PluginSetupContext): AgentCardDocument {
-    const name = ctx.agentName ?? "DeepAgent";
+    const name = ctx.agentName ?? "Agent";
     const tools = [...ctx.toolNames].sort();
 
     return {
@@ -235,7 +235,7 @@ export class AgentCardPlugin implements DeepAgentPlugin, AgentCardProvider {
   }
 
   private createAutoSkillsCard(ctx: PluginContext | PluginSetupContext): SkillsDocument {
-    const name = ctx.agentName ?? "DeepAgent";
+    const name = ctx.agentName ?? "Agent";
     const skills = [...ctx.toolNames].sort();
 
     return {

@@ -7,7 +7,7 @@ import { stdin, stdout } from "node:process";
 import type { LanguageModel } from "ai";
 import { color, bold, createSpinner, formatDuration } from "../format.js";
 import { AgentConfigLoader } from "../../agent/agent-config-loader.js";
-import type { DeepAgent } from "../../agent/deep-agent.js";
+import type { Agent } from "../../agent/agent.js";
 import type { HotReloadPort } from "../../ports/hot-reload.port.js";
 
 export async function devCommand(
@@ -39,10 +39,10 @@ export async function devCommand(
     return initialModel;
   };
 
-  let agent: DeepAgent = AgentConfigLoader.fromConfig(config, modelResolver);
+  let agent: Agent = AgentConfigLoader.fromConfig(config, modelResolver);
 
   console.log(bold(color("cyan", "\n  ╔══════════════════════════════════════╗")));
-  console.log(bold(color("cyan", "  ║      🔄 GaussFlow Dev Mode          ║")));
+  console.log(bold(color("cyan", "  ║      🔄 Gauss Dev Mode          ║")));
   console.log(bold(color("cyan", "  ╚══════════════════════════════════════╝")));
   console.log(color("dim", `  Agent: ${config.name} | Watching: ${configPath}`));
   console.log(color("dim", "  Config changes will hot-reload automatically."));

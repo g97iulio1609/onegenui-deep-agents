@@ -14,7 +14,7 @@ import type {
   BeforeStepResult,
   BeforeToolParams,
   BeforeToolResult,
-  DeepAgentPlugin,
+  Plugin,
   OnErrorParams,
   OnErrorResult,
   PluginContext,
@@ -22,12 +22,12 @@ import type {
 } from "../ports/plugin.port.js";
 
 export class PluginManager {
-  private readonly plugins: DeepAgentPlugin[] = [];
-  private readonly subscriptions = new Map<DeepAgentPlugin, Set<() => void>>();
+  private readonly plugins: Plugin[] = [];
+  private readonly subscriptions = new Map<Plugin, Set<() => void>>();
   private initPromise?: Promise<void>;
   private disposed = false;
 
-  register(plugin: DeepAgentPlugin): void {
+  register(plugin: Plugin): void {
     if (this.initPromise) throw new Error("Cannot register plugins after initialization");
     if (this.plugins.some((p) => p.name === plugin.name)) {
       throw new Error(`Plugin \"${plugin.name}\" is already registered`);
@@ -44,7 +44,7 @@ export class PluginManager {
   }
 
   private async doInitialize(ctx: PluginSetupContext): Promise<void> {
-    const initialized: DeepAgentPlugin[] = [];
+    const initialized: Plugin[] = [];
 
     try {
       for (const plugin of this.plugins) {
@@ -81,7 +81,7 @@ export class PluginManager {
     }
   }
 
-  private async rollback(initialized: DeepAgentPlugin[]): Promise<void> {
+  private async rollback(initialized: Plugin[]): Promise<void> {
     for (let i = initialized.length - 1; i >= 0; i--) {
       const plugin = initialized[i]!;
       this.detachAllSubscriptions(plugin);
@@ -94,7 +94,7 @@ export class PluginManager {
     }
   }
 
-  private detachAllSubscriptions(plugin: DeepAgentPlugin): void {
+  private detachAllSubscriptions(plugin: Plugin): void {
     const unsubscribers = this.subscriptions.get(plugin);
     if (!unsubscribers) return;
     for (const unsubscribe of unsubscribers) {
@@ -266,7 +266,7 @@ export class PluginManager {
     return this.plugins.length;
   }
 
-  getPlugins(): readonly DeepAgentPlugin[] {
+  getPlugins(): readonly Plugin[] {
     return this.plugins;
   }
 }

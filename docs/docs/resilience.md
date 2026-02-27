@@ -6,7 +6,7 @@ description: Circuit breaker, rate limiter, and tool cache for robust agent oper
 
 # Resilience Patterns
 
-GaussFlow provides built-in resilience patterns to handle failures, rate limits, and performance optimization. These patterns help create robust, production-ready agents that can handle various failure modes gracefully.
+Gauss provides built-in resilience patterns to handle failures, rate limits, and performance optimization. These patterns help create robust, production-ready agents that can handle various failure modes gracefully.
 
 ## Circuit Breaker
 
@@ -15,7 +15,7 @@ The circuit breaker pattern prevents cascading failures by temporarily blocking 
 ### Configuration
 
 ```typescript
-import { CircuitBreaker, DEFAULT_CIRCUIT_BREAKER_CONFIG } from "@giulio-leone/gaussflow-agent";
+import { CircuitBreaker, DEFAULT_CIRCUIT_BREAKER_CONFIG } from "gauss";
 
 const circuitBreaker = new CircuitBreaker({
   failureThreshold: 5,        // Open after 5 consecutive failures
@@ -37,10 +37,10 @@ The circuit breaker has three states:
 | **OPEN** | Failing fast | All requests rejected immediately |
 | **HALF_OPEN** | Testing recovery | Limited requests allowed to test service health |
 
-### Usage with DeepAgent
+### Usage with Agent
 
 ```typescript
-import { DeepAgent, CircuitBreaker } from "@giulio-leone/gaussflow-agent";
+import { Agent, CircuitBreaker } from "gauss";
 import { openai } from "@ai-sdk/openai";
 
 const circuitBreaker = new CircuitBreaker({
@@ -49,7 +49,7 @@ const circuitBreaker = new CircuitBreaker({
   monitorWindowMs: 30_000,
 });
 
-const agent = DeepAgent.create({
+const agent = Agent.create({
   model: openai("gpt-4o"),
   instructions: "You are a resilient assistant that handles failures gracefully.",
 })
@@ -96,7 +96,7 @@ The rate limiter controls the frequency of operations using a token bucket algor
 ### Configuration
 
 ```typescript
-import { RateLimiter, DEFAULT_RATE_LIMITER_CONFIG } from "@giulio-leone/gaussflow-agent";
+import { RateLimiter, DEFAULT_RATE_LIMITER_CONFIG } from "gauss";
 
 const rateLimiter = new RateLimiter({
   maxTokens: 10,              // Maximum 10 tokens in bucket
@@ -107,10 +107,10 @@ const rateLimiter = new RateLimiter({
 const defaultLimiter = new RateLimiter(DEFAULT_RATE_LIMITER_CONFIG);
 ```
 
-### Usage with DeepAgent
+### Usage with Agent
 
 ```typescript
-import { DeepAgent, RateLimiter } from "@giulio-leone/gaussflow-agent";
+import { Agent, RateLimiter } from "gauss";
 import { openai } from "@ai-sdk/openai";
 
 const rateLimiter = new RateLimiter({
@@ -118,7 +118,7 @@ const rateLimiter = new RateLimiter({
   refillRateMs: 2000,         // 1 token every 2 seconds
 });
 
-const agent = DeepAgent.create({
+const agent = Agent.create({
   model: openai("gpt-4o"),
   instructions: "You are a rate-limited assistant.",
 })
@@ -175,7 +175,7 @@ The tool cache provides LRU (Least Recently Used) caching with TTL (Time To Live
 ### Configuration
 
 ```typescript
-import { ToolCache, DEFAULT_TOOL_CACHE_CONFIG } from "@giulio-leone/gaussflow-agent";
+import { ToolCache, DEFAULT_TOOL_CACHE_CONFIG } from "gauss";
 
 const toolCache = new ToolCache({
   defaultTtlMs: 300_000,      // 5 minute default TTL
@@ -186,10 +186,10 @@ const toolCache = new ToolCache({
 const defaultCache = new ToolCache(DEFAULT_TOOL_CACHE_CONFIG);
 ```
 
-### Usage with DeepAgent
+### Usage with Agent
 
 ```typescript
-import { DeepAgent, ToolCache } from "@giulio-leone/gaussflow-agent";
+import { Agent, ToolCache } from "gauss";
 import { openai } from "@ai-sdk/openai";
 
 const toolCache = new ToolCache({
@@ -197,7 +197,7 @@ const toolCache = new ToolCache({
   maxSize: 500,               // 500 cache entries
 });
 
-const agent = DeepAgent.create({
+const agent = Agent.create({
   model: openai("gpt-4o"),
   instructions: "You are an efficient assistant that caches expensive operations.",
 })
@@ -258,14 +258,14 @@ For maximum robustness, combine all three patterns:
 
 ```typescript
 import { 
-  DeepAgent, 
+  Agent, 
   CircuitBreaker, 
   RateLimiter, 
   ToolCache 
-} from "@giulio-leone/gaussflow-agent";
+} from "gauss";
 import { openai } from "@ai-sdk/openai";
 
-const agent = DeepAgent.create({
+const agent = Agent.create({
   model: openai("gpt-4o"),
   instructions: "You are a highly resilient assistant with comprehensive failure handling.",
 })
@@ -294,17 +294,17 @@ const result = await agent.run("Process this data with full resilience patterns.
 
 ## Error Handling with Resilience
 
-Resilience patterns integrate with GaussFlow's error handling system:
+Resilience patterns integrate with Gauss's error handling system:
 
 ```typescript
 import { 
-  DeepAgent, 
+  Agent, 
   CircuitBreaker, 
   CircuitBreakerError,
   RateLimiterError 
-} from "@giulio-leone/gaussflow-agent";
+} from "gauss";
 
-const agent = DeepAgent.create({ model, instructions: "..." })
+const agent = Agent.create({ model, instructions: "..." })
   .withCircuitBreaker(new CircuitBreaker())
   .withRateLimiter(new RateLimiter())
   .on("error", (event) => {
@@ -342,14 +342,14 @@ const agent = DeepAgent.create({ model, instructions: "..." })
 - Monitor cache hit rates and rate limiter queue lengths
 
 ```typescript
-import { DeepAgent, ObservabilityPlugin } from "@giulio-leone/gaussflow-agent";
+import { Agent, ObservabilityPlugin } from "gauss";
 
 const observability = new ObservabilityPlugin({
   metrics: { enabled: true },
   logging: { level: "info" },
 });
 
-const agent = DeepAgent.create({ model, instructions: "..." })
+const agent = Agent.create({ model, instructions: "..." })
   .withCircuitBreaker(new CircuitBreaker())
   .withRateLimiter(new RateLimiter())
   .withToolCache(new ToolCache())

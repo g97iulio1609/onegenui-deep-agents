@@ -1,5 +1,5 @@
 // =============================================================================
-// @giulio-leone/gaussflow-agent — HierarchicalEventBus
+// gauss — HierarchicalEventBus
 // =============================================================================
 
 import type {

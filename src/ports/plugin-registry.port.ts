@@ -2,11 +2,11 @@
 // Plugin Registry Port — Contract for plugin marketplace / registry
 // =============================================================================
 
-import type { DeepAgentPlugin } from "./plugin.port.js";
+import type { Plugin } from "./plugin.port.js";
 
 /** Describes how to load/instantiate a plugin */
 export type PluginSource =
-  | { type: "builtin"; factory: () => DeepAgentPlugin }
+  | { type: "builtin"; factory: () => Plugin }
   | { type: "module"; modulePath: string; exportName?: string }
   | { type: "url"; url: string };
 
@@ -34,5 +34,5 @@ export interface PluginRegistryPort {
   /** Search manifests by keyword (matches name, description, tags). */
   search(query: string): PluginManifest[];
   /** Resolve a manifest to a live plugin instance. */
-  resolve(name: string): Promise<DeepAgentPlugin>;
+  resolve(name: string): Promise<Plugin>;
 }

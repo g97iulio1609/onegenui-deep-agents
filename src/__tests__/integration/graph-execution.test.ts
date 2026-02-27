@@ -3,7 +3,7 @@ import { AgentGraph, AgentGraphBuilder } from "../../graph/agent-graph.js";
 import { SharedContext } from "../../graph/shared-context.js";
 import { MajorityVoteConsensus } from "../../adapters/consensus/majority-vote.adapter.js";
 import { VirtualFilesystem } from "../../adapters/filesystem/virtual-fs.adapter.js";
-import { DeepAgent } from "../../agent/deep-agent.js";
+import { Agent } from "../../agent/agent.js";
 import type { LanguageModel } from "ai";
 
 // Mock language model for testing
@@ -29,13 +29,13 @@ describe("Graph Execution Integration", () => {
         timeout: 5000,
       });
 
-      const agent1 = new DeepAgent({
+      const agent1 = new Agent({
         name: "agent1",
         instructions: "Test agent 1",
         model: mockLanguageModel,
       });
 
-      const agent2 = new DeepAgent({
+      const agent2 = new Agent({
         name: "agent2", 
         instructions: "Test agent 2",
         model: mockLanguageModel,
@@ -64,19 +64,19 @@ describe("Graph Execution Integration", () => {
       
       const builder = AgentGraph.create();
       
-      const agent1 = new DeepAgent({
+      const agent1 = new Agent({
         name: "agent1",
         instructions: "Test agent 1",
         model: mockLanguageModel,
       });
 
-      const agent2 = new DeepAgent({
+      const agent2 = new Agent({
         name: "agent2",
         instructions: "Test agent 2", 
         model: mockLanguageModel,
       });
 
-      const agent3 = new DeepAgent({
+      const agent3 = new Agent({
         name: "agent3",
         instructions: "Test agent 3",
         model: mockLanguageModel,

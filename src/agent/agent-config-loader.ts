@@ -1,12 +1,12 @@
 // =============================================================================
-// AgentConfigLoader — Load and hot-reload DeepAgent from config files
+// AgentConfigLoader — Load and hot-reload Agent from config files
 // =============================================================================
 
 import { readFileSync } from "node:fs";
 import type { LanguageModel } from "ai";
-import type { AgentConfig, HotReloadPort } from "../ports/hot-reload.port.js";
+import type { HotReloadAgentConfig as AgentConfig, HotReloadPort } from "../ports/hot-reload.port.js";
 import { FileWatcherAdapter } from "../adapters/hot-reload/file-watcher.adapter.js";
-import { DeepAgent } from "./deep-agent.js";
+import { Agent } from "./agent.js";
 
 export interface ModelResolver {
   (modelName: string): LanguageModel;
@@ -14,11 +14,11 @@ export interface ModelResolver {
 
 export class AgentConfigLoader {
   /**
-   * Creates a DeepAgent from an AgentConfig.
+   * Creates a Agent from an AgentConfig.
    * Requires a modelResolver to convert the model string to a LanguageModel instance.
    */
-  static fromConfig(config: AgentConfig, modelResolver: ModelResolver): DeepAgent {
-    const builder = DeepAgent.create({
+  static fromConfig(config: AgentConfig, modelResolver: ModelResolver): Agent {
+    const builder = Agent.create({
       name: config.name,
       model: modelResolver(config.model),
       instructions: config.systemPrompt || "You are a helpful assistant.",
@@ -37,13 +37,13 @@ export class AgentConfigLoader {
   }
 
   /**
-   * Watches a config file and calls onReload with a new DeepAgent when config changes.
+   * Watches a config file and calls onReload with a new Agent when config changes.
    * Returns the HotReloadPort so the caller can stop watching.
    */
   static watchAndReload(
     path: string,
     modelResolver: ModelResolver,
-    onReload: (agent: DeepAgent) => void,
+    onReload: (agent: Agent) => void,
   ): HotReloadPort {
     const watcher = new FileWatcherAdapter();
     watcher.watch(path, (config) => {

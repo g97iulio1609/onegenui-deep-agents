@@ -28,9 +28,9 @@ const deterministicReranker: ReRankingPort = {
 const crawlerFixtures: Record<string, Array<{ title: string; url: string; snippet: string }>> = {
   "gauss flow memory tiering": [
     {
-      title: "GaussFlow Memory Tiering",
+      title: "Gauss Memory Tiering",
       url: "https://gaussflow.dev/docs/memory-tiering",
-      snippet: "Memory tiering in GaussFlow",
+      snippet: "Memory tiering in Gauss",
     },
     {
       title: "Noise",
@@ -40,7 +40,7 @@ const crawlerFixtures: Record<string, Array<{ title: string; url: string; snippe
   ],
   "mcp policy engine allow deny": [
     {
-      title: "GaussFlow MCP Policy Engine",
+      title: "Gauss MCP Policy Engine",
       url: "https://gaussflow.dev/docs/mcp-policy-engine",
       snippet: "Allow deny governance",
     },
@@ -52,7 +52,7 @@ const crawlerFixtures: Record<string, Array<{ title: string; url: string; snippe
   ],
   "semantic web search citation": [
     {
-      title: "GaussFlow Semantic Web Search",
+      title: "Gauss Semantic Web Search",
       url: "https://gaussflow.dev/docs/semantic-web-search",
       snippet: "Search rerank citation",
     },

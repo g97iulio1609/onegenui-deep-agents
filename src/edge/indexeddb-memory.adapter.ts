@@ -83,7 +83,7 @@ export class IndexedDbMemoryAdapter implements MemoryPort {
   private dbPromise: Promise<IDBDb> | null = null;
 
   constructor(options: IndexedDbMemoryOptions = {}) {
-    this.dbName = options.dbName ?? "deep-agent-memory";
+    this.dbName = options.dbName ?? "gauss-memory";
   }
 
   // ---------------------------------------------------------------------------

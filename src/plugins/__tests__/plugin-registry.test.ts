@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import { DefaultPluginRegistryAdapter } from "../../adapters/plugin-registry/default-plugin-registry.adapter.js";
 import { PluginRegistryPlugin } from "../plugin-registry.plugin.js";
 import type { PluginManifest } from "../../ports/plugin-registry.port.js";
-import type { DeepAgentPlugin } from "../../ports/plugin.port.js";
+import type { Plugin } from "../../ports/plugin.port.js";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -15,7 +15,7 @@ function makeBuiltinManifest(
   name: string,
   overrides: Partial<PluginManifest> = {},
 ): PluginManifest {
-  const plugin: DeepAgentPlugin = {
+  const plugin: Plugin = {
     name,
     version: "1.0.0",
   };
@@ -146,7 +146,7 @@ describe("DefaultPluginRegistryAdapter", () => {
 
   it("resolves builtin plugins via factory", async () => {
     const registry = new DefaultPluginRegistryAdapter();
-    const expectedPlugin: DeepAgentPlugin = { name: "hello", version: "2.0.0" };
+    const expectedPlugin: Plugin = { name: "hello", version: "2.0.0" };
 
     registry.register({
       name: "hello",

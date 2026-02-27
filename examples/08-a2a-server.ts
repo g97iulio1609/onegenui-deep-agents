@@ -1,4 +1,4 @@
-// 08 — Expose DeepAgent as an A2A JSON-RPC HTTP server
+// 08 — Expose Agent as an A2A JSON-RPC HTTP server
 // Usage: npx tsx examples/08-a2a-server.ts
 
 import { createServer, type IncomingMessage } from "node:http";
@@ -6,8 +6,8 @@ import { createServer, type IncomingMessage } from "node:http";
 import {
   A2APlugin,
   AgentCardPlugin,
-  DeepAgent,
-} from "@giulio-leone/gaussflow-agent";
+  Agent,
+} from "gauss";
 
 const model = {} as import("ai").LanguageModel;
 
@@ -31,7 +31,7 @@ async function main(): Promise<void> {
   const agentCard = new AgentCardPlugin();
   const a2a = new A2APlugin({ agentCardProvider: agentCard });
 
-  const agent = DeepAgent.create({
+  const agent = Agent.create({
     model,
     instructions: "You are a distributed task coordinator.",
     maxSteps: 30,

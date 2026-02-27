@@ -1,8 +1,8 @@
 // =============================================================================
-// Agent Test Runner — Run a DeepAgent and collect results
+// Agent Test Runner — Run a Agent and collect results
 // =============================================================================
 
-import type { DeepAgent, DeepAgentResult } from "../agent/deep-agent.js";
+import type { Agent, AgentResult } from "../agent/agent.js";
 
 export interface AgentTestResult {
   response: string;
@@ -13,7 +13,7 @@ export interface AgentTestResult {
 }
 
 export async function runAgentTest(config: {
-  agent: DeepAgent;
+  agent: Agent;
   prompt: string;
   maxSteps?: number;
 }): Promise<AgentTestResult> {
@@ -49,7 +49,7 @@ export async function runAgentTest(config: {
   agent.eventBus.on("step:end", stepHandler);
 
   const start = Date.now();
-  let result: DeepAgentResult;
+  let result: AgentResult;
 
   try {
     result = await agent.run(prompt);

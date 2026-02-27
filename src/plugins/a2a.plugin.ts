@@ -5,9 +5,9 @@
 import { tool, type Tool } from "ai";
 import { z } from "zod";
 
-import type { DeepAgentResult, DeepAgentRunOptions } from "../agent/deep-agent.js";
+import type { AgentResult, AgentRunOptions } from "../agent/agent.js";
 import type {
-  DeepAgentPlugin,
+  Plugin,
   PluginContext,
   PluginSetupContext,
 } from "../ports/plugin.port.js";
@@ -43,7 +43,7 @@ const DEFAULT_RETRY_CONFIG: A2ATaskRetryConfig = {
 
 export interface A2AAgentRuntime {
   sessionId: string;
-  run(prompt: string, options?: DeepAgentRunOptions): Promise<DeepAgentResult>;
+  run(prompt: string, options?: AgentRunOptions): Promise<AgentResult>;
 }
 
 export interface A2APluginOptions {
@@ -79,7 +79,7 @@ const A2A_SUBSCRIBE_SCHEMA = z.object({
   taskId: z.string().optional(),
 });
 
-export class A2APlugin implements DeepAgentPlugin {
+export class A2APlugin implements Plugin {
   readonly name = "a2a";
   readonly version = "1.0.0";
   readonly tools: Record<string, Tool>;
@@ -771,14 +771,14 @@ export class A2APlugin implements DeepAgentPlugin {
     const ctx = this.latestCtx ?? this.setupCtx;
     if (!ctx) {
       return {
-        name: "DeepAgent",
+        name: "Agent",
         instructions: "",
         tools: [],
       };
     }
 
     return {
-      name: ctx.agentName ?? "DeepAgent",
+      name: ctx.agentName ?? "Agent",
       sessionId: ctx.sessionId,
       instructions: ctx.config.instructions,
       maxSteps: ctx.config.maxSteps,

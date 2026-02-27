@@ -48,7 +48,7 @@ export class OpfsFilesystem implements FilesystemPort {
   private readonly rootName: string;
 
   constructor(options: OpfsFilesystemOptions = {}) {
-    this.rootName = options.rootName ?? "deep-agent";
+    this.rootName = options.rootName ?? "gauss";
   }
 
   // ---------------------------------------------------------------------------

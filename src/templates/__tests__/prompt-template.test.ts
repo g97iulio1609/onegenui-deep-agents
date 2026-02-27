@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import type { LanguageModel } from "ai";
 import { PromptTemplate } from "../prompt-template.js";
-import type { DeepAgentConfig } from "../../types.js";
-import { DeepAgent } from "../../agent/deep-agent.js";
+import type { AgentConfig } from "../../types.js";
+import { Agent } from "../../agent/agent.js";
 
 // Mock model for testing
 const mockModel = {
@@ -270,14 +270,14 @@ describe("PromptTemplate", () => {
     });
   });
 
-  describe("DeepAgent integration", () => {
-    const mockConfig: DeepAgentConfig = {
+  describe("Agent integration", () => {
+    const mockConfig: AgentConfig = {
       model: mockModel,
       instructions: "Default instructions"
     };
 
     it("should work with string instructions (existing behavior)", () => {
-      const agent = DeepAgent.create(mockConfig)
+      const agent = Agent.create(mockConfig)
         .withInstructions("Custom instructions")
         .build();
       
@@ -287,7 +287,7 @@ describe("PromptTemplate", () => {
     it("should work with template and variables", () => {
       const template = PromptTemplate.from("You are a {{role}} assistant specialized in {{domain}}.");
       
-      const agent = DeepAgent.create(mockConfig)
+      const agent = Agent.create(mockConfig)
         .withInstructions(template, { role: "helpful", domain: "TypeScript" })
         .build();
       
@@ -297,7 +297,7 @@ describe("PromptTemplate", () => {
     it("should work with template without variables", () => {
       const template = PromptTemplate.from("You are a helpful assistant.");
       
-      const agent = DeepAgent.create(mockConfig)
+      const agent = Agent.create(mockConfig)
         .withInstructions(template)
         .build();
       

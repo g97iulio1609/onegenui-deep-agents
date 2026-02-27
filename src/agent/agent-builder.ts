@@ -1,5 +1,5 @@
 // =============================================================================
-// DeepAgentBuilder — Configuration & construction of DeepAgent instances
+// AgentBuilder — Configuration & construction of Agent instances
 // =============================================================================
 
 import type { Tool } from "ai";
@@ -12,8 +12,8 @@ import type { McpPort } from "../ports/mcp.port.js";
 import type { PolicyEnginePort } from "../ports/policy.port.js";
 import type { TelemetryPort } from "../ports/telemetry.port.js";
 import type { CostTrackerPort } from "../ports/cost-tracker.port.js";
-import type { AgentEventHandler, AgentEventType, DeepAgentConfig, ApprovalConfig, SubagentConfig } from "../types.js";
-import type { DeepAgentPlugin } from "../ports/plugin.port.js";
+import type { AgentEventHandler, AgentEventType, AgentConfig, ApprovalConfig, SubagentConfig } from "../types.js";
+import type { Plugin } from "../ports/plugin.port.js";
 import type { RuntimePort } from "../ports/runtime.port.js";
 import type { LifecycleHooks } from "./lifecycle.js";
 import type { PromptTemplate } from "../templates/index.js";
@@ -24,10 +24,10 @@ import { defaultFilesystem, defaultMemory, defaultTokenCounter } from "./default
 import { CircuitBreaker, RateLimiter, ToolCache, DEFAULT_CIRCUIT_BREAKER_CONFIG, DEFAULT_RATE_LIMITER_CONFIG, DEFAULT_TOOL_CACHE_CONFIG } from "../adapters/resilience/index.js";
 import type { CircuitBreakerConfig, RateLimiterConfig, ToolCacheConfig } from "../adapters/resilience/index.js";
 
-import { DeepAgent } from "./deep-agent.js";
+import { Agent } from "./agent.js";
 
-export class DeepAgentBuilder extends AbstractBuilder<DeepAgent> {
-  private readonly agentConfig: DeepAgentConfig;
+export class AgentBuilder extends AbstractBuilder<Agent> {
+  private readonly agentConfig: AgentConfig;
   private maxStepsOverride?: number;
 
   private fs?: FilesystemPort;
@@ -54,7 +54,7 @@ export class DeepAgentBuilder extends AbstractBuilder<DeepAgent> {
   private telemetryAdapter?: TelemetryPort;
 
   private extraTools: Record<string, Tool> = {};
-  private readonly plugins: DeepAgentPlugin[] = [];
+  private readonly plugins: Plugin[] = [];
   private lifecycleHooks?: LifecycleHooks;
 
   private readonly eventHandlers: Array<{
@@ -66,7 +66,7 @@ export class DeepAgentBuilder extends AbstractBuilder<DeepAgent> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private outputSpec?: any;
 
-  constructor(config: DeepAgentConfig) {
+  constructor(config: AgentConfig) {
     super();
     this.agentConfig = config;
   }
@@ -158,7 +158,7 @@ export class DeepAgentBuilder extends AbstractBuilder<DeepAgent> {
     return this;
   }
 
-  withPlugin(plugin: DeepAgentPlugin): this {
+  withPlugin(plugin: Plugin): this {
     this.plugins.push(plugin);
     return this;
   }
@@ -204,8 +204,8 @@ export class DeepAgentBuilder extends AbstractBuilder<DeepAgent> {
     if (!this.agentConfig.instructions) throw new Error("instructions is required");
   }
 
-  protected construct(): DeepAgent {
-    const agent = new DeepAgent({
+  protected construct(): Agent {
+    const agent = new Agent({
       model: this.agentConfig.model,
       instructions: this.agentConfig.instructions,
       id: this.agentConfig.id,
@@ -246,7 +246,7 @@ export class DeepAgentBuilder extends AbstractBuilder<DeepAgent> {
     return agent;
   }
 
-  build(): DeepAgent {
+  build(): Agent {
     return super.build();
   }
 }

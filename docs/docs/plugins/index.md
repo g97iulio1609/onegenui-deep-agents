@@ -1,17 +1,17 @@
 ---
 sidebar_position: 3
 title: Plugins
-description: Overview of the GaussFlow plugin system
+description: Overview of the Gauss plugin system
 ---
 
 # Plugins
 
-Plugins extend GaussFlow behavior through **lifecycle hooks** and **tool injection**. They are executed in registration order with deterministic hook execution.
+Plugins extend Gauss behavior through **lifecycle hooks** and **tool injection**. They are executed in registration order with deterministic hook execution.
 
 ## Plugin Interface
 
 ```typescript
-interface DeepAgentPlugin {
+interface Plugin {
   readonly name: string;
   readonly version?: string;
   readonly hooks?: PluginHooks;
@@ -36,9 +36,9 @@ interface DeepAgentPlugin {
 ## Using Plugins
 
 ```typescript
-import { DeepAgent, createGuardrailsPlugin, createEvalsPlugin } from "@giulio-leone/gaussflow-agent";
+import { Agent, createGuardrailsPlugin, createEvalsPlugin } from "gauss";
 
-const agent = DeepAgent.create({
+const agent = Agent.create({
   model: openai("gpt-4o"),
   instructions: "You are a helpful assistant.",
 })
@@ -52,8 +52,8 @@ const agent = DeepAgent.create({
 Extend `BasePlugin` for the simplest approach:
 
 ```typescript
-import { BasePlugin } from "@giulio-leone/gaussflow-agent";
-import type { PluginHooks, PluginContext, AfterRunParams } from "@giulio-leone/gaussflow-agent";
+import { BasePlugin } from "gauss";
+import type { PluginHooks, PluginContext, AfterRunParams } from "gauss";
 
 class AuditPlugin extends BasePlugin {
   readonly name = "audit";
@@ -74,9 +74,9 @@ Or implement the interface directly for tools-only plugins:
 ```typescript
 import { tool } from "ai";
 import { z } from "zod";
-import type { DeepAgentPlugin } from "@giulio-leone/gaussflow-agent";
+import type { Plugin } from "gauss";
 
-const timePlugin: DeepAgentPlugin = {
+const timePlugin: Plugin = {
   name: "time",
   tools: {
     current_time: tool({

@@ -18,7 +18,7 @@ import {
   assertMaxTokens,
 } from "../../testing/assertions.js";
 import { createSnapshot, compareSnapshots } from "../../testing/snapshot.js";
-import { DeepAgent } from "../../agent/deep-agent.js";
+import { Agent } from "../../agent/agent.js";
 
 // =============================================================================
 // Mock AI SDK — ToolLoopAgent (same pattern as deep-agent.test.ts)
@@ -154,7 +154,7 @@ describe("runAgentTest", () => {
     });
 
     const mockModel = { modelId: "test", provider: "test" } as unknown as LanguageModel;
-    const agent = DeepAgent.create({ model: mockModel, instructions: "Test" }).build();
+    const agent = Agent.create({ model: mockModel, instructions: "Test" }).build();
 
     const result = await runAgentTest({ agent, prompt: "Hello" });
 
@@ -170,7 +170,7 @@ describe("runAgentTest", () => {
     });
 
     const mockModel = { modelId: "test", provider: "test" } as unknown as LanguageModel;
-    const agent = DeepAgent.create({ model: mockModel, instructions: "Test" }).build();
+    const agent = Agent.create({ model: mockModel, instructions: "Test" }).build();
 
     const result = await runAgentTest({ agent, prompt: "Hello" });
 
@@ -187,7 +187,7 @@ describe("runAgentTest", () => {
     });
 
     const mockModel = { modelId: "test", provider: "test" } as unknown as LanguageModel;
-    const agent = DeepAgent.create({ model: mockModel, instructions: "Test" }).build();
+    const agent = Agent.create({ model: mockModel, instructions: "Test" }).build();
 
     const result = await runAgentTest({ agent, prompt: "Hello" });
 
@@ -198,7 +198,7 @@ describe("runAgentTest", () => {
     generateFn.mockResolvedValue({ text: "No tools", steps: [] });
 
     const mockModel = { modelId: "test", provider: "test" } as unknown as LanguageModel;
-    const agent = DeepAgent.create({ model: mockModel, instructions: "Test" }).build();
+    const agent = Agent.create({ model: mockModel, instructions: "Test" }).build();
 
     const result = await runAgentTest({ agent, prompt: "Hello" });
 

@@ -11,10 +11,10 @@
 // const model = openai("gpt-4o");
 
 import {
-  DeepAgent,
+  Agent,
   VirtualFilesystem,
-} from "@giulio-leone/gaussflow-agent";
-import type { AgentEvent } from "@giulio-leone/gaussflow-agent";
+} from "gauss";
+import type { AgentEvent } from "gauss";
 
 const model = {} as import("ai").LanguageModel;
 
@@ -22,7 +22,7 @@ async function main(): Promise<void> {
   const fs = new VirtualFilesystem();
 
   // Builder pattern: chain capabilities onto the agent
-  const agent = DeepAgent.create({
+  const agent = Agent.create({
     model,
     instructions: [
       "You are a project scaffolding assistant.",

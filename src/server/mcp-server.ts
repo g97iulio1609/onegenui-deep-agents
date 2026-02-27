@@ -1,5 +1,5 @@
 // =============================================================================
-// McpServer — Expose DeepAgent tools as an MCP Server
+// McpServer — Expose Agent tools as an MCP Server
 // =============================================================================
 // Enables cross-language consumption (Python, Go, etc.) via Streamable HTTP.
 // =============================================================================

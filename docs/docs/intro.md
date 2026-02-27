@@ -1,20 +1,20 @@
 ---
 sidebar_position: 1
 title: Getting Started
-description: Install GaussFlow and create your first AI agent
+description: Install Gauss and create your first AI agent
 ---
 
 # Getting Started
 
-GaussFlow is an AI agent framework built on [Vercel AI SDK v6](https://sdk.vercel.ai/) with hexagonal architecture, a plugin system, multi-runtime support, and multi-agent collaboration.
+Gauss is an AI agent framework built on [Vercel AI SDK v6](https://sdk.vercel.ai/) with hexagonal architecture, a plugin system, multi-runtime support, and multi-agent collaboration.
 
 ## Installation
 
 ```bash
-pnpm add @giulio-leone/gaussflow-agent
+pnpm add gauss
 ```
 
-GaussFlow requires `ai` (v6+) and `zod` (v4+) as direct dependencies.
+Gauss requires `ai` (v6+) and `zod` (v4+) as direct dependencies.
 
 ### Optional Peer Dependencies
 
@@ -35,10 +35,10 @@ pnpm add @supabase/supabase-js tiktoken
 ## Quick Start
 
 ```typescript
-import { DeepAgent } from "@giulio-leone/gaussflow-agent";
+import { Agent } from "gauss";
 import { openai } from "@ai-sdk/openai";
 
-const agent = DeepAgent.minimal({
+const agent = Agent.minimal({
   model: openai("gpt-4o"),
   instructions: "You are a helpful coding assistant.",
 });
@@ -50,17 +50,17 @@ console.log(`Steps: ${result.steps.length}`);
 console.log(`Session: ${result.sessionId}`);
 ```
 
-`DeepAgent.minimal()` creates an agent with a virtual filesystem and planning tools enabled, using in-memory storage and approximate token counting.
+`Agent.minimal()` creates an agent with a virtual filesystem and planning tools enabled, using in-memory storage and approximate token counting.
 
 ## Your First Agent with the Builder API
 
 For more control, use the builder pattern:
 
 ```typescript
-import { DeepAgent } from "@giulio-leone/gaussflow-agent";
+import { Agent } from "gauss";
 import { openai } from "@ai-sdk/openai";
 
-const agent = DeepAgent.create({
+const agent = Agent.create({
   model: openai("gpt-4o"),
   instructions: "You are a project manager. Break tasks into todos.",
 })
@@ -80,10 +80,10 @@ await agent.dispose();
 
 | Method | Description |
 |--------|-------------|
-| `DeepAgent.create(config)` | Returns a `DeepAgentBuilder` for full control |
-| `DeepAgent.minimal(config)` | Planning enabled, default adapters |
-| `DeepAgent.full(config)` | Planning + subagents + optional overrides |
-| `DeepAgent.auto(config)` | Universal adapters, works in any runtime |
+| `Agent.create(config)` | Returns a `AgentBuilder` for full control |
+| `Agent.minimal(config)` | Planning enabled, default adapters |
+| `Agent.full(config)` | Planning + subagents + optional overrides |
+| `Agent.auto(config)` | Universal adapters, works in any runtime |
 
 ## Adding Plugins
 
@@ -91,15 +91,15 @@ Plugins extend agent capabilities with lifecycle hooks and tools:
 
 ```typescript
 import {
-  DeepAgent,
+  Agent,
   createGuardrailsPlugin,
   createEvalsPlugin,
   createObservabilityPlugin,
   ConsoleLoggingAdapter,
-} from "@giulio-leone/gaussflow-agent";
+} from "gauss";
 import { z } from "zod";
 
-const agent = DeepAgent.create({
+const agent = Agent.create({
   model: openai("gpt-4o"),
   instructions: "You are a helpful assistant.",
 })

@@ -42,7 +42,7 @@ function getDenoKv(): DenoKvApi {
 // Key builders
 // -----------------------------------------------------------------------------
 
-const PREFIX = "deep-agent";
+const PREFIX = "gauss";
 
 function todosKey(sessionId: string): string[] {
   return [PREFIX, sessionId, "todos"];

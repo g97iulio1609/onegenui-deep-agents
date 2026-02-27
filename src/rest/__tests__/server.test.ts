@@ -5,13 +5,13 @@
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
 import http from "node:http";
 import { Router, parseBody, sendJson, sendError } from "../router.js";
-import { GaussFlowServer } from "../server.js";
+import { GaussServer } from "../server.js";
 
 // =============================================================================
-// Mock DeepAgent and CLI providers — prevent real AI calls
+// Mock Agent and CLI providers — prevent real AI calls
 // =============================================================================
 
-vi.mock("../../agent/deep-agent.js", () => {
+vi.mock("../../agent/agent.js", () => {
   const disposeFn = vi.fn().mockResolvedValue(undefined);
   const runFn = vi.fn().mockResolvedValue({
     text: "Mock AI response",
@@ -45,8 +45,8 @@ vi.mock("../../agent/deep-agent.js", () => {
   }
 
   return {
-    DeepAgent: MockDeepAgent,
-    DeepAgentBuilder: class {},
+    Agent: MockDeepAgent,
+    AgentBuilder: class {},
     __mockRunFn: runFn,
     __mockDisposeFn: disposeFn,
   };
@@ -189,13 +189,13 @@ describe("Router", () => {
 // Server integration tests
 // =============================================================================
 
-describe("GaussFlowServer", () => {
+describe("GaussServer", () => {
   let server: OneAgentServer;
   const PORT = 0; // Use ephemeral port
   let actualPort: number;
 
   beforeAll(async () => {
-    server = new GaussFlowServer({ port: 0, cors: true });
+    server = new GaussServer({ port: 0, cors: true });
     // Listen on port 0 to get a random available port
     await server.listen(0);
     // Get the actual port from the underlying server
@@ -379,13 +379,13 @@ describe("GaussFlowServer", () => {
 // Server with auth
 // =============================================================================
 
-describe("GaussFlowServer (with auth)", () => {
+describe("GaussServer (with auth)", () => {
   let server: OneAgentServer;
   let actualPort: number;
   const API_KEY = "test-secret-key-123";
 
   beforeAll(async () => {
-    server = new GaussFlowServer({ port: 0, apiKey: API_KEY });
+    server = new GaussServer({ port: 0, apiKey: API_KEY });
     await server.listen(0);
     const addr = (server as any).server?.address();
     actualPort = typeof addr === "object" && addr ? addr.port : 3457;
@@ -437,12 +437,12 @@ describe("GaussFlowServer (with auth)", () => {
 // Agent Health Endpoint Tests
 // =============================================================================
 
-describe("GaussFlowServer with Agent", () => {
+describe("GaussServer with Agent", () => {
   const API_KEY = "test-key-123";
   let actualPort: number;
 
   describe("Agent health endpoint", () => {
-    let server: GaussFlowServer;
+    let server: GaussServer;
     let mockAgent: any;
 
     beforeEach(async () => {
@@ -460,7 +460,7 @@ describe("GaussFlowServer with Agent", () => {
         isShuttingDown: vi.fn().mockReturnValue(false),
       };
 
-      server = new GaussFlowServer(
+      server = new GaussServer(
         {
           port: 0,
           apiKey: API_KEY,

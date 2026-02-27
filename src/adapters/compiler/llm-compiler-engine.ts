@@ -1,6 +1,6 @@
 // =============================================================================
 // LLM Compiler Engine — Compiles StructuredDeclaration into executable artifacts
-// Uses gaussflow DeepAgent + AI SDK Output.object for LLM-assisted compilation
+// Uses gaussflow Agent + AI SDK Output.object for LLM-assisted compilation
 // with Zod schema enforcement for deterministic structure.
 // =============================================================================
 
@@ -13,7 +13,7 @@ import {
   type LLMCompilerOutput,
 } from "../../domain/compiler.schema.js";
 import type { WorkflowCompilerPort, SkillRegistryPort } from "../../ports/compiler.port.js";
-import { DeepAgent } from "../../agent/deep-agent.js";
+import { Agent } from "../../agent/agent.js";
 
 // -----------------------------------------------------------------------------
 // Compiler system prompt
@@ -66,7 +66,7 @@ export class LLMCompilerEngine implements WorkflowCompilerPort {
 
     const compilationPrompt = this.buildPrompt(declaration);
 
-    const agent = DeepAgent.create({
+    const agent = Agent.create({
       model: this.model,
       instructions: buildCompilerPrompt(existingSkills),
       maxSteps: 1,

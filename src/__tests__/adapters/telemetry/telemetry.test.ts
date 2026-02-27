@@ -6,7 +6,7 @@ import { OtelTelemetryAdapter } from "../../../adapters/telemetry/otel-telemetry
 import type { TelemetryPort, TelemetrySpan } from "../../../ports/telemetry.port.js";
 
 // =============================================================================
-// Mock AI SDK — ToolLoopAgent (for DeepAgent integration tests)
+// Mock AI SDK — ToolLoopAgent (for Agent integration tests)
 // =============================================================================
 
 const { generateFn, constructorSpy } = vi.hoisted(() => {
@@ -172,10 +172,10 @@ describe("OtelTelemetryAdapter", () => {
 });
 
 // =============================================================================
-// DeepAgent Integration — Telemetry spans for tool/LLM calls
+// Agent Integration — Telemetry spans for tool/LLM calls
 // =============================================================================
 
-describe("DeepAgent telemetry integration", () => {
+describe("Agent telemetry integration", () => {
   const mockModel = {
     modelId: "test-model",
     provider: "test",
@@ -224,11 +224,11 @@ describe("DeepAgent telemetry integration", () => {
 
   it("creates llm.generate span and tool spans during run", async () => {
     // Dynamically import to get the mocked version
-    const { DeepAgent } = await import("../../../agent/deep-agent.js");
+    const { Agent } = await import("../../../agent/agent.js");
 
     const telemetry = createSpyTelemetry();
 
-    const agent = DeepAgent.create({
+    const agent = Agent.create({
       model: mockModel,
       instructions: "Test",
     })
@@ -267,9 +267,9 @@ describe("DeepAgent telemetry integration", () => {
   });
 
   it("builder exposes withTelemetry method", async () => {
-    const { DeepAgent } = await import("../../../agent/deep-agent.js");
+    const { Agent } = await import("../../../agent/agent.js");
 
-    const builder = DeepAgent.create({
+    const builder = Agent.create({
       model: mockModel,
       instructions: "Test",
     });

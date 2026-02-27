@@ -1,5 +1,5 @@
 // =============================================================================
-// @giulio-leone/gaussflow-agent/testing — Barrel Export
+// gauss/testing — Barrel Export
 // =============================================================================
 
 export { createMockProvider } from "./mock-provider.js";

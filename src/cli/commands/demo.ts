@@ -13,7 +13,7 @@ const MAX_RESPONSE_PREVIEW_LENGTH = 200;
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function demoGuardrails(model: LanguageModel): Promise<void> {
-  const { DeepAgent } = await import("../../agent/deep-agent.js");
+  const { Agent } = await import("../../agent/agent.js");
   const { GuardrailsPlugin, createPiiFilter } = await import("../../plugins/index.js");
 
   console.log(color("magenta", "\n═══ Guardrails Plugin Demo ═══\n"));
@@ -28,7 +28,7 @@ export async function demoGuardrails(model: LanguageModel): Promise<void> {
     onFailure: "warn",
   });
 
-  const agent = DeepAgent.create({
+  const agent = Agent.create({
     model,
     instructions: "You are a helpful assistant.",
   })
@@ -65,7 +65,7 @@ export async function demoGuardrails(model: LanguageModel): Promise<void> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function demoWorkflow(model: LanguageModel): Promise<void> {
-  const { DeepAgent } = await import("../../agent/deep-agent.js");
+  const { Agent } = await import("../../agent/agent.js");
   const { WorkflowPlugin } = await import("../../plugins/index.js");
 
   console.log(color("magenta", "\n═══ Workflow Plugin Demo ═══\n"));
@@ -100,7 +100,7 @@ export async function demoWorkflow(model: LanguageModel): Promise<void> {
     ],
   });
 
-  const agent = DeepAgent.create({
+  const agent = Agent.create({
     model,
     instructions: "You are a helpful assistant.",
   })
@@ -189,7 +189,7 @@ export async function demoGraph(model: LanguageModel): Promise<void> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function demoObservability(model: LanguageModel): Promise<void> {
-  const { DeepAgent } = await import("../../agent/deep-agent.js");
+  const { Agent } = await import("../../agent/agent.js");
   const { ObservabilityPlugin } = await import("../../plugins/index.js");
   const { InMemoryTracingAdapter } = await import("../../adapters/tracing/index.js");
   const { InMemoryMetricsAdapter } = await import("../../adapters/metrics/index.js");
@@ -204,7 +204,7 @@ export async function demoObservability(model: LanguageModel): Promise<void> {
 
   const plugin = new ObservabilityPlugin({ tracer, metrics, logger });
 
-  const agent = DeepAgent.create({
+  const agent = Agent.create({
     model,
     instructions: "You are a helpful assistant. Answer briefly.",
   })

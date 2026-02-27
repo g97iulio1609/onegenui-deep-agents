@@ -13,7 +13,7 @@ vi.mock("node:fs", () => ({
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { detectProjectContext, contextToSystemPrompt, type ProjectContext } from "../project-context.js";
-import { loadIgnorePatterns, shouldIgnore } from "../gaussflow-ignore.js";
+import { loadIgnorePatterns, shouldIgnore } from "../gauss-ignore.js";
 
 const mockExistsSync = vi.mocked(existsSync);
 const mockReadFileSync = vi.mocked(readFileSync);

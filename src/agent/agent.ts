@@ -1,5 +1,5 @@
 // =============================================================================
-// DeepAgent — Execution orchestrator (SRP: building logic in deep-agent-builder.ts)
+// Agent — Execution orchestrator (SRP: building logic in deep-agent-builder.ts)
 // =============================================================================
 
 import type { LanguageModel, Tool } from "ai";
@@ -16,13 +16,13 @@ import type {
 import type { TelemetryPort } from "../ports/telemetry.port.js";
 import type { CostTrackerPort } from "../ports/cost-tracker.port.js";
 import type {
-  DeepAgentConfig,
+  AgentConfig,
   CheckpointConfig,
   SubagentConfig,
   ApprovalConfig,
   McpToolsetSelection,
 } from "../types.js";
-import type { DeepAgentPlugin, PluginRunMetadata } from "../ports/plugin.port.js";
+import type { Plugin, PluginRunMetadata } from "../ports/plugin.port.js";
 import type { RuntimePort } from "../ports/runtime.port.js";
 import type { MiddlewarePort } from "../ports/middleware.port.js";
 import { createRuntimeAdapterAsync } from "../adapters/runtime/detect-runtime.js";
@@ -37,13 +37,13 @@ import { LifecycleManager, type LifecycleHooks, type HealthStatus } from "./life
 import { MiddlewareChain } from "../middleware/chain.js";
 
 // Builder is imported for use in static factory methods
-import { DeepAgentBuilder } from "./deep-agent-builder.js";
+import { AgentBuilder } from "./agent-builder.js";
 
 // =============================================================================
 // Result type
 // =============================================================================
 
-export interface DeepAgentResult<TOutput = unknown> {
+export interface AgentResult<TOutput = unknown> {
   text: string;
   steps: unknown[];
   sessionId: string;
@@ -53,17 +53,17 @@ export interface DeepAgentResult<TOutput = unknown> {
   toolCalls: Array<{ name: string; args?: unknown; stepIndex: number }>;
 }
 
-export interface DeepAgentRunOptions {
+export interface AgentRunOptions {
   pluginMetadata?: PluginRunMetadata;
   mcpToolset?: McpToolsetSelection;
   policyContext?: PolicyContext;
 }
 
 // Re-export builder for backward compatibility
-export { DeepAgentBuilder } from "./deep-agent-builder.js";
+export { AgentBuilder } from "./agent-builder.js";
 
 // =============================================================================
-// DeepAgent
+// Agent
 // =============================================================================
 
 interface DeepAgentInternalConfig {
@@ -86,7 +86,7 @@ interface DeepAgentInternalConfig {
   approvalConfig?: Required<ApprovalConfig>;
   checkpointConfig?: Required<CheckpointConfig>;
   extraTools?: Record<string, Tool>;
-  plugins?: DeepAgentPlugin[];
+  plugins?: Plugin[];
   costTracker?: CostTrackerPort;
   circuitBreaker?: CircuitBreaker;
   rateLimiter?: RateLimiter;
@@ -100,7 +100,7 @@ interface DeepAgentInternalConfig {
   middleware?: MiddlewarePort[];
 }
 
-export class DeepAgent {
+export class Agent {
   readonly sessionId: string;
   readonly eventBus: EventBus;
 
@@ -226,20 +226,20 @@ export class DeepAgent {
   // Static factories
   // ---------------------------------------------------------------------------
 
-  static create(config: DeepAgentConfig): DeepAgentBuilder {
-    return new DeepAgentBuilder(config);
+  static create(config: AgentConfig): AgentBuilder {
+    return new AgentBuilder(config);
   }
 
-  static minimal(config: DeepAgentConfig): DeepAgent {
-    return DeepAgent.create(config).withPlanning().build();
+  static minimal(config: AgentConfig): Agent {
+    return Agent.create(config).withPlanning().build();
   }
 
-  static full(config: DeepAgentConfig & {
+  static full(config: AgentConfig & {
     memory?: MemoryPort;
     mcp?: McpPort;
     tokenCounter?: TokenCounterPort;
-  }): DeepAgent {
-    const builder = DeepAgent.create(config).withPlanning().withSubagents();
+  }): Agent {
+    const builder = Agent.create(config).withPlanning().withSubagents();
     if (config.memory) builder.withMemory(config.memory);
     if (config.mcp) builder.withMcp(config.mcp);
     if (config.tokenCounter) builder.withTokenCounter(config.tokenCounter);
@@ -252,10 +252,10 @@ export class DeepAgent {
    * that require zero platform-specific APIs.
    *
    * For runtime-specific adapters (LocalFilesystem, DenoFilesystem, OpfsFilesystem, etc.),
-   * use `DeepAgent.create()` and compose manually.
+   * use `Agent.create()` and compose manually.
    */
-  static auto(config: DeepAgentConfig): DeepAgent {
-    return DeepAgent.create(config).withPlanning().build();
+  static auto(config: AgentConfig): Agent {
+    return Agent.create(config).withPlanning().build();
   }
 
   // ---------------------------------------------------------------------------
@@ -286,7 +286,7 @@ export class DeepAgent {
   // Run & Stream - Delegation to ExecutionEngine
   // ---------------------------------------------------------------------------
 
-  async run(prompt: string, options: DeepAgentRunOptions = {}): Promise<DeepAgentResult> {
+  async run(prompt: string, options: AgentRunOptions = {}): Promise<AgentResult> {
     await this.ensureRuntime();
     return this.executionEngine.run(prompt, this.sessionId, this._runtime!, options);
   }
@@ -294,7 +294,7 @@ export class DeepAgent {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async stream(
     params: { messages: Array<{ role: string; content: unknown }> },
-    options: DeepAgentRunOptions = {},
+    options: AgentRunOptions = {},
   ): Promise<any> {
     await this.ensureRuntime();
     return this.executionEngine.stream(params, this.sessionId, this._runtime!, options);

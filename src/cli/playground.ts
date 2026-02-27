@@ -1,5 +1,5 @@
 // =============================================================================
-// Playground CLI — Programmatic launcher for GaussFlow Playground
+// Playground CLI — Programmatic launcher for Gauss Playground
 // =============================================================================
 
 import { NodeHttpServer } from "../server/node-http.server.js";
@@ -14,7 +14,7 @@ export interface PlaygroundOptions {
 }
 
 /**
- * Start the GaussFlow Playground server.
+ * Start the Gauss Playground server.
  *
  * Usage:
  * ```ts
@@ -55,7 +55,7 @@ export async function startPlayground(options: PlaygroundOptions): Promise<{
   await server.listen(port);
   const url = `http://localhost:${port}`;
 
-  console.log(`\n  ⚡ GaussFlow Playground running at ${url}`);
+  console.log(`\n  ⚡ Gauss Playground running at ${url}`);
   console.log(`  📡 API:  ${url}/api/agents`);
   console.log(`  🎮 UI:   Run 'cd packages/playground && npm run dev' for the React UI\n`);
 

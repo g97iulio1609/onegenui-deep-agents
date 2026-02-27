@@ -6,7 +6,7 @@ import { tool, type Tool } from "ai";
 import { z } from "zod";
 
 import type {
-  DeepAgentPlugin,
+  Plugin,
   PluginSetupContext,
 } from "../ports/plugin.port.js";
 import type { McpToolServerDefinition } from "../ports/mcp-server.port.js";
@@ -34,7 +34,7 @@ const START_SCHEMA = z.object({
 
 const STOP_SCHEMA = z.object({});
 
-export class McpServerPlugin implements DeepAgentPlugin {
+export class McpServerPlugin implements Plugin {
   readonly name = "mcp-server";
   readonly version = "1.0.0";
   readonly tools: Record<string, Tool>;

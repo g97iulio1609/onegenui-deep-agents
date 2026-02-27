@@ -11,8 +11,8 @@
 // import { openai } from "@ai-sdk/openai";
 // const model = openai("gpt-4o");
 
-import { DeepAgent } from "@giulio-leone/gaussflow-agent";
-import type { AgentEvent, SubagentConfig } from "@giulio-leone/gaussflow-agent";
+import { Agent } from "gauss";
+import type { AgentEvent, SubagentConfig } from "gauss";
 
 const model = {} as import("ai").LanguageModel;
 
@@ -23,7 +23,7 @@ async function main(): Promise<void> {
     allowNesting: true,       // subagents may spawn their own children
   };
 
-  const agent = DeepAgent.create({
+  const agent = Agent.create({
     model,
     instructions: [
       "You are a lead engineer that decomposes complex tasks.",

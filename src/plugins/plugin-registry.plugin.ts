@@ -5,7 +5,7 @@
 import { tool, type Tool } from "ai";
 import { z } from "zod";
 
-import type { DeepAgentPlugin } from "../ports/plugin.port.js";
+import type { Plugin } from "../ports/plugin.port.js";
 import type { PluginRegistryPort } from "../ports/plugin-registry.port.js";
 import { DefaultPluginRegistryAdapter } from "../adapters/plugin-registry/default-plugin-registry.adapter.js";
 
@@ -13,7 +13,7 @@ export interface PluginRegistryPluginOptions {
   registry?: PluginRegistryPort;
 }
 
-export class PluginRegistryPlugin implements DeepAgentPlugin {
+export class PluginRegistryPlugin implements Plugin {
   readonly name = "plugin-registry";
   readonly version = "1.0.0";
   readonly tools: Record<string, Tool>;
@@ -122,10 +122,10 @@ export class PluginRegistryPlugin implements DeepAgentPlugin {
             };
           }
 
-          const plugin: DeepAgentPlugin =
+          const plugin: Plugin =
             typeof exported === "function" && exported.prototype
-              ? (new exported() as DeepAgentPlugin)
-              : (exported as DeepAgentPlugin);
+              ? (new exported() as Plugin)
+              : (exported as Plugin);
 
           // Register manifest
           this.registry.register({

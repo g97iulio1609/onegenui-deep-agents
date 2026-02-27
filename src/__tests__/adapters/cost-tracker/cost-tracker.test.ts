@@ -182,14 +182,14 @@ describe("DefaultCostTrackerAdapter", () => {
   });
 
   describe("builder integration", () => {
-    it("withCostTracker is available on DeepAgentBuilder", async () => {
+    it("withCostTracker is available on AgentBuilder", async () => {
       // Verify the builder method exists by importing and checking
-      const { DeepAgentBuilder } = await import("../../../agent/deep-agent-builder.js");
+      const { AgentBuilder } = await import("../../../agent/agent-builder.js");
       const tracker = new DefaultCostTrackerAdapter();
 
       // Create a mock model to satisfy the builder
       const mockModel = { modelId: "test" } as any;
-      const builder = new DeepAgentBuilder({
+      const builder = new AgentBuilder({
         model: mockModel,
         instructions: "test",
       });

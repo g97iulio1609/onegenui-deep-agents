@@ -8,7 +8,7 @@
 
 import type { LanguageModel } from "ai";
 import type { Plan, Phase, Step } from "../../domain/plan.schema.js";
-import type { DeepAgentConfig } from "../../types.js";
+import type { AgentConfig } from "../../types.js";
 import { AgentGraph } from "../../graph/agent-graph.js";
 
 export interface PlanToGraphOptions {
@@ -119,7 +119,7 @@ function buildAgentConfig(
   step: Step,
   plan: Plan,
   options: PlanToGraphOptions,
-): DeepAgentConfig {
+): AgentConfig {
   const model =
     options.modelOverrides?.[step.id] ??
     (step.resources?.preferredModel

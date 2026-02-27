@@ -11,8 +11,8 @@
 // import { openai } from "@ai-sdk/openai";
 // const model = openai("gpt-4o");
 
-import { DeepAgent, AiSdkMcpAdapter } from "@giulio-leone/gaussflow-agent";
-import type { McpServerConfig } from "@giulio-leone/gaussflow-agent";
+import { Agent, AiSdkMcpAdapter } from "gauss";
+import type { McpServerConfig } from "gauss";
 
 const model = {} as import("ai").LanguageModel;
 
@@ -51,7 +51,7 @@ async function main(): Promise<void> {
   }
 
   // -- Build agent with MCP tools available ----------------------------------
-  const agent = DeepAgent.create({
+  const agent = Agent.create({
     model,
     instructions: [
       "You have access to external tools via MCP servers.",

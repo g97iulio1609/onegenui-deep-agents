@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import { AgentConfigLoader } from "../agent-config-loader.js";
 import { FileWatcherAdapter } from "../../adapters/hot-reload/file-watcher.adapter.js";
-import type { AgentConfig } from "../../ports/hot-reload.port.js";
+import type { HotReloadAgentConfig as AgentConfig } from "../../ports/hot-reload.port.js";
 import type { LanguageModel } from "ai";
 
 vi.mock("node:fs", async () => {

@@ -27,9 +27,9 @@ const MAX_TOOL_OUTPUT_DISPLAY_LENGTH = 500;
 function getDefaultSystemPrompt(): string {
   try {
     const ctx = contextToSystemPrompt(detectProjectContext());
-    return `You are GaussFlow, an AI coding assistant. ${ctx} You can read files, write files, search code, list directories, and execute bash commands. Use these tools to help the user accomplish their tasks. Be concise and direct.`;
+    return `You are Gauss, an AI coding assistant. ${ctx} You can read files, write files, search code, list directories, and execute bash commands. Use these tools to help the user accomplish their tasks. Be concise and direct.`;
   } catch {
-    return "You are GaussFlow, an AI coding assistant. You can read files, write files, search code, list directories, and execute bash commands. Use these tools to help the user accomplish their tasks. Be concise and direct.";
+    return "You are Gauss, an AI coding assistant. You can read files, write files, search code, list directories, and execute bash commands. Use these tools to help the user accomplish their tasks. Be concise and direct.";
   }
 }
 
@@ -107,7 +107,7 @@ export async function startRepl(
   const history: Array<{ role: "user" | "assistant"; content: string }> = [];
 
   console.log(bold(color("cyan", "\n  ╔══════════════════════════════════════╗")));
-  console.log(bold(color("cyan", "  ║       🤖 GaussFlow Interactive       ║")));
+  console.log(bold(color("cyan", "  ║       🤖 Gauss Interactive       ║")));
   console.log(bold(color("cyan", "  ╚══════════════════════════════════════╝")));
   console.log(color("dim", `  Provider: ${currentProvider} | Model: ${currentModelId}`));
   console.log(color("dim", "  Tools: readFile, writeFile, bash, listFiles, searchFiles"));
@@ -212,7 +212,7 @@ export async function startRepl(
 
     const { tool: aiTool } = await import("ai");
     const { z } = await import("zod");
-    const { DeepAgent } = await import("../agent/deep-agent.js");
+    const { Agent } = await import("../agent/agent.js");
     const { createCliTools } = await import("./tools.js");
 
     const tools = createCliTools({
@@ -238,7 +238,7 @@ export async function startRepl(
       // MCP discovery may fail if no servers connected — continue without MCP tools
     }
 
-    const agent = DeepAgent.create({
+    const agent = Agent.create({
       model: currentModel,
       instructions: systemPrompt,
       maxSteps: 30,

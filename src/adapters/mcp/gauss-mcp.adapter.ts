@@ -1,4 +1,4 @@
-// GaussFlowMcpAdapter — Adapter bridging @giulio-leone/gaussflow-mcp registry to McpPort
+// GaussMcpAdapter — Adapter bridging @giulio-leone/gaussflow-mcp registry to McpPort
 
 import type { McpRegistry } from "@giulio-leone/gaussflow-mcp";
 import type {
@@ -14,7 +14,7 @@ import type {
   McpServerConfig,
 } from "../../ports/mcp.port.js";
 
-export class GaussFlowMcpAdapter implements McpPort {
+export class GaussMcpAdapter implements McpPort {
   private readonly registry: McpRegistry;
   private readonly executor?: (
     serverId: string,

@@ -1,17 +1,17 @@
 // =============================================================================
-// AgentNode — Wraps a DeepAgent or nested AgentGraph for graph execution
+// AgentNode — Wraps a Agent or nested AgentGraph for graph execution
 // =============================================================================
 
-import type { DeepAgentConfig } from "../types.js";
+import type { AgentConfig } from "../types.js";
 import type { GraphConfig } from "../domain/graph.schema.js";
 import type { SharedContext } from "./shared-context.js";
 import type { AgentGraph } from "./agent-graph.js";
-import { DeepAgent } from "../agent/deep-agent.js";
+import { Agent } from "../agent/agent.js";
 
 export interface AgentNodeConfig {
   id: string;
   type: "agent" | "graph";
-  agentConfig?: DeepAgentConfig;
+  agentConfig?: AgentConfig;
   graph?: AgentGraph;
   overrides?: Partial<GraphConfig>;
 }
@@ -53,7 +53,7 @@ export class AgentNode {
       throw new Error(`Node "${this.id}" has no agentConfig or graph`);
     }
 
-    const agent = DeepAgent.minimal(this.config.agentConfig);
+    const agent = Agent.minimal(this.config.agentConfig);
     try {
       const agentResult = await agent.run(prompt);
 

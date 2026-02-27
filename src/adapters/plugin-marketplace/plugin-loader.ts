@@ -3,13 +3,13 @@
 // =============================================================================
 
 import type { MarketplacePluginManifest, MarketplacePort } from "../../ports/plugin-manifest.port.js";
-import type { DeepAgentPlugin } from "../../ports/plugin.port.js";
+import type { Plugin } from "../../ports/plugin.port.js";
 import { getPluginDir } from "./local-cache.js";
 import { join, resolve, sep } from "node:path";
 
 export interface LoadedPlugin {
   manifest: MarketplacePluginManifest;
-  plugin: DeepAgentPlugin;
+  plugin: Plugin;
 }
 
 export interface PluginLoaderOptions {
@@ -18,8 +18,8 @@ export interface PluginLoaderOptions {
 }
 
 /**
- * Loads marketplace plugins from disk into executable DeepAgentPlugin instances.
- * Plugins must export a default DeepAgentPlugin or `{ plugin: DeepAgentPlugin }`.
+ * Loads marketplace plugins from disk into executable Plugin instances.
+ * Plugins must export a default Plugin or `{ plugin: Plugin }`.
  */
 export class PluginLoader {
   private readonly validate: boolean;
@@ -84,21 +84,21 @@ export class PluginLoader {
 
   // ─── Private ────────────────────────────────────────────────────────────
 
-  private extractPlugin(mod: Record<string, unknown>, name: string): DeepAgentPlugin {
+  private extractPlugin(mod: Record<string, unknown>, name: string): Plugin {
     // Try: default export
     if (mod.default && typeof mod.default === "object" && "name" in (mod.default as object)) {
-      return mod.default as DeepAgentPlugin;
+      return mod.default as Plugin;
     }
     // Try: named export `plugin`
     if (mod.plugin && typeof mod.plugin === "object" && "name" in (mod.plugin as object)) {
-      return mod.plugin as DeepAgentPlugin;
+      return mod.plugin as Plugin;
     }
     throw new Error(
-      `Plugin "${name}" must export a default DeepAgentPlugin or a named "plugin" export.`,
+      `Plugin "${name}" must export a default Plugin or a named "plugin" export.`,
     );
   }
 
-  private validatePlugin(plugin: DeepAgentPlugin, name: string): void {
+  private validatePlugin(plugin: Plugin, name: string): void {
     if (!plugin.name || typeof plugin.name !== "string") {
       throw new Error(`Plugin "${name}" is missing a valid "name" property.`);
     }

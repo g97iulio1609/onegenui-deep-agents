@@ -4,14 +4,14 @@ sidebar_position: 8
 
 # REST API
 
-GaussFlow includes a zero-dependency HTTP REST API server, enabling any language (Python, Go, Ruby, etc.) to use GaussFlow over HTTP.
+Gauss includes a zero-dependency HTTP REST API server, enabling any language (Python, Go, Ruby, etc.) to use Gauss over HTTP.
 
 ## Quick Start
 
 ```typescript
-import { GaussFlowServer } from "@giulio-leone/gaussflow-agent";
+import { GaussServer } from "gauss";
 
-const server = new GaussFlowServer({
+const server = new GaussServer({
   port: 3456,
   apiKey: "my-secret-token", // Optional Bearer auth
   cors: true,

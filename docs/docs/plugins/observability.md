@@ -12,18 +12,18 @@ The `ObservabilityPlugin` provides three-pillar observability by integrating `Tr
 
 ```typescript
 import {
-  DeepAgent,
+  Agent,
   createObservabilityPlugin,
   InMemoryTracingAdapter,
   InMemoryMetricsAdapter,
   ConsoleLoggingAdapter,
-} from "@giulio-leone/gaussflow-agent";
+} from "gauss";
 
 const tracer = new InMemoryTracingAdapter();
 const metrics = new InMemoryMetricsAdapter();
 const logger = new ConsoleLoggingAdapter();
 
-const agent = DeepAgent.create({
+const agent = Agent.create({
   model: openai("gpt-4o"),
   instructions: "You are a helpful assistant.",
 })
@@ -132,7 +132,7 @@ interface LoggingPort {
 Implement the port interfaces to integrate with your observability stack:
 
 ```typescript
-import type { TracingPort, Span } from "@giulio-leone/gaussflow-agent";
+import type { TracingPort, Span } from "gauss";
 
 class OpenTelemetryAdapter implements TracingPort {
   startSpan(name: string, parentSpan?: Span): Span {

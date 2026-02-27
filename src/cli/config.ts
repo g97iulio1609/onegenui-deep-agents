@@ -12,7 +12,7 @@ const CONFIG_FILE = ".gaussflowrc";
 /** Maximum number of history lines to retain on disk */
 const MAX_HISTORY_LINES = 1000;
 
-export interface GaussFlowConfig {
+export interface GaussConfig {
   keys: Record<string, string>;
   defaultProvider?: string;
   defaultModel?: string;
@@ -23,12 +23,12 @@ function configPath(): string {
   return join(homedir(), CONFIG_FILE);
 }
 
-export function loadConfig(): GaussFlowConfig {
+export function loadConfig(): GaussConfig {
   const path = configPath();
   if (!existsSync(path)) return { keys: {} };
   try {
     const raw = readFileSync(path, "utf-8");
-    const parsed = JSON.parse(raw) as Partial<GaussFlowConfig>;
+    const parsed = JSON.parse(raw) as Partial<GaussConfig>;
     return {
       keys: parsed.keys ?? {},
       defaultProvider: parsed.defaultProvider,
@@ -41,7 +41,7 @@ export function loadConfig(): GaussFlowConfig {
   }
 }
 
-export function saveConfig(config: GaussFlowConfig): void {
+export function saveConfig(config: GaussConfig): void {
   const path = configPath();
   writeFileSync(path, JSON.stringify(config, null, 2) + "\n", {
     encoding: "utf-8",

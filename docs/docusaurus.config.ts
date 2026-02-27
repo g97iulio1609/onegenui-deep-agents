@@ -3,7 +3,7 @@ import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
-  title: 'GaussFlow',
+  title: 'Gauss',
   tagline: 'AI Agent Framework with Hexagonal Architecture',
   favicon: 'img/favicon.ico',
 
@@ -46,7 +46,7 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: 'GaussFlow',
+      title: 'Gauss',
       items: [
         {
           type: 'docSidebar',
@@ -55,7 +55,7 @@ const config: Config = {
           label: 'Docs',
         },
         {
-          href: 'https://www.npmjs.com/package/@giulio-leone/gaussflow-agent',
+          href: 'https://www.npmjs.com/package/gauss',
           label: 'npm',
           position: 'right',
         },
@@ -91,12 +91,12 @@ const config: Config = {
             },
             {
               label: 'npm',
-              href: 'https://www.npmjs.com/package/@giulio-leone/gaussflow-agent',
+              href: 'https://www.npmjs.com/package/gauss',
             },
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} GaussFlow. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Gauss. Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,

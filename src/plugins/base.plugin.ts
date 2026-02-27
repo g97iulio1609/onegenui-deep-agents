@@ -1,10 +1,10 @@
 // =============================================================================
-// BasePlugin — Abstract base class for DeepAgent plugins
+// BasePlugin — Abstract base class for Agent plugins
 // =============================================================================
 
-import type { DeepAgentPlugin, PluginHooks } from "../ports/plugin.port.js";
+import type { Plugin, PluginHooks } from "../ports/plugin.port.js";
 
-export abstract class BasePlugin implements DeepAgentPlugin {
+export abstract class BasePlugin implements Plugin {
   abstract readonly name: string;
   readonly version = "1.0.0";
   readonly hooks: PluginHooks;

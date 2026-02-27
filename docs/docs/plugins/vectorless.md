@@ -17,9 +17,9 @@ pnpm add @giulio-leone/gaussflow-vectorless
 ## Quick Start
 
 ```typescript
-import { DeepAgent, createVectorlessPlugin } from "@giulio-leone/gaussflow-agent";
+import { Agent, createVectorlessPlugin } from "gauss";
 
-const agent = DeepAgent.create({
+const agent = Agent.create({
   model: openai("gpt-4o"),
   instructions: "You can extract and query knowledge from text.",
 })

@@ -5,7 +5,7 @@
 import { tool, type Tool } from "ai";
 import { z } from "zod";
 
-import type { DeepAgentPlugin, PluginHooks, PluginContext, AfterRunParams } from "../ports/plugin.port.js";
+import type { Plugin, PluginHooks, PluginContext, AfterRunParams } from "../ports/plugin.port.js";
 import type { AgentMemoryPort, MemoryEntry } from "../ports/agent-memory.port.js";
 import { InMemoryAgentMemoryAdapter } from "../adapters/memory/in-memory-agent-memory.adapter.js";
 
@@ -36,7 +36,7 @@ export interface MemoryPluginOptions {
 // Plugin
 // ─────────────────────────────────────────────────────────────────────────────
 
-export class MemoryPlugin implements DeepAgentPlugin {
+export class MemoryPlugin implements Plugin {
   readonly name = "memory";
   readonly version = "1.0.0";
   readonly hooks: PluginHooks;

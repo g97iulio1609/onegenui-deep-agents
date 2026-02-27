@@ -1,14 +1,14 @@
 import { describe, it, expect } from "vitest";
 import type { LanguageModel } from "ai";
-import type { DeepAgentConfig } from "../../types.js";
+import type { AgentConfig } from "../../types.js";
 import { AgentGraph } from "../agent-graph.js";
 import { AsciiGraphAdapter } from "../../adapters/graph-visualization/ascii-graph.adapter.js";
 import { MermaidGraphAdapter } from "../../adapters/graph-visualization/mermaid-graph.adapter.js";
 import type { GraphDescriptor } from "../../ports/graph-visualization.port.js";
 
 const mockModel = { modelId: "test", provider: "test" } as unknown as LanguageModel;
-const cfg = (instructions = "do stuff"): DeepAgentConfig =>
-  ({ model: mockModel, instructions }) as DeepAgentConfig;
+const cfg = (instructions = "do stuff"): AgentConfig =>
+  ({ model: mockModel, instructions }) as AgentConfig;
 
 describe("Graph Visualization", () => {
   // ===========================================================================

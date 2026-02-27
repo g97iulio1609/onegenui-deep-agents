@@ -2,7 +2,7 @@
 // DefaultPluginRegistryAdapter — In-memory plugin registry implementation
 // =============================================================================
 
-import type { DeepAgentPlugin } from "../../ports/plugin.port.js";
+import type { Plugin } from "../../ports/plugin.port.js";
 import type {
   PluginManifest,
   PluginRegistryPort,
@@ -48,7 +48,7 @@ export class DefaultPluginRegistryAdapter implements PluginRegistryPort {
     });
   }
 
-  async resolve(name: string): Promise<DeepAgentPlugin> {
+  async resolve(name: string): Promise<Plugin> {
     const manifest = this.manifests.get(name);
     if (!manifest) {
       throw new Error(`Plugin "${name}" is not registered.`);
@@ -73,8 +73,8 @@ export class DefaultPluginRegistryAdapter implements PluginRegistryPort {
         }
         // Support both class exports (new) and factory/instance exports
         return typeof exported === "function" && exported.prototype
-          ? (new exported() as DeepAgentPlugin)
-          : (exported as DeepAgentPlugin);
+          ? (new exported() as Plugin)
+          : (exported as Plugin);
       }
 
       case "url":

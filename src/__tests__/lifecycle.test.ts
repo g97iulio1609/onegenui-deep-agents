@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
 import type { LanguageModel } from "ai";
-import { DeepAgent } from "../index.js";
+import { Agent } from "../index.js";
 import type { LifecycleHooks } from "../agent/lifecycle.js";
 
-describe("DeepAgent Lifecycle", () => {
+describe("Agent Lifecycle", () => {
   const mockModel = {
     modelId: "mock-model",
     specificationVersion: "v2",
@@ -11,7 +11,7 @@ describe("DeepAgent Lifecycle", () => {
 
   describe("Basic Lifecycle Operations", () => {
     it("should start and shutdown agent with default hooks", async () => {
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test agent",
       }).build();
@@ -31,7 +31,7 @@ describe("DeepAgent Lifecycle", () => {
     });
 
     it("should return healthy status for a ready agent", async () => {
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test agent",
       }).build();
@@ -47,7 +47,7 @@ describe("DeepAgent Lifecycle", () => {
     });
 
     it("should return unhealthy status for a not-started agent", async () => {
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test agent",
       }).build();
@@ -77,7 +77,7 @@ describe("DeepAgent Lifecycle", () => {
         onHealthCheck,
       };
 
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test agent with hooks",
       })
@@ -105,7 +105,7 @@ describe("DeepAgent Lifecycle", () => {
         onStartup,
       };
 
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test agent with failing startup",
       })
@@ -125,7 +125,7 @@ describe("DeepAgent Lifecycle", () => {
         onShutdown,
       };
 
-      const agent = DeepAgent.create({
+      const agent = Agent.create({
         model: mockModel,
         instructions: "Test agent with shutdown hook",
       })

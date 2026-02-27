@@ -11,7 +11,7 @@ The `EvalsPlugin` automatically collects evaluation metrics for every agent run 
 ## Quick Start
 
 ```typescript
-import { DeepAgent, createEvalsPlugin } from "@giulio-leone/gaussflow-agent";
+import { Agent, createEvalsPlugin } from "gauss";
 
 const evals = createEvalsPlugin({
   persist: true,
@@ -28,7 +28,7 @@ const evals = createEvalsPlugin({
   },
 });
 
-const agent = DeepAgent.create({
+const agent = Agent.create({
   model: openai("gpt-4o"),
   instructions: "You are a helpful assistant.",
 })

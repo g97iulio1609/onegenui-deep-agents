@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { LanguageModel, Tool } from "ai";
 
-import { DeepAgent } from "../agent/deep-agent.js";
+import { Agent } from "../agent/agent.js";
 
 const { generateFn, constructorSpy } = vi.hoisted(() => {
   const generateFn = vi.fn().mockResolvedValue({
@@ -35,7 +35,7 @@ const mockModel = {
   provider: "mock",
 } as unknown as LanguageModel;
 
-describe("DeepAgent + Plugins integration", () => {
+describe("Agent + Plugins integration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     generateFn.mockResolvedValue({ text: "plugin-test", steps: [{ type: "text" }] });
@@ -45,7 +45,7 @@ describe("DeepAgent + Plugins integration", () => {
     const beforeStep = vi.fn(async () => undefined);
     const afterStep = vi.fn(async () => undefined);
 
-    const agent = DeepAgent.create({
+    const agent = Agent.create({
       model: mockModel,
       instructions: "Test plugin lifecycle",
     })
@@ -92,7 +92,7 @@ describe("DeepAgent + Plugins integration", () => {
       };
     });
 
-    const agent = DeepAgent.create({
+    const agent = Agent.create({
       model: mockModel,
       instructions: "Test tool hooks",
     })
@@ -121,7 +121,7 @@ describe("DeepAgent + Plugins integration", () => {
   it("supports onError suppression", async () => {
     generateFn.mockRejectedValueOnce(new Error("boom"));
 
-    const agent = DeepAgent.create({
+    const agent = Agent.create({
       model: mockModel,
       instructions: "Suppress errors",
     })

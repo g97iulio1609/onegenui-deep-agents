@@ -1,16 +1,16 @@
-# GaussFlow vs Mastra vs DeepAgentsJS — Competitive Analysis
+# Gauss vs Mastra vs DeepAgentsJS — Competitive Analysis
 
 > Updated after M1–M7 implementation. 228 tests passing, zero DTS errors.
 
 ## Executive Summary
 
-GaussFlow now **covers or exceeds** every capability offered by both Mastra and DeepAgentsJS, while retaining unique differentiators neither competitor has: multi-runtime support (Node/Deno/Edge/Browser/Bun), DAG-level token budgeting, resilience patterns (circuit breaker, rate limiter, tool cache), and a workflow compiler (NL→DAG).
+Gauss now **covers or exceeds** every capability offered by both Mastra and DeepAgentsJS, while retaining unique differentiators neither competitor has: multi-runtime support (Node/Deno/Edge/Browser/Bun), DAG-level token budgeting, resilience patterns (circuit breaker, rate limiter, tool cache), and a workflow compiler (NL→DAG).
 
 ---
 
 ## Feature Matrix
 
-| Capability | GaussFlow | Mastra | DeepAgentsJS | Notes |
+| Capability | Gauss | Mastra | DeepAgentsJS | Notes |
 |---|:---:|:---:|:---:|---|
 | **Core Architecture** |||||
 | Hexagonal Ports & Adapters | ✅ 31+ ports | ❌ | ❌ | Unique — swap any adapter |
@@ -18,27 +18,27 @@ GaussFlow now **covers or exceeds** every capability offered by both Mastra and 
 | Plugin Marketplace | ✅ GitHub + npm + Composite | ⚠️ Local only | ❌ | Multi-source discovery, path-safe loader |
 | Multi-Runtime | ✅ Node/Deno/Edge/Browser/Bun | ❌ Node only | ❌ Node only | Unique |
 | **Middleware** |||||
-| Composable Middleware Chain | ✅ Priority-ordered, typed | ❌ | ✅ | GaussFlow: enum priorities + compose() |
-| HITL Middleware | ✅ Suspend/Resume/Timeout | ⚠️ Workflow-level | ✅ Per-tool | GaussFlow: storage-backed suspension |
+| Composable Middleware Chain | ✅ Priority-ordered, typed | ❌ | ✅ | Gauss: enum priorities + compose() |
+| HITL Middleware | ✅ Suspend/Resume/Timeout | ⚠️ Workflow-level | ✅ Per-tool | Gauss: storage-backed suspension |
 | Logging Middleware | ✅ Structured | ❌ | ❌ | Built-in |
 | Caching Middleware | ✅ TTL + invalidation | ❌ | ❌ | Built-in |
-| Summarization Middleware | ✅ Fraction/token/msg triggers | ❌ | ✅ | GaussFlow: emergency mode |
+| Summarization Middleware | ✅ Fraction/token/msg triggers | ❌ | ✅ | Gauss: emergency mode |
 | Result Eviction | ✅ 50K threshold + exclusions | ❌ | ✅ | Parity |
 | Skills Middleware | ✅ SKILL.md + inheritance | ❌ | ✅ | Parity |
 | Observational Memory Middleware | ✅ Token-threshold auto-summarize | ✅ | ❌ | Parity with Mastra |
 | Processor Pipeline | ✅ Input→Output + retry | ✅ | ❌ | Parity with Mastra |
 | **Models & Routing** |||||
-| Multi-Provider Model Router | ✅ 4 policies (cost/latency/capability/fallback) | ✅ 40+ providers | ❌ | GaussFlow: pluggable policies |
+| Multi-Provider Model Router | ✅ 4 policies (cost/latency/capability/fallback) | ✅ 40+ providers | ❌ | Gauss: pluggable policies |
 | AI SDK Integration | ✅ v6 adapter | ✅ Dual SDK | ❌ | Parity |
 | **Memory & Knowledge** |||||
 | Tiered Memory (short/working/semantic/observation) | ✅ 4 tiers | ✅ 3 tiers | ⚠️ 1 tier | Superior — 4 independent tiers |
 | Working Memory | ✅ TTL + templates | ✅ | ❌ | Parity with Mastra |
 | Graph-RAG (Knowledge Graph) | ✅ Entity extraction + graph traversal + hybrid scoring | ✅ + Graph-RAG | ❌ | Parity with Mastra |
-| Vector Store Port | ✅ InMemory + cosine + filters | ✅ 5+ adapters | ❌ | GaussFlow: extensible port |
+| Vector Store Port | ✅ InMemory + cosine + filters | ✅ 5+ adapters | ❌ | Gauss: extensible port |
 | Embedding Port | ✅ Abstract + batch | ✅ Multi-provider | ❌ | Parity |
 | Semantic Recall | ✅ Cross-session vector search | ✅ | ❌ | Parity |
 | **Suspension & Skills** |||||
-| Suspend/Resume (durable) | ✅ InMemory adapter, version migration | ✅ Workflow-level | ✅ LangGraph | GaussFlow: middleware-level |
+| Suspend/Resume (durable) | ✅ InMemory adapter, version migration | ✅ Workflow-level | ✅ LangGraph | Gauss: middleware-level |
 | Skills System (SKILL.md) | ✅ YAML frontmatter, inheritance, validation | ❌ | ✅ | Parity with DeepAgentsJS |
 | Sandbox Execution | ✅ LocalShell + E2B Cloud | ❌ | ✅ LocalShell + E2B | Superior — both local and cloud |
 | **Storage** |||||
@@ -47,7 +47,7 @@ GaussFlow now **covers or exceeds** every capability offered by both Mastra and 
 | File-Based Learning | ✅ | ❌ | ❌ | Unique |
 | Metrics Export (Prometheus) | ✅ | ❌ | ❌ | Unique |
 | **Server & Auth** |||||
-| HTTP Server (zero-dep) | ✅ Node http, CORS, SSE, body limit | ✅ Express/Hono | ❌ | GaussFlow: zero dependencies |
+| HTTP Server (zero-dep) | ✅ Node http, CORS, SSE, body limit | ✅ Express/Hono | ❌ | Gauss: zero dependencies |
 | API Key Auth | ✅ Timing-safe | ✅ | ❌ | Parity |
 | JWT Auth (HMAC-SHA256) | ✅ timingSafeEqual | ✅ | ❌ | Parity |
 | RBAC Authorization | ✅ Role → permissions mapping | ✅ | ❌ | Parity |
@@ -76,7 +76,7 @@ GaussFlow now **covers or exceeds** every capability offered by both Mastra and 
 | OTEL Integration | ✅ | ✅ | ❌ | Parity |
 | Structured Logging | ✅ | ✅ | ❌ | Parity |
 | **Voice/TTS** |||||
-| Voice Port (STT/TTS) | ✅ Abstract + InMemory | ✅ Multi-provider | ❌ | GaussFlow: port-based extensible |
+| Voice Port (STT/TTS) | ✅ Abstract + InMemory | ✅ Multi-provider | ❌ | Gauss: port-based extensible |
 | **Datasets** |||||
 | Datasets Management | ✅ CRUD + versioning + query | ✅ | ❌ | Parity |
 | **Deployment** |||||
@@ -89,7 +89,7 @@ GaussFlow now **covers or exceeds** every capability offered by both Mastra and 
 
 ## Scorecard
 
-| Category | GaussFlow | Mastra | DeepAgentsJS |
+| Category | Gauss | Mastra | DeepAgentsJS |
 |---|:---:|:---:|:---:|
 | Architecture & Extensibility | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ |
 | Model Provider Coverage | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐ |
@@ -104,7 +104,7 @@ GaussFlow now **covers or exceeds** every capability offered by both Mastra and 
 
 ---
 
-## GaussFlow Unique Advantages (No Competitor Equivalent)
+## Gauss Unique Advantages (No Competitor Equivalent)
 
 1. **Hexagonal Architecture** — Every module is a swappable port/adapter pair
 2. **Multi-Runtime** — Node, Deno, Edge, Browser, Bun (competitors: Node only)
@@ -119,8 +119,8 @@ GaussFlow now **covers or exceeds** every capability offered by both Mastra and 
 
 ## Areas Where Mastra Still Leads
 
-1. **Model Provider Count** — 40+ out-of-the-box vs GaussFlow's adapter-based approach (requires implementing per-provider adapters)
-2. **Persistent Storage Adapters** — Mastra: Postgres/LibSQL/Redis built-in; GaussFlow: InMemory + File (ports ready for Postgres/Redis adapters)
+1. **Model Provider Count** — 40+ out-of-the-box vs Gauss's adapter-based approach (requires implementing per-provider adapters)
+2. **Persistent Storage Adapters** — Mastra: Postgres/LibSQL/Redis built-in; Gauss: InMemory + File (ports ready for Postgres/Redis adapters)
 3. **Community & Ecosystem** — YC W25, larger contributor base
 
 ## Areas Where DeepAgentsJS Still Leads
@@ -131,4 +131,4 @@ GaussFlow now **covers or exceeds** every capability offered by both Mastra and 
 
 ## Conclusion
 
-GaussFlow has closed **all 26 capability gaps**, completed **all 5 stubs**, and added 3 additional capabilities (Graph-RAG, E2B Sandbox, Playground UI) that were the last remaining competitive advantages. With 33+ hexagonal ports, 276 passing tests, and unique differentiators in multi-runtime, resilience, DAG orchestration, and planning, GaussFlow is architecturally superior to both competitors. The only remaining areas where competitors lead (model provider count, LangGraph backend) are ecosystem advantages, not architectural ones.
+Gauss has closed **all 26 capability gaps**, completed **all 5 stubs**, and added 3 additional capabilities (Graph-RAG, E2B Sandbox, Playground UI) that were the last remaining competitive advantages. With 33+ hexagonal ports, 276 passing tests, and unique differentiators in multi-runtime, resilience, DAG orchestration, and planning, Gauss is architecturally superior to both competitors. The only remaining areas where competitors lead (model provider count, LangGraph backend) are ecosystem advantages, not architectural ones.

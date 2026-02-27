@@ -1,13 +1,13 @@
 // =============================================================================
 // LLM NL Parser — Parses natural language into StructuredDeclaration via LLM
-// Uses gaussflow DeepAgent + AI SDK Output.object for structured generation.
+// Uses gaussflow Agent + AI SDK Output.object for structured generation.
 // =============================================================================
 
 import { Output } from "ai";
 import type { LanguageModel } from "ai";
 import { StructuredDeclarationSchema, type StructuredDeclaration } from "../../domain/compiler.schema.js";
 import type { NLParserPort } from "../../ports/compiler.port.js";
-import { DeepAgent } from "../../agent/deep-agent.js";
+import { Agent } from "../../agent/agent.js";
 
 const SYSTEM_PROMPT = `You are a workflow declaration parser. Your job is to convert natural language workflow descriptions into structured declarations.
 
@@ -39,7 +39,7 @@ export class LLMNLParser implements NLParserPort {
   constructor(private readonly model: LanguageModel) {}
 
   async parse(naturalLanguage: string): Promise<StructuredDeclaration> {
-    const agent = DeepAgent.create({
+    const agent = Agent.create({
       model: this.model,
       instructions: SYSTEM_PROMPT,
       maxSteps: 1,

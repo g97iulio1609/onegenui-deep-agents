@@ -6,13 +6,13 @@ import { z } from "zod";
 
 import {
   AgentCardPlugin,
-  DeepAgent,
-  type DeepAgentPlugin,
-} from "@giulio-leone/gaussflow-agent";
+  Agent,
+  type Plugin,
+} from "gauss";
 
 const model = {} as import("ai").LanguageModel;
 
-const observabilityPlugin: DeepAgentPlugin = {
+const observabilityPlugin: Plugin = {
   name: "observability",
   tools: {
     "ops:health": tool({
@@ -40,7 +40,7 @@ async function main(): Promise<void> {
     },
   });
 
-  const agent = DeepAgent.create({
+  const agent = Agent.create({
     model,
     instructions: "You are an ops coordinator. Prefer deterministic execution.",
     maxSteps: 20,

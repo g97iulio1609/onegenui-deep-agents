@@ -1,19 +1,19 @@
 #!/usr/bin/env node
 // =============================================================================
-// GaussFlow CLI — Main entry point
+// Gauss CLI — Main entry point
 // =============================================================================
 
 import { parseArgs } from "node:util";
 import { setKey, deleteKey, listKeys, resolveApiKey, envVarName, setDefaultProvider, setDefaultModel, getDefaultProvider, getDefaultModelFromConfig, loadConfig } from "./config.js";
 import { createModel, isValidProvider, SUPPORTED_PROVIDERS, getDefaultModel } from "./providers.js";
 import type { ProviderName } from "./providers.js";
-// Heavy modules (DeepAgent, plugins, graph) are lazy-loaded inside handlers
+// Heavy modules (Agent, plugins, graph) are lazy-loaded inside handlers
 import { color, bold, maskKey } from "./format.js";
 
 const VERSION = "1.2.0";
 
 const HELP = `
-${bold("GaussFlow CLI")} — AI Agent Framework
+${bold("Gauss CLI")} — AI Agent Framework
 
 ${bold("Usage:")}
   gaussflow "<prompt>"                         Direct prompt with streaming

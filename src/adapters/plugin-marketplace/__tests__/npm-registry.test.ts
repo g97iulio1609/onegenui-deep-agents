@@ -25,7 +25,7 @@ const NPM_SEARCH_RESPONSE = {
       package: {
         name: "@gaussflow/plugin-web-search",
         version: "1.2.0",
-        description: "Web search plugin for GaussFlow",
+        description: "Web search plugin for Gauss",
         author: { name: "alice" },
         keywords: ["gaussflow-plugin", "search"],
       },
@@ -45,7 +45,7 @@ const NPM_SEARCH_RESPONSE = {
 const NPM_PACKAGE_RESPONSE = {
   name: "@gaussflow/plugin-web-search",
   version: "1.2.0",
-  description: "Web search plugin for GaussFlow",
+  description: "Web search plugin for Gauss",
   author: { name: "alice" },
   keywords: ["gaussflow-plugin", "search"],
   main: "./dist/index.js",

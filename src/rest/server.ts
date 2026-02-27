@@ -1,5 +1,5 @@
 // =============================================================================
-// REST API — GaussFlowServer (zero-dependency HTTP server using node:http)
+// REST API — GaussServer (zero-dependency HTTP server using node:http)
 // =============================================================================
 
 import { createServer, type Server, type IncomingMessage, type ServerResponse } from "node:http";
@@ -13,15 +13,15 @@ import {
   handleGraphRun,
   handleAgentHealth,
 } from "./handlers.js";
-import { DeepAgent } from "../agent/deep-agent.js";
+import { Agent } from "../agent/agent.js";
 
-export class GaussFlowServer {
+export class GaussServer {
   private readonly options: Required<ServerOptions>;
   private readonly router: Router;
   private server: Server | null = null;
-  private agent?: DeepAgent;
+  private agent?: Agent;
 
-  constructor(options?: ServerOptions, agent?: DeepAgent) {
+  constructor(options?: ServerOptions, agent?: Agent) {
     this.options = {
       port: options?.port ?? 3456,
       apiKey: options?.apiKey ?? "",

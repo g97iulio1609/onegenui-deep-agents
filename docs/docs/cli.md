@@ -4,22 +4,22 @@ sidebar_position: 7
 
 # CLI
 
-GaussFlow includes a command-line interface for interactive testing and scripting — similar to Claude Code or OpenCode.
+Gauss includes a command-line interface for interactive testing and scripting — similar to Claude Code or OpenCode.
 
 ## Installation
 
 ```bash
 # Global install
-npm install -g @giulio-leone/gaussflow-agent
+npm install -g gauss
 gaussflow --help
 
 # Or use npx
-npx @giulio-leone/gaussflow-agent --help
+npx gauss --help
 ```
 
 ## Quick Start — Direct Prompt
 
-The fastest way to use GaussFlow. Just pass a prompt directly:
+The fastest way to use Gauss. Just pass a prompt directly:
 
 ```bash
 gaussflow "What is AI?"

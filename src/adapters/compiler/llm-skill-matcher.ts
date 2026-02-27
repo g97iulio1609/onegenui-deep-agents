@@ -1,5 +1,5 @@
 // =============================================================================
-// LLM Skill Matcher — Uses DeepAgent + Output.object for semantic skill matching
+// LLM Skill Matcher — Uses Agent + Output.object for semantic skill matching
 // =============================================================================
 
 import { Output } from "ai";
@@ -7,7 +7,7 @@ import type { LanguageModel } from "ai";
 import { z } from "zod";
 import type { SkillDeclaration } from "../../domain/compiler.schema.js";
 import type { SkillMatcherPort, SkillMatch } from "../../ports/skill-matcher.port.js";
-import { DeepAgent } from "../../agent/deep-agent.js";
+import { Agent } from "../../agent/agent.js";
 
 // Zod schema for LLM match result
 const MatchResultSchema = z.object({
@@ -56,7 +56,7 @@ Minimum confidence threshold: ${threshold}
 
 Find all existing skills that match the candidate.`;
 
-    const agent = DeepAgent.create({
+    const agent = Agent.create({
       model: this.model,
       instructions: MATCHER_PROMPT,
       maxSteps: 1,

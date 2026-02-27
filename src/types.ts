@@ -1,5 +1,5 @@
 // =============================================================================
-// @giulio-leone/gaussflow-agent — Shared Type Definitions
+// gauss — Shared Type Definitions
 // =============================================================================
 
 import type { LanguageModel } from "ai";
@@ -9,7 +9,7 @@ import type { PolicyEnginePort } from "./ports/policy.port.js";
 // Agent Configuration
 // =============================================================================
 
-export interface DeepAgentConfig {
+export interface AgentConfig {
   /** Agent identifier */
   id?: string;
   /** Display name */

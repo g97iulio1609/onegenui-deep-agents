@@ -1,5 +1,5 @@
 // =============================================================================
-// @giulio-leone/gaussflow-agent — Public API
+// gauss — Public API
 // =============================================================================
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -13,7 +13,7 @@ export { Output } from "ai";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export {
-  GaussFlowError,
+  GaussError,
   ToolExecutionError,
   PluginError,
   McpConnectionError,
@@ -27,7 +27,7 @@ export {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type {
-  DeepAgentConfig,
+  AgentConfig,
   ContextConfig,
   ApprovalConfig,
   DelegationHooks,
@@ -335,9 +335,9 @@ export {
 // Agent — Orchestrator
 // ─────────────────────────────────────────────────────────────────────────────
 
-export { DeepAgent } from "./agent/deep-agent.js";
-export { DeepAgentBuilder } from "./agent/deep-agent-builder.js";
-export type { DeepAgentResult, DeepAgentRunOptions } from "./agent/deep-agent.js";
+export { Agent } from "./agent/agent.js";
+export { AgentBuilder } from "./agent/agent-builder.js";
+export type { AgentResult, AgentRunOptions } from "./agent/agent.js";
 export { ToolManager } from "./agent/tool-manager.js";
 export { ExecutionEngine } from "./agent/execution-engine.js";
 
@@ -353,7 +353,7 @@ export { EventBus } from "./agent/event-bus.js";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type {
-  DeepAgentPlugin,
+  Plugin,
   PluginHooks,
   PluginContext,
   PluginSetupContext,
@@ -453,13 +453,13 @@ export type {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { VirtualFilesystem, type DiskSyncFn } from "./adapters/filesystem/virtual-fs.adapter.js";
-// Node.js-specific: LocalFilesystem → import from "@giulio-leone/gaussflow-agent/node"
+// Node.js-specific: LocalFilesystem → import from "gauss/node"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Adapters — MCP
 // ─────────────────────────────────────────────────────────────────────────────
 
-export { GaussFlowMcpAdapter } from "./adapters/mcp/gaussflow-mcp.adapter.js";
+export { GaussMcpAdapter } from "./adapters/mcp/gauss-mcp.adapter.js";
 export { AiSdkMcpAdapter } from "./adapters/mcp/ai-sdk-mcp.adapter.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -654,7 +654,7 @@ export { createPolicyTools } from "./tools/policy/index.js";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { ApproximateTokenCounter } from "./adapters/token-counter/approximate.adapter.js";
-// Node.js-specific: TiktokenTokenCounter → import from "@giulio-leone/gaussflow-agent/node"
+// Node.js-specific: TiktokenTokenCounter → import from "gauss/node"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Context — Token Tracking, Compression, Summarization
@@ -744,7 +744,7 @@ export type { LifecycleHooks, HealthStatus } from "./agent/lifecycle.js";
 // ---------------------------------------------------------------------------
 // Hot-Reload — Watch config files and reload agents
 // ---------------------------------------------------------------------------
-export type { HotReloadPort, AgentConfig } from "./ports/hot-reload.port.js";
+export type { HotReloadPort, HotReloadAgentConfig } from "./ports/hot-reload.port.js";
 export { FileWatcherAdapter } from "./adapters/hot-reload/index.js";
 export { AgentConfigLoader } from "./agent/agent-config-loader.js";
 export type { ModelResolver } from "./agent/agent-config-loader.js";
@@ -766,7 +766,7 @@ export type { DeltaEncoder } from "./streaming/delta-encoder.js";
 // ---------------------------------------------------------------------------
 // REST API — HTTP Server
 // ---------------------------------------------------------------------------
-export { GaussFlowServer } from "./rest/server.js";
+export { GaussServer } from "./rest/server.js";
 export { Router } from "./rest/router.js";
 export type {
   ServerOptions as RestServerOptions,
@@ -834,10 +834,10 @@ export type {
 // Deprecated Aliases (Backward Compatibility)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** @deprecated Use GaussFlowServer */
-export { GaussFlowServer as OneAgentServer } from "./rest/server.js";
-/** @deprecated Use GaussFlowMcpAdapter */
-export { GaussFlowMcpAdapter as OnegenUiMcpAdapter } from "./adapters/mcp/gaussflow-mcp.adapter.js";
+/** @deprecated Use GaussServer */
+export { GaussServer as OneAgentServer } from "./rest/server.js";
+/** @deprecated Use GaussMcpAdapter */
+export { GaussMcpAdapter as OnegenUiMcpAdapter } from "./adapters/mcp/gauss-mcp.adapter.js";
 
 // ---------------------------------------------------------------------------
 // Workflow Compiler — NL → StructuredDeclaration → WorkflowDef + Skills + Agents
@@ -1044,3 +1044,28 @@ export { registerPlaygroundRoutes } from "./server/playground-api.js";
 export type { PlaygroundAgent, PlaygroundConfig } from "./server/playground-api.js";
 export { startPlayground } from "./cli/playground.js";
 export type { PlaygroundOptions } from "./cli/playground.js";
+
+// ── Backward Compatibility Aliases (deprecated) ─────────────────────────────
+// These aliases preserve backward compatibility with pre-v2.0 imports.
+// They will be removed in a future major version.
+
+/** @deprecated Use `Agent` instead */
+export { Agent as DeepAgent } from "./agent/agent.js";
+/** @deprecated Use `AgentBuilder` instead */
+export { AgentBuilder as DeepAgentBuilder } from "./agent/agent-builder.js";
+/** @deprecated Use `AgentResult` instead */
+export type { AgentResult as DeepAgentResult } from "./agent/agent.js";
+/** @deprecated Use `AgentRunOptions` instead */
+export type { AgentRunOptions as DeepAgentRunOptions } from "./agent/agent.js";
+/** @deprecated Use `Plugin` instead */
+export type { Plugin as DeepAgentPlugin } from "./ports/plugin.port.js";
+/** @deprecated Use `AgentConfig` instead */
+export type { AgentConfig as DeepAgentConfig } from "./types.js";
+/** @deprecated Use `GaussError` instead */
+export { GaussError as GaussFlowError } from "./errors/index.js";
+/** @deprecated Use `GaussServer` instead */
+export { GaussServer as GaussFlowServer } from "./rest/server.js";
+/** @deprecated Use `GaussMcpAdapter` instead */
+export { GaussMcpAdapter as GaussFlowMcpAdapter } from "./adapters/mcp/gauss-mcp.adapter.js";
+/** @deprecated Use `GaussConfig` instead */
+export type { GaussConfig as GaussFlowConfig } from "./cli/config.js";

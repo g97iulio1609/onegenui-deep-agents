@@ -43,7 +43,7 @@ describe("SemanticWebSearchPlugin", () => {
     const mockCrawler = {
       search: vi.fn().mockResolvedValue([
         {
-          title: "GaussFlow docs",
+          title: "Gauss docs",
           url: "https://gaussflow.dev/docs",
           snippet: "Official docs",
         },
@@ -53,7 +53,7 @@ describe("SemanticWebSearchPlugin", () => {
           snippet: "Mastra framework",
         },
       ]),
-      crawl: vi.fn().mockResolvedValue({ content: "GaussFlow documentation content" }),
+      crawl: vi.fn().mockResolvedValue({ content: "Gauss documentation content" }),
     };
 
     const plugin = new SemanticWebSearchPlugin({

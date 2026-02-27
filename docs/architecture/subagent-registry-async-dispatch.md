@@ -1,6 +1,6 @@
 # SubagentRegistry + Async Dispatch — Design Document Architetturale
 
-> **Framework**: GaussFlow (`@giulio-leone/gaussflow-agent`)  
+> **Framework**: Gauss (`gauss`)  
 > **Stato**: RFC — Design per implementazione reale  
 > **Versione**: 1.0.0
 
@@ -731,12 +731,12 @@ Il TaskTool sincrono corrente (`createTaskTool()` in `src/tools/subagent/task.to
 
 ```typescript
 // Vecchio modo (sincrono, bloccante) — continua a funzionare identicamente
-const agent = DeepAgent.create(config)
+const agent = Agent.create(config)
   .withSubagents()  // registra il tool "task" sincrono
   .build();
 
 // Nuovo modo (asincrono, 3-tool) — opt-in esplicito
-const agent = DeepAgent.create(config)
+const agent = Agent.create(config)
   .withAsyncSubagents({  // registra dispatch/poll/await
     limits: { maxConcurrentPerParent: 5, maxDepth: 3 },
     poolConfig: { minWorkers: 2, maxWorkers: 10 },
@@ -755,7 +755,7 @@ I due modi sono **mutuamente esclusivi**: `.withSubagents()` e `.withAsyncSubage
 **Scenario**: Il parent agent raggiunge `maxSteps`, viene cancellato dall'utente, o crasha per un'eccezione non gestita.
 
 **Soluzione**:
-1. Il `DeepAgent.dispose()` (riga 270-292 di deep-agent.ts) chiama `registry.cancelAll(parentId)`
+1. Il `Agent.dispose()` (riga 270-292 di deep-agent.ts) chiama `registry.cancelAll(parentId)`
 2. Il registry itera tutti gli handle con `parentId` matching
 3. Ogni handle viene abortato tramite `AbortController.abort()`
 4. I timeout timer vengono cancellati
@@ -1884,7 +1884,7 @@ export function createAsyncSubagentTools(
 }
 ```
 
-### 6.4 Integrazione nel `DeepAgentBuilder` (`.withAsyncSubagents()`)
+### 6.4 Integrazione nel `AgentBuilder` (`.withAsyncSubagents()`)
 
 ```typescript
 // =============================================================================
@@ -1960,10 +1960,10 @@ export interface AsyncSubagentConfig {
 
 ```typescript
 import { openai } from "@ai-sdk/openai";
-import { DeepAgent } from "@giulio-leone/gaussflow-agent";
+import { Agent } from "gauss";
 
 // --- Crea un coordinator con async subagents ---
-const coordinator = DeepAgent.create({
+const coordinator = Agent.create({
   model: openai("gpt-4o"),
   instructions: `
     You are a research coordinator. When given a topic:
