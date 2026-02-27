@@ -12,6 +12,8 @@ export interface MarketplacePluginManifest {
   dependencies?: Record<string, string>;
   tags?: string[];
   license?: string;
+  /** Origin registry ("github" | "npm" | "local") */
+  source?: string;
 }
 
 /** Port for discovering, installing, and managing marketplace plugins */

@@ -496,6 +496,12 @@ export { DefaultPluginRegistryAdapter } from "./adapters/plugin-registry/default
 
 export { GitHubRegistryAdapter } from "./adapters/plugin-marketplace/github-registry.adapter.js";
 export type { GitHubRegistryOptions } from "./adapters/plugin-marketplace/github-registry.adapter.js";
+export { NpmRegistryAdapter } from "./adapters/plugin-marketplace/npm-registry.adapter.js";
+export type { NpmRegistryOptions } from "./adapters/plugin-marketplace/npm-registry.adapter.js";
+export { CompositeMarketplaceAdapter } from "./adapters/plugin-marketplace/composite-marketplace.adapter.js";
+export type { CompositeMarketplaceOptions } from "./adapters/plugin-marketplace/composite-marketplace.adapter.js";
+export { PluginLoader } from "./adapters/plugin-marketplace/plugin-loader.js";
+export type { LoadedPlugin, PluginLoaderOptions } from "./adapters/plugin-marketplace/plugin-loader.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Adapters — Learning
