@@ -4,17 +4,39 @@
 
 import type { HttpServerPort } from "../ports/http-server.port.js";
 
+export interface PlaygroundTool {
+  name: string;
+  description: string;
+  parameters?: Record<string, unknown>;
+}
+
+export interface PlaygroundMemoryEntry {
+  key: string;
+  value: unknown;
+  tier: "short" | "working" | "semantic" | "observation";
+  timestamp: number;
+}
+
+export interface PlaygroundGraphData {
+  nodes: Array<{ id: string; type: string; label: string; properties: Record<string, unknown> }>;
+  edges: Array<{ source: string; target: string; type: string; weight: number }>;
+}
+
 export interface PlaygroundAgent {
   name: string;
   description?: string;
-  /** Function to invoke the agent with a prompt and return the response text */
   invoke: (prompt: string, options?: { stream?: boolean }) => Promise<string | AsyncIterable<string>>;
+  /** Registered tools (for ToolInspector) */
+  tools?: PlaygroundTool[];
+  /** Memory provider (for MemoryViewer) */
+  getMemory?: () => Promise<PlaygroundMemoryEntry[]>;
+  /** Knowledge graph provider (for GraphVisualizer) */
+  getGraph?: () => Promise<PlaygroundGraphData>;
 }
 
 export interface PlaygroundConfig {
   server: HttpServerPort;
   agents: PlaygroundAgent[];
-  /** Static file directory for the playground UI (optional) */
   staticDir?: string;
 }
 
@@ -123,6 +145,39 @@ export function registerPlaygroundRoutes(config: PlaygroundConfig): void {
   server.route("GET", "/api/agents/:name/history", async (req, res) => {
     const agentHistory = history.filter((h) => h.agentName === req.params.name);
     res.json(agentHistory);
+  });
+
+  // GET /api/agents/:name/tools — List agent tools
+  server.route("GET", "/api/agents/:name/tools", async (req, res) => {
+    const agent = agentMap.get(req.params.name);
+    if (!agent) { res.status(404).json({ error: `Agent "${req.params.name}" not found` }); return; }
+    res.json(agent.tools ?? []);
+  });
+
+  // GET /api/agents/:name/memory — Get agent memory state
+  server.route("GET", "/api/agents/:name/memory", async (req, res) => {
+    const agent = agentMap.get(req.params.name);
+    if (!agent) { res.status(404).json({ error: `Agent "${req.params.name}" not found` }); return; }
+    if (!agent.getMemory) { res.json([]); return; }
+    try {
+      const memory = await agent.getMemory();
+      res.json(memory);
+    } catch (err: unknown) {
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  // GET /api/agents/:name/graph — Get agent knowledge graph
+  server.route("GET", "/api/agents/:name/graph", async (req, res) => {
+    const agent = agentMap.get(req.params.name);
+    if (!agent) { res.status(404).json({ error: `Agent "${req.params.name}" not found` }); return; }
+    if (!agent.getGraph) { res.json({ nodes: [], edges: [] }); return; }
+    try {
+      const graph = await agent.getGraph();
+      res.json(graph);
+    } catch (err: unknown) {
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+    }
   });
 
   // GET /api/health
