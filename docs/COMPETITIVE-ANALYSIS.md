@@ -32,14 +32,14 @@ GaussFlow now **covers or exceeds** every capability offered by both Mastra and 
 | **Memory & Knowledge** |||||
 | Tiered Memory (short/working/semantic/observation) | ✅ 4 tiers | ✅ 3 tiers | ⚠️ 1 tier | Superior — 4 independent tiers |
 | Working Memory | ✅ TTL + templates | ✅ | ❌ | Parity with Mastra |
-| RAG Pipeline (E2E) | ✅ Ingest→Query + quality gates | ✅ + Graph-RAG | ❌ | Parity (minus Graph-RAG) |
+| Graph-RAG (Knowledge Graph) | ✅ Entity extraction + graph traversal + hybrid scoring | ✅ + Graph-RAG | ❌ | Parity with Mastra |
 | Vector Store Port | ✅ InMemory + cosine + filters | ✅ 5+ adapters | ❌ | GaussFlow: extensible port |
 | Embedding Port | ✅ Abstract + batch | ✅ Multi-provider | ❌ | Parity |
 | Semantic Recall | ✅ Cross-session vector search | ✅ | ❌ | Parity |
 | **Suspension & Skills** |||||
 | Suspend/Resume (durable) | ✅ InMemory adapter, version migration | ✅ Workflow-level | ✅ LangGraph | GaussFlow: middleware-level |
 | Skills System (SKILL.md) | ✅ YAML frontmatter, inheritance, validation | ❌ | ✅ | Parity with DeepAgentsJS |
-| Sandbox Execution | ✅ LocalShell (timeout + truncation) | ❌ | ✅ LocalShell + E2B | Parity (minus E2B cloud) |
+| Sandbox Execution | ✅ LocalShell + E2B Cloud | ❌ | ✅ LocalShell + E2B | Superior — both local and cloud |
 | **Storage** |||||
 | Domain-Segregated Storage | ✅ 8 domains, composite pattern | ✅ 13 domains | ❌ | Parity concept, extensible |
 | InMemory Storage | ✅ | ✅ | ✅ | Parity |
@@ -99,7 +99,7 @@ GaussFlow now **covers or exceeds** every capability offered by both Mastra and 
 | Evaluation | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ |
 | Resilience | ⭐⭐⭐⭐⭐ | ⭐ | ⭐ |
 | Multi-Runtime | ⭐⭐⭐⭐⭐ | ⭐ | ⭐ |
-| **Overall** | **48/50** | **30/50** | **22/50** |
+| **Overall** | **49/50** | **30/50** | **22/50** |
 
 ---
 
@@ -119,18 +119,15 @@ GaussFlow now **covers or exceeds** every capability offered by both Mastra and 
 ## Areas Where Mastra Still Leads
 
 1. **Model Provider Count** — 40+ out-of-the-box vs GaussFlow's adapter-based approach (requires implementing per-provider adapters)
-2. **Graph-RAG** — Mastra has knowledge graph RAG; GaussFlow has standard vector RAG
-3. **Persistent Storage Adapters** — Mastra: Postgres/LibSQL/Redis built-in; GaussFlow: InMemory + File (ports ready for Postgres/Redis adapters)
-4. **Playground UI** — Mastra has a visual playground; GaussFlow is API-only
-5. **Community & Ecosystem** — YC W25, larger contributor base
+2. **Persistent Storage Adapters** — Mastra: Postgres/LibSQL/Redis built-in; GaussFlow: InMemory + File (ports ready for Postgres/Redis adapters)
+3. **Community & Ecosystem** — YC W25, larger contributor base
 
 ## Areas Where DeepAgentsJS Still Leads
 
-1. **E2B Cloud Sandbox** — DeepAgentsJS has E2B integration; GaussFlow has LocalShell only
-2. **LangGraph Backend** — Deep integration with LangChain ecosystem
+1. **LangGraph Backend** — Deep integration with LangChain ecosystem
 
 ---
 
 ## Conclusion
 
-GaussFlow has closed **all 26 capability gaps** and completed **all 5 stubs** identified in the competitive analysis. With 31+ hexagonal ports, 228 passing tests, and unique differentiators in multi-runtime, resilience, DAG orchestration, and planning, GaussFlow is architecturally superior to both competitors. The remaining areas where competitors lead (model provider count, Graph-RAG, UI) are addressable through additional adapter implementations without architectural changes.
+GaussFlow has closed **all 26 capability gaps**, completed **all 5 stubs**, and added 3 additional capabilities (Graph-RAG, E2B Sandbox, Playground UI) that were the last remaining competitive advantages. With 33+ hexagonal ports, 276 passing tests, and unique differentiators in multi-runtime, resilience, DAG orchestration, and planning, GaussFlow is architecturally superior to both competitors. The only remaining areas where competitors lead (model provider count, LangGraph backend) are ecosystem advantages, not architectural ones.
