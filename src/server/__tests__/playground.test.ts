@@ -15,6 +15,23 @@ describe("PlaygroundAPI", () => {
       name: "echo-agent",
       description: "Echoes back the prompt",
       invoke: async (prompt) => `Echo: ${prompt}`,
+      tools: [
+        { name: "search", description: "Search the web", parameters: { query: "string" } },
+        { name: "calculate", description: "Do math" },
+      ],
+      getMemory: async () => [
+        { key: "user_pref", value: "dark mode", tier: "working" as const, timestamp: Date.now() },
+        { key: "last_query", value: "hello", tier: "short" as const, timestamp: Date.now() },
+      ],
+      getGraph: async () => ({
+        nodes: [
+          { id: "n1", type: "PERSON", label: "Alice", properties: {} },
+          { id: "n2", type: "ORG", label: "Acme", properties: {} },
+        ],
+        edges: [
+          { source: "n1", target: "n2", type: "WORKS_AT", weight: 1 },
+        ],
+      }),
     },
     {
       name: "stream-agent",
@@ -111,5 +128,62 @@ describe("PlaygroundAPI", () => {
     const data = await res.json();
     expect(data.status).toBe("ok");
     expect(data.agents).toBe(2);
+  });
+
+  // ============= New endpoints: tools, memory, graph =============
+
+  it("GET /api/agents/:name/tools returns tool list", async () => {
+    const res = await fetch(`http://localhost:${TEST_PORT}/api/agents/echo-agent/tools`);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data).toHaveLength(2);
+    expect(data[0].name).toBe("search");
+    expect(data[1].name).toBe("calculate");
+  });
+
+  it("GET /api/agents/:name/tools returns [] for agent without tools", async () => {
+    const res = await fetch(`http://localhost:${TEST_PORT}/api/agents/stream-agent/tools`);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data).toEqual([]);
+  });
+
+  it("GET /api/agents/:name/tools returns 404 for unknown agent", async () => {
+    const res = await fetch(`http://localhost:${TEST_PORT}/api/agents/missing/tools`);
+    expect(res.status).toBe(404);
+  });
+
+  it("GET /api/agents/:name/memory returns memory entries", async () => {
+    const res = await fetch(`http://localhost:${TEST_PORT}/api/agents/echo-agent/memory`);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data).toHaveLength(2);
+    expect(data[0].key).toBe("user_pref");
+    expect(data[0].tier).toBe("working");
+    expect(data[1].tier).toBe("short");
+  });
+
+  it("GET /api/agents/:name/memory returns [] for agent without getMemory", async () => {
+    const res = await fetch(`http://localhost:${TEST_PORT}/api/agents/stream-agent/memory`);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data).toEqual([]);
+  });
+
+  it("GET /api/agents/:name/graph returns graph data", async () => {
+    const res = await fetch(`http://localhost:${TEST_PORT}/api/agents/echo-agent/graph`);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.nodes).toHaveLength(2);
+    expect(data.edges).toHaveLength(1);
+    expect(data.nodes[0].type).toBe("PERSON");
+    expect(data.edges[0].type).toBe("WORKS_AT");
+  });
+
+  it("GET /api/agents/:name/graph returns empty for agent without getGraph", async () => {
+    const res = await fetch(`http://localhost:${TEST_PORT}/api/agents/stream-agent/graph`);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data).toEqual({ nodes: [], edges: [] });
   });
 });
