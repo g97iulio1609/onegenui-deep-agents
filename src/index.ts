@@ -830,14 +830,7 @@ export type {
   SemanticSearchStressSummary,
 } from "./evals/index.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Deprecated Aliases (Backward Compatibility)
-// ─────────────────────────────────────────────────────────────────────────────
 
-/** @deprecated Use GaussServer */
-export { GaussServer as OneAgentServer } from "./rest/server.js";
-/** @deprecated Use GaussMcpAdapter */
-export { GaussMcpAdapter as OnegenUiMcpAdapter } from "./adapters/mcp/gauss-mcp.adapter.js";
 
 // ---------------------------------------------------------------------------
 // Workflow Compiler — NL → StructuredDeclaration → WorkflowDef + Skills + Agents
@@ -1045,27 +1038,3 @@ export type { PlaygroundAgent, PlaygroundConfig } from "./server/playground-api.
 export { startPlayground } from "./cli/playground.js";
 export type { PlaygroundOptions } from "./cli/playground.js";
 
-// ── Backward Compatibility Aliases (deprecated) ─────────────────────────────
-// These aliases preserve backward compatibility with pre-v2.0 imports.
-// They will be removed in a future major version.
-
-/** @deprecated Use `Agent` instead */
-export { Agent as DeepAgent } from "./agent/agent.js";
-/** @deprecated Use `AgentBuilder` instead */
-export { AgentBuilder as DeepAgentBuilder } from "./agent/agent-builder.js";
-/** @deprecated Use `AgentResult` instead */
-export type { AgentResult as DeepAgentResult } from "./agent/agent.js";
-/** @deprecated Use `AgentRunOptions` instead */
-export type { AgentRunOptions as DeepAgentRunOptions } from "./agent/agent.js";
-/** @deprecated Use `Plugin` instead */
-export type { Plugin as DeepAgentPlugin } from "./ports/plugin.port.js";
-/** @deprecated Use `AgentConfig` instead */
-export type { AgentConfig as DeepAgentConfig } from "./types.js";
-/** @deprecated Use `GaussError` instead */
-export { GaussError as GaussFlowError } from "./errors/index.js";
-/** @deprecated Use `GaussServer` instead */
-export { GaussServer as GaussFlowServer } from "./rest/server.js";
-/** @deprecated Use `GaussMcpAdapter` instead */
-export { GaussMcpAdapter as GaussFlowMcpAdapter } from "./adapters/mcp/gauss-mcp.adapter.js";
-/** @deprecated Use `GaussConfig` instead */
-export type { GaussConfig as GaussFlowConfig } from "./cli/config.js";
