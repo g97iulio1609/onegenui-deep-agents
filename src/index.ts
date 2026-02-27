@@ -803,6 +803,9 @@ export {
   compareSemanticSearchBenchmark,
   assertSemanticSearchBenchmarkGate,
   renderSemanticSearchBenchmarkMarkdown,
+  DEFAULT_SEMANTIC_STRESS_THRESHOLDS,
+  evaluateSemanticSearchStressSuite,
+  assertSemanticSearchStressGate,
 } from "./evals/index.js";
 export type {
   SemanticSearchEvalCase,
@@ -816,6 +819,9 @@ export type {
   SemanticSearchBenchmarkBaseline,
   SemanticSearchBenchmarkBudgets,
   SemanticSearchBenchmarkComparison,
+  SemanticSearchStressSample,
+  SemanticSearchStressThresholds,
+  SemanticSearchStressSummary,
 } from "./evals/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────

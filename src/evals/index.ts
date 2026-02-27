@@ -22,3 +22,12 @@ export {
   type SemanticSearchBenchmarkBudgets,
   type SemanticSearchBenchmarkComparison,
 } from "./semantic-search-benchmark.js";
+
+export {
+  DEFAULT_SEMANTIC_STRESS_THRESHOLDS,
+  evaluateSemanticSearchStressSuite,
+  assertSemanticSearchStressGate,
+  type SemanticSearchStressSample,
+  type SemanticSearchStressThresholds,
+  type SemanticSearchStressSummary,
+} from "./semantic-search-stress-suite.js";
