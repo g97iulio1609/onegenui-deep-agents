@@ -222,7 +222,7 @@ describe("SummarizationMiddleware", () => {
     const ctx = { sessionId: "s1", agentName: "a", timestamp: Date.now(), metadata: {
       messages: ["msg1", "msg2", "msg3", "msg4"],
     } };
-    await mw.beforeAgent({ prompt: "test" }, ctx);
+    await mw.beforeAgent(ctx, { prompt: "test", instructions: "", tools: {} } as any);
     expect(summarized).toBe(true);
     const msgs = ctx.metadata.messages as string[];
     expect(msgs[0]).toContain("[Summary of");
@@ -237,7 +237,7 @@ describe("SummarizationMiddleware", () => {
     const ctx = { sessionId: "s1", agentName: "a", timestamp: Date.now(), metadata: {
       messages: ["msg1", "msg2"],
     } };
-    await mw.beforeAgent({ prompt: "test" }, ctx);
+    await mw.beforeAgent(ctx, { prompt: "test", instructions: "", tools: {} } as any);
     expect(summarized).toBe(false);
   });
 
@@ -252,7 +252,7 @@ describe("SummarizationMiddleware", () => {
     const ctx = { sessionId: "s1", agentName: "a", timestamp: Date.now(), metadata: {
       messages: ["a".repeat(15), "b".repeat(15), "c".repeat(15), "d".repeat(15), "e".repeat(15)],
     } };
-    await mw.beforeAgent({ prompt: "test" }, ctx);
+    await mw.beforeAgent(ctx, { prompt: "test", instructions: "", tools: {} } as any);
     const msgs = ctx.metadata.messages as string[];
     expect(msgs[0]).toContain("[Summary of");
   });
@@ -265,7 +265,7 @@ describe("SummarizationMiddleware", () => {
     const ctx = { sessionId: "s1", agentName: "a", timestamp: Date.now(), metadata: {
       messages: ["old1", "old2", "old3", "recent1", "recent2"],
     } };
-    await mw.beforeAgent({ prompt: "test" }, ctx);
+    await mw.beforeAgent(ctx, { prompt: "test", instructions: "", tools: {} } as any);
     const msgs = ctx.metadata.messages as string[];
     // Should keep ~20% = 2 recent messages
     expect(msgs.length).toBeLessThan(5);

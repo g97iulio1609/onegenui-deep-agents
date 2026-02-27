@@ -2,7 +2,8 @@
 // Summarization Middleware — Context management with configurable triggers
 // =============================================================================
 
-import type { MiddlewarePort, MiddlewareContext } from "../ports/middleware.port.js";
+import type { MiddlewarePort, MiddlewareContext, BeforeAgentParams, BeforeAgentResult, AfterAgentParams, AfterAgentResult } from "../ports/middleware.port.js";
+import { MiddlewarePriority } from "../ports/middleware.port.js";
 
 export interface SummarizationConfig {
   /** Token fraction threshold to trigger (default 0.85) */
@@ -25,7 +26,7 @@ function defaultEstimateTokens(text: string): number {
 
 export class SummarizationMiddleware implements MiddlewarePort {
   readonly name = "summarization";
-  readonly priority = 50; // EARLY — run before most other middleware
+  readonly priority = MiddlewarePriority.EARLY;
 
   private config: Required<Omit<SummarizationConfig, "tokenThreshold" | "messageThreshold">> & Pick<SummarizationConfig, "tokenThreshold" | "messageThreshold">;
 
@@ -40,28 +41,25 @@ export class SummarizationMiddleware implements MiddlewarePort {
     };
   }
 
-  async beforeAgent(params: { prompt: string; instructions?: string; tools?: unknown[] }, context: MiddlewareContext) {
-    const messages = context.metadata?.messages as string[] | undefined;
-    if (!messages || messages.length === 0) return { action: "continue" as const, params };
+  async beforeAgent(ctx: MiddlewareContext, _params: BeforeAgentParams): Promise<BeforeAgentResult | void> {
+    const messages = ctx.metadata?.messages as string[] | undefined;
+    if (!messages || messages.length === 0) return;
 
     const shouldSummarize = this.shouldTrigger(messages);
-    if (!shouldSummarize) return { action: "continue" as const, params };
+    if (!shouldSummarize) return;
 
-    // Summarize older messages, keep recent ones
     const keepCount = Math.max(2, Math.floor(messages.length * 0.2));
     const toSummarize = messages.slice(0, messages.length - keepCount);
-    if (toSummarize.length === 0) return { action: "continue" as const, params };
+    if (toSummarize.length === 0) return;
     const kept = messages.slice(messages.length - keepCount);
 
     const summary = await this.config.summarize(toSummarize);
     const newMessages = [`[Summary of ${toSummarize.length} previous messages]: ${summary}`, ...kept];
-    context.metadata.messages = newMessages;
-
-    return { action: "continue" as const, params };
+    ctx.metadata.messages = newMessages;
   }
 
-  async afterAgent(result: unknown) {
-    return result;
+  async afterAgent(_ctx: MiddlewareContext, _params: AfterAgentParams): Promise<AfterAgentResult | void> {
+    // No-op
   }
 
   private shouldTrigger(messages: string[]): boolean {

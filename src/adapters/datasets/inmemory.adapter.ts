@@ -55,7 +55,7 @@ export class InMemoryDatasetsAdapter implements DatasetsPort {
     if (query?.sort) {
       const { field, order } = query.sort;
       results.sort((a, b) => {
-        const av = a.data[field], bv = b.data[field];
+        const av = a.data[field] as string | number, bv = b.data[field] as string | number;
         const cmp = av < bv ? -1 : av > bv ? 1 : 0;
         return order === "desc" ? -cmp : cmp;
       });

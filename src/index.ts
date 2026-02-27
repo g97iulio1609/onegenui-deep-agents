@@ -899,3 +899,112 @@ export { createWorkflowStorage } from "./adapters/compiler/storage-factory.js";
 export type { StorageFactoryOptions } from "./adapters/compiler/storage-factory.js";
 export type { SkillMatcherPort, SkillMatch } from "./ports/skill-matcher.port.js";
 export type { SerializerPort, SerializerFormat } from "./ports/serializer.port.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// M1: Middleware Architecture + Model Router
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type {
+  MiddlewarePort, MiddlewareContext, MiddlewarePriority,
+  MiddlewareChainPort, BeforeAgentChainResult,
+} from "./ports/middleware.port.js";
+export { MiddlewareChain, composeMiddleware } from "./middleware/chain.js";
+export { createLoggingMiddleware } from "./middleware/logging.js";
+export type { LoggingMiddlewareOptions, LogEntry as MiddlewareLogEntry } from "./middleware/logging.js";
+export { createCachingMiddleware } from "./middleware/caching.js";
+export type { CachingMiddlewareOptions, CacheStats } from "./middleware/caching.js";
+export { createHITLMiddleware } from "./middleware/hitl.js";
+export type { HITLDecision, HITLApprovalHandler, HITLMiddlewareOptions } from "./middleware/hitl.js";
+export { createProcessorPipeline } from "./middleware/processor.js";
+export type { InputProcessor, OutputProcessor, ProcessorPipelineOptions } from "./middleware/processor.js";
+export { AiSdkModelAdapter } from "./adapters/model/ai-sdk.adapter.js";
+export { ModelRouter } from "./adapters/model/router.adapter.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// M2: HITL Suspend/Resume + Skills + Sandbox
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type { SuspensionPort, SuspendedState, ResumeDecision } from "./ports/suspension.port.js";
+export { InMemorySuspensionAdapter } from "./adapters/suspension/inmemory.adapter.js";
+export type { SkillsPort, Skill } from "./ports/skills.port.js";
+export { FileSkillAdapter } from "./adapters/skills/file-skill.adapter.js";
+export { createSkillsMiddleware } from "./middleware/skills.js";
+export type { SkillsMiddlewareOptions } from "./middleware/skills.js";
+export type { SandboxPort, ExecuteResult } from "./ports/sandbox.port.js";
+export { LocalShellSandboxAdapter } from "./adapters/sandbox/local-shell.adapter.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// M3: RAG Pipeline + Vector Stores + Enhanced Memory
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type { EmbeddingPort } from "./ports/embedding.port.js";
+export { InMemoryEmbeddingAdapter } from "./adapters/embedding/inmemory.adapter.js";
+export type { VectorStorePort } from "./ports/vector-store.port.js";
+export { InMemoryVectorStore } from "./adapters/vector-store/inmemory.adapter.js";
+export type { DocumentPort } from "./ports/document.port.js";
+export { MarkdownDocumentAdapter } from "./adapters/document/markdown.adapter.js";
+export type { WorkingMemoryPort } from "./ports/working-memory.port.js";
+export { InMemoryWorkingMemory } from "./adapters/working-memory/inmemory.adapter.js";
+export { RAGPipeline } from "./rag/pipeline.js";
+export { createObservationalMemoryMiddleware } from "./middleware/observational-memory.js";
+export type { ObservationalMemoryOptions, ObservationMetadata } from "./middleware/observational-memory.js";
+export { createResultEvictionMiddleware } from "./middleware/result-eviction.js";
+export type { ResultEvictionOptions } from "./middleware/result-eviction.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// M4: Storage Abstraction + Persistent Adapters
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type { StorageDomainPort } from "./ports/storage-domain.port.js";
+export { CompositeStorageAdapter } from "./ports/storage-domain.port.js";
+export { InMemoryStorageAdapter } from "./adapters/storage/inmemory.adapter.js";
+export { PrometheusMetricsAdapter } from "./adapters/metrics/prometheus.adapter.js";
+export { FileLearningAdapter } from "./adapters/learning/file-learning.adapter.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// M5: HTTP Server + Auth + Agent Networks
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type {
+  HttpServerPort, HttpRequest, HttpResponse, HttpHandler, HttpMiddleware, HttpMethod, Route,
+} from "./ports/http-server.port.js";
+export { NodeHttpServer } from "./server/node-http.server.js";
+export type { AuthPort, AuthorizationPort, AuthUser, AuthResult } from "./ports/auth.port.js";
+export { ApiKeyAuthAdapter, JwtAuthAdapter, CompositeAuthAdapter, RbacAuthorizationAdapter } from "./adapters/auth/auth.adapter.js";
+export type {
+  AgentNetworkPort, NetworkTopology, NetworkAgent, DelegationRequest,
+  DelegationResult as NetworkDelegationResult,
+} from "./ports/agent-network.port.js";
+export { AgentNetworkAdapter } from "./adapters/agent-network/agent-network.adapter.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// M6: ACP + Streaming + Eval Enhancement
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type { AcpServerPort, AcpMessage, AcpSession, AcpHandler } from "./ports/acp.port.js";
+export { AcpServer } from "./protocols/acp/acp-server.js";
+export {
+  ScorerPipeline, createScorer,
+  exactMatchScorer, containsScorer, lengthScorer, llmJudgeScorer,
+} from "./evals/scorer.js";
+export type { Scorer, ScoreResult, ScorerContext } from "./evals/scorer.js";
+export {
+  TrajectoryRecorder, hasAgentSteps, hasToolCallRequests, hasNoErrors,
+  hasToolCallCount, completedWithin, hasOrderedSteps,
+  exportTrajectory, importTrajectory,
+} from "./evals/trajectory.js";
+export type { Trajectory, TrajectoryStep } from "./evals/trajectory.js";
+export { SummarizationMiddleware } from "./middleware/summarization.js";
+export { ProgressEmitter } from "./agent/progress.js";
+export type { ProgressEvent, ProgressPhase, ProgressListener } from "./agent/progress.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// M7: Voice/TTS + Datasets + Deployer
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type { VoicePort, VoiceConfig, VoiceEvent, VoiceEventListener } from "./ports/voice.port.js";
+export { InMemoryVoiceAdapter } from "./adapters/voice/inmemory.adapter.js";
+export type { DatasetsPort, DatasetEntry, DatasetInfo, DatasetQuery } from "./ports/datasets.port.js";
+export { InMemoryDatasetsAdapter } from "./adapters/datasets/inmemory.adapter.js";
+export type { DeployerPort, DeploymentConfig, DeploymentInfo, DeploymentStatus } from "./ports/deployer.port.js";
+export { InMemoryDeployerAdapter } from "./adapters/deployer/inmemory.adapter.js";
