@@ -2,21 +2,16 @@
 // gauss — Public API
 // =============================================================================
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Factory Functions — Clean API surface
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Factory Functions ───────────────────────────────────────────────────────
+// import { agent, graph, rag } from 'gauss'
 
 export { agent, graph, rag } from "./gauss.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// AI SDK re-exports (structured output passthrough)
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── AI SDK Re-exports ──────────────────────────────────────────────────────
 
 export { Output } from "ai";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Errors
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Errors ─────────────────────────────────────────────────────────────────
 
 export {
   GaussError,
@@ -28,14 +23,19 @@ export {
   ConfigurationError,
 } from "./errors/index.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Core Types ─────────────────────────────────────────────────────────────
 
 export type {
   AgentConfig,
   ContextConfig,
   ApprovalConfig,
+  ApprovalRequest,
+  SubagentConfig,
+  CheckpointConfig,
+  McpToolsetSelection,
+  AgentEventType,
+  AgentEvent,
+  AgentEventHandler,
   DelegationHooks,
   DelegationStartContext,
   DelegationStartResult,
@@ -46,13 +46,6 @@ export type {
   DelegationCompletionCheckResult,
   DelegationMessageFilterContext,
   DelegationMessageFilterResult,
-  SubagentConfig,
-  McpToolsetSelection,
-  CheckpointConfig,
-  ApprovalRequest,
-  AgentEventType,
-  AgentEvent,
-  AgentEventHandler,
   FilesystemZone,
   FileEntry,
   FileStat,
@@ -64,267 +57,20 @@ export type {
   SessionState,
 } from "./types.js";
 
-export type { RuntimePort } from "./ports/runtime.port.js";
+// ─── Agent ──────────────────────────────────────────────────────────────────
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Ports (contracts for hexagonal architecture)
-// ─────────────────────────────────────────────────────────────────────────────
-
-export type { MemoryPort } from "./ports/memory.port.js";
-export type { LearningPort } from "./ports/learning.port.js";
-export type { FilesystemPort } from "./ports/filesystem.port.js";
-export type {
-  AgentMemoryPort,
-  MemoryEntry,
-  MemoryTier,
-  MemoryStats,
-  RecallOptions,
-} from "./ports/agent-memory.port.js";
-export type {
-  PluginManifest,
-  PluginRegistryPort,
-  PluginSource,
-} from "./ports/plugin-registry.port.js";
-export type {
-  MarketplacePluginManifest,
-  MarketplacePort,
-} from "./ports/plugin-manifest.port.js";
-export type {
-  ValidationPort,
-  ValidationResult,
-} from "./ports/validation.port.js";
-export type {
-  McpPort,
-  McpToolDefinition,
-  McpToolResult,
-  McpToolResultContent,
-  McpServerInfo,
-  McpServerConfig,
-} from "./ports/mcp.port.js";
-export type {
-  PolicyEffect,
-  PolicyContext,
-  PolicyRequest,
-  PolicyRule,
-  PolicyDecision,
-  PolicyAuditRecord,
-  PolicyEnginePort,
-} from "./ports/policy.port.js";
-export type {
-  McpServerPort,
-  McpServerOptions,
-  McpToolServerDefinition,
-} from "./ports/mcp-server.port.js";
-export type {
-  ModelPort,
-  ModelGenerateOptions,
-  ModelGenerateResult,
-  ModelStreamResult,
-} from "./ports/model.port.js";
-export type {
-  TokenCounterPort,
-  TokenBudget,
-  TokenUsage,
-} from "./ports/token-counter.port.js";
-export type { TracingPort, Span } from "./ports/tracing.port.js";
-export type { MetricsPort } from "./ports/metrics.port.js";
-export type { TelemetryPort, TelemetrySpan } from "./ports/telemetry.port.js";
-export type { LoggingPort, LogLevel, LogEntry } from "./ports/logging.port.js";
-export type {
-  ISemanticScrapingPort,
-  ManifestTool,
-  PageToolSet,
-  SiteToolManifest,
-  SemanticTool,
-} from "./ports/semantic-scraping.port.js";
-export type {
-  ChunkingPort,
-  ChunkOptions,
-  Chunk,
-} from "./ports/chunking.port.js";
-export type {
-  PartialJsonPort,
-  JsonAccumulator,
-} from "./ports/partial-json.port.js";
-export type {
-  ReRankingPort,
-  ReRankingOptions,
-  ScoredResult,
-  SourceAttribution,
-} from "./ports/reranking.port.js";
-export type {
-  ToolCompositionPort,
-  ToolPipeline,
-  ToolMiddleware,
-} from "./ports/tool-composition.port.js";
-export type {
-  CostTrackerPort,
-  CostTokenUsage,
-  CostEstimate,
-} from "./ports/cost-tracker.port.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Domain Schemas
-// ─────────────────────────────────────────────────────────────────────────────
-
-export {
-  TodoSchema,
-  TodoStatusSchema,
-  TodoListSchema,
-  WriteTodosInputSchema,
-  UpdateTodoInputSchema,
-  type Todo,
-  type TodoStatus,
-  type TodoList,
-  type WriteTodosInput,
-  type UpdateTodoInput,
-} from "./domain/todo.schema.js";
-
-export {
-  // Enums & Primitivi
-  StepExecutionModeSchema,
-  StepStatusSchema as PlanStepStatusSchema,
-  StepPrioritySchema,
-  PlanStatusSchema,
-  PlanEventTypeSchema,
-  // Schemas
-  ResourceRequirementsSchema,
-  IOFieldSchema,
-  StepContractSchema,
-  StepResultSchema,
-  StepConditionSchema,
-  LoopConfigSchema,
-  SubStepSchema,
-  StepSchema as PlanStepSchema,
-  PhaseSchema,
-  PlanMetadataSchema,
-  PlanSchema,
-  PlanEventSchema,
-  PlanProgressSchema,
-  PhaseProgressSchema,
-  StepProgressSchema,
-  // State machine
-  STEP_STATUS_TRANSITIONS,
-  PLAN_STATUS_TRANSITIONS,
-  isValidStepTransition,
-  isValidPlanTransition,
-  transitionStep,
-  // Factory functions
-  createStep,
-  createPhase,
-  createSubStep,
-  createPlan,
-  generateStepId,
-  // Validation & progress
-  validatePlan,
-  calculateProgress,
-  // Migration
-  todosToplan as todosToPlan,
-  // Example
-  createExamplePlan,
-  // Types
-  type StepExecutionMode,
-  type StepStatus as PlanStepStatus,
-  type StepPriority,
-  type PlanStatus,
-  type ResourceRequirements,
-  type IOField,
-  type StepContract,
-  type StepResult,
-  type StepCondition,
-  type LoopConfig,
-  type SubStep,
-  type Step as PlanStep,
-  type Phase,
-  type PlanMetadata,
-  type Plan,
-  type PlanEvent,
-  type PlanEventType,
-  type PlanProgress,
-  type PhaseProgress,
-  type StepProgress,
-  type PlanValidationResult,
-} from "./domain/plan.schema.js";
-
-export {
-  CheckpointSchema,
-  type Checkpoint,
-} from "./domain/checkpoint.schema.js";
-
-export {
-  UserProfileSchema,
-  UserMemorySchema,
-  SharedKnowledgeSchema,
-  type UserProfile,
-  type UserMemory,
-  type UserMemoryInput,
-  type SharedKnowledge,
-  type SharedKnowledgeInput,
-} from "./domain/learning.schema.js";
-
-export {
-  MessageSchema,
-  CompressedContextSchema,
-  ConversationStateSchema,
-  type MessageType,
-  type CompressedContextType,
-  type ConversationState,
-} from "./domain/conversation.schema.js";
-
-export {
-  AgentEventTypeSchema,
-  AgentEventSchema,
-  type AgentEventTypeValue,
-  type AgentEventValue,
-} from "./domain/events.schema.js";
-
-export {
-  EvalMetricsSchema,
-  EvalResultSchema,
-  type EvalMetrics,
-  type EvalResult,
-} from "./domain/eval.schema.js";
-
-export type {
-  RetryConfig,
-  WorkflowStep,
-  WorkflowContext,
-  InputMapping,
-  OutputMapping,
-  WorkflowResult,
-  StepType,
-  ParallelStep,
-  ConditionalStep,
-  LoopStep,
-  ForeachStep,
-  MapStep,
-  AgentStep,
-  AnyStep,
-  WorkflowDefinition,
-  ValidationResult as WorkflowValidationResult,
-  WorkflowEventType,
-  WorkflowEvent,
-} from "./domain/workflow.schema.js";
-
-export type {
-  WorkflowPort,
-  WorkflowEventListener,
-} from "./ports/workflow.port.js";
-
-export {
-  WorkflowBuilder,
-  defineWorkflow,
-} from "./domain/workflow.builder.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Utils
-// ─────────────────────────────────────────────────────────────────────────────
-
-export { AbstractBuilder } from "./utils/abstract-builder.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Agent Configuration
-// ─────────────────────────────────────────────────────────────────────────────
+export { Agent } from "./agent/agent.js";
+export { AgentBuilder } from "./agent/agent-builder.js";
+export type { AgentResult, AgentRunOptions } from "./agent/agent.js";
+export { ToolManager } from "./agent/tool-manager.js";
+export { ExecutionEngine } from "./agent/execution-engine.js";
+export { ApprovalManager } from "./agent/approval-manager.js";
+export { EventBus } from "./agent/event-bus.js";
+export { LifecycleManager } from "./agent/lifecycle.js";
+export type { LifecycleHooks, HealthStatus } from "./agent/lifecycle.js";
+export { ProgressEmitter } from "./agent/progress.js";
+export type { ProgressEvent, ProgressPhase, ProgressListener } from "./agent/progress.js";
+export { createAllTodosDoneCondition } from "./agent/stop-conditions.js";
 
 export {
   DEFAULT_CONTEXT_CONFIG,
@@ -337,26 +83,64 @@ export {
   resolveCheckpointConfig,
 } from "./agent/agent-config.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Agent — Orchestrator
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Ports (Hexagonal Architecture Contracts) ───────────────────────────────
 
-export { Agent } from "./agent/agent.js";
-export { AgentBuilder } from "./agent/agent-builder.js";
-export type { AgentResult, AgentRunOptions } from "./agent/agent.js";
-export { ToolManager } from "./agent/tool-manager.js";
-export { ExecutionEngine } from "./agent/execution-engine.js";
+export type { RuntimePort } from "./ports/runtime.port.js";
+export type { MemoryPort } from "./ports/memory.port.js";
+export type { LearningPort } from "./ports/learning.port.js";
+export type { FilesystemPort } from "./ports/filesystem.port.js";
+export type { TokenCounterPort, TokenBudget, TokenUsage } from "./ports/token-counter.port.js";
+export type { TracingPort, Span } from "./ports/tracing.port.js";
+export type { MetricsPort } from "./ports/metrics.port.js";
+export type { TelemetryPort, TelemetrySpan } from "./ports/telemetry.port.js";
+export type { LoggingPort, LogLevel, LogEntry } from "./ports/logging.port.js";
+export type { ModelPort, ModelGenerateOptions, ModelGenerateResult, ModelStreamResult } from "./ports/model.port.js";
+export type {
+  AgentMemoryPort,
+  MemoryEntry,
+  MemoryTier,
+  MemoryStats,
+  RecallOptions,
+} from "./ports/agent-memory.port.js";
+export type { McpPort, McpToolDefinition, McpToolResult, McpToolResultContent, McpServerInfo, McpServerConfig } from "./ports/mcp.port.js";
+export type { McpServerPort, McpServerOptions, McpToolServerDefinition } from "./ports/mcp-server.port.js";
+export type { PolicyEffect, PolicyContext, PolicyRequest, PolicyRule, PolicyDecision, PolicyAuditRecord, PolicyEnginePort } from "./ports/policy.port.js";
+export type { ValidationPort, ValidationResult } from "./ports/validation.port.js";
+export type { PluginManifest, PluginRegistryPort, PluginSource } from "./ports/plugin-registry.port.js";
+export type { MarketplacePluginManifest, MarketplacePort } from "./ports/plugin-manifest.port.js";
+export type { ISemanticScrapingPort, ManifestTool, PageToolSet, SiteToolManifest, SemanticTool } from "./ports/semantic-scraping.port.js";
+export type { ChunkingPort, ChunkOptions, Chunk } from "./ports/chunking.port.js";
+export type { PartialJsonPort, JsonAccumulator } from "./ports/partial-json.port.js";
+export type { ReRankingPort, ReRankingOptions, ScoredResult, SourceAttribution } from "./ports/reranking.port.js";
+export type { ToolCompositionPort, ToolPipeline, ToolMiddleware } from "./ports/tool-composition.port.js";
+export type { CostTrackerPort, CostTokenUsage, CostEstimate } from "./ports/cost-tracker.port.js";
+export type { EmbeddingPort } from "./ports/embedding.port.js";
+export type { VectorStorePort } from "./ports/vector-store.port.js";
+export type { DocumentPort } from "./ports/document.port.js";
+export type { WorkingMemoryPort } from "./ports/working-memory.port.js";
+export type { ConsensusPort, ConsensusResult } from "./ports/consensus.port.js";
+export type { GraphVisualizationPort, GraphDescriptor } from "./ports/graph-visualization.port.js";
+export type { SuspensionPort, SuspendedState, ResumeDecision } from "./ports/suspension.port.js";
+export type { SkillsPort, Skill } from "./ports/skills.port.js";
+export type { SandboxPort, ExecuteResult } from "./ports/sandbox.port.js";
+export type { HotReloadPort, HotReloadAgentConfig } from "./ports/hot-reload.port.js";
+export type { KnowledgeGraphPort, GraphNode, GraphEdge, GraphQueryOptions, SubgraphResult } from "./ports/knowledge-graph.port.js";
+export type { EntityExtractorPort, Entity, Relation, ExtractionResult } from "./ports/entity-extractor.port.js";
+export type { StorageDomainPort } from "./ports/storage-domain.port.js";
+export type { HttpServerPort, HttpRequest, HttpResponse, HttpHandler, HttpMiddleware, HttpMethod, Route } from "./ports/http-server.port.js";
+export type { AuthPort, AuthorizationPort, AuthUser, AuthResult } from "./ports/auth.port.js";
+export type { AgentNetworkPort, NetworkTopology, NetworkAgent, DelegationRequest, DelegationResult as NetworkDelegationResult } from "./ports/agent-network.port.js";
+export type { AcpServerPort, AcpMessage, AcpSession, AcpHandler } from "./ports/acp.port.js";
+export type { VoicePort, VoiceConfig, VoiceEvent, VoiceEventListener } from "./ports/voice.port.js";
+export type { DatasetsPort, DatasetEntry, DatasetInfo, DatasetQuery } from "./ports/datasets.port.js";
+export type { DeployerPort, DeploymentConfig, DeploymentInfo, DeploymentStatus } from "./ports/deployer.port.js";
+export type { WorkflowPort, WorkflowEventListener } from "./ports/workflow.port.js";
+export type { MiddlewarePort, MiddlewareContext, MiddlewarePriority, MiddlewareChainPort, BeforeAgentChainResult } from "./ports/middleware.port.js";
+export type { NLParserPort, WorkflowCompilerPort, CompileFromNLPort, SkillRegistryPort, WorkflowStoragePort, StoredWorkflow, StorageStrategy } from "./ports/compiler.port.js";
+export type { SkillMatcherPort, SkillMatch } from "./ports/skill-matcher.port.js";
+export type { SerializerPort, SerializerFormat } from "./ports/serializer.port.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Agent — Approval & Events
-// ─────────────────────────────────────────────────────────────────────────────
-
-export { ApprovalManager } from "./agent/approval-manager.js";
-export { EventBus } from "./agent/event-bus.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Plugins
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Plugins ────────────────────────────────────────────────────────────────
 
 export type {
   Plugin,
@@ -376,6 +160,7 @@ export type {
   OnErrorParams,
   OnErrorResult,
 } from "./ports/plugin.port.js";
+
 export {
   PluginManager,
   BasePlugin,
@@ -411,16 +196,12 @@ export {
   McpServerPlugin,
   createMcpServerPlugin,
 } from "./plugins/index.js";
-export {
-  MemoryPlugin,
-  createMemoryPlugin,
-} from "./plugins/memory.plugin.js";
+
+export { MemoryPlugin, createMemoryPlugin } from "./plugins/memory.plugin.js";
 export type { MemoryPluginOptions } from "./plugins/memory.plugin.js";
-export {
-  PluginRegistryPlugin,
-  createPluginRegistryPlugin,
-} from "./plugins/plugin-registry.plugin.js";
+export { PluginRegistryPlugin, createPluginRegistryPlugin } from "./plugins/plugin-registry.plugin.js";
 export type { PluginRegistryPluginOptions } from "./plugins/plugin-registry.plugin.js";
+
 export type {
   AgentCardPluginOptions,
   AgentCardSnapshot,
@@ -454,152 +235,70 @@ export type {
   McpServerPluginOptions,
 } from "./plugins/index.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Adapters — Filesystem (runtime-agnostic)
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Middleware ──────────────────────────────────────────────────────────────
 
-export { VirtualFilesystem, type DiskSyncFn } from "./adapters/filesystem/virtual-fs.adapter.js";
-// Node.js-specific: LocalFilesystem → import from "gauss/node"
+export { MiddlewareChain, composeMiddleware } from "./middleware/chain.js";
+export { createLoggingMiddleware } from "./middleware/logging.js";
+export type { LoggingMiddlewareOptions, LogEntry as MiddlewareLogEntry } from "./middleware/logging.js";
+export { createCachingMiddleware } from "./middleware/caching.js";
+export type { CachingMiddlewareOptions, CacheStats } from "./middleware/caching.js";
+export { createHITLMiddleware } from "./middleware/hitl.js";
+export type { HITLDecision, HITLApprovalHandler, HITLMiddlewareOptions } from "./middleware/hitl.js";
+export { createProcessorPipeline } from "./middleware/processor.js";
+export type { InputProcessor, OutputProcessor, ProcessorPipelineOptions } from "./middleware/processor.js";
+export { createSkillsMiddleware } from "./middleware/skills.js";
+export type { SkillsMiddlewareOptions } from "./middleware/skills.js";
+export { createObservationalMemoryMiddleware } from "./middleware/observational-memory.js";
+export type { ObservationalMemoryOptions, ObservationMetadata } from "./middleware/observational-memory.js";
+export { createResultEvictionMiddleware } from "./middleware/result-eviction.js";
+export type { ResultEvictionOptions } from "./middleware/result-eviction.js";
+export { SummarizationMiddleware } from "./middleware/summarization.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Adapters — MCP
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Graph — Multi-Agent Collaboration ──────────────────────────────────────
 
-export { GaussMcpAdapter } from "./adapters/mcp/gauss-mcp.adapter.js";
-export { AiSdkMcpAdapter } from "./adapters/mcp/ai-sdk-mcp.adapter.js";
+export { AgentGraph, AgentGraphBuilder } from "./graph/agent-graph.js";
+export { SharedContext } from "./graph/shared-context.js";
+export { GraphExecutor } from "./graph/graph-executor.js";
+export type { GraphCheckpoint } from "./graph/graph-executor.js";
+export type { AgentNodeConfig, NodeResult } from "./graph/agent-node.js";
+export type { GraphConfig, GraphResult, GraphStreamEvent } from "./domain/graph.schema.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Adapters — Policy
-// ─────────────────────────────────────────────────────────────────────────────
+export { LlmJudgeConsensus } from "./adapters/consensus/llm-judge.adapter.js";
+export { MajorityVoteConsensus } from "./adapters/consensus/majority-vote.adapter.js";
+export { DebateConsensus } from "./adapters/consensus/debate.adapter.js";
+export { AsciiGraphAdapter } from "./adapters/graph-visualization/ascii-graph.adapter.js";
+export { MermaidGraphAdapter } from "./adapters/graph-visualization/mermaid-graph.adapter.js";
 
-export { McpPolicyEngine } from "./adapters/policy/mcp-policy-engine.js";
+export { WorkerPool } from "./graph/worker-pool.js";
+export type { WorkerPoolConfig, WorkerPoolMetrics } from "./graph/worker-pool.js";
+export { AsyncChannel } from "./graph/async-channel.js";
+export { IncrementalReadyTracker } from "./graph/incremental-ready-tracker.js";
+export { PriorityQueue } from "./graph/priority-queue.js";
+export { TokenBudgetController } from "./graph/token-budget-controller.js";
+export type { BudgetStatus } from "./graph/token-budget-controller.js";
+export { ForkCoordinator } from "./graph/fork-coordinator.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Adapters — MCP Server
-// ─────────────────────────────────────────────────────────────────────────────
+export { AgentSupervisor } from "./graph/agent-supervisor.js";
+export type { SupervisorStrategy, ChildPolicy, ChildSpec, RestartIntensity, SupervisorConfig, ChildStatus } from "./graph/agent-supervisor.js";
+export { SupervisorBuilder } from "./graph/supervisor-builder.js";
+export { DynamicAgentGraph } from "./graph/dynamic-agent-graph.js";
+export type { MutationType, MutationEntry, MutationResult } from "./graph/dynamic-agent-graph.js";
 
-export { DefaultMcpServerAdapter } from "./adapters/mcp-server/index.js";
-export type { McpToolExecutor } from "./adapters/mcp-server/index.js";
+// ─── RAG & Knowledge ────────────────────────────────────────────────────────
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Adapters — Memory
-// ─────────────────────────────────────────────────────────────────────────────
+export { RAGPipeline } from "./rag/pipeline.js";
+export { GraphRAGPipeline } from "./rag/graph-rag.pipeline.js";
+export type { GraphRAGConfig, GraphIngestResult, GraphQueryResult } from "./rag/graph-rag.pipeline.js";
 
-export { InMemoryAdapter } from "./adapters/memory/in-memory.adapter.js";
-export { InMemoryAgentMemoryAdapter } from "./adapters/memory/in-memory-agent-memory.adapter.js";
-export { TieredAgentMemoryAdapter } from "./adapters/memory/tiered-agent-memory.adapter.js";
-export { SupabaseMemoryAdapter } from "./adapters/memory/supabase.adapter.js";
+export { InMemoryEmbeddingAdapter } from "./adapters/embedding/inmemory.adapter.js";
+export { InMemoryVectorStore } from "./adapters/vector-store/inmemory.adapter.js";
+export { MarkdownDocumentAdapter } from "./adapters/document/markdown.adapter.js";
+export { InMemoryWorkingMemory } from "./adapters/working-memory/inmemory.adapter.js";
+export { InMemoryKnowledgeGraphAdapter } from "./adapters/knowledge-graph/inmemory.adapter.js";
+export { PatternEntityExtractorAdapter, DEFAULT_ENTITY_PATTERNS } from "./adapters/entity-extractor/pattern.adapter.js";
+export type { PatternRule, RelationPattern, PatternEntityExtractorConfig } from "./adapters/entity-extractor/pattern.adapter.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Adapters — Plugin Registry
-// ─────────────────────────────────────────────────────────────────────────────
-
-export { DefaultPluginRegistryAdapter } from "./adapters/plugin-registry/default-plugin-registry.adapter.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Adapters — Plugin Marketplace
-// ─────────────────────────────────────────────────────────────────────────────
-
-export { GitHubRegistryAdapter } from "./adapters/plugin-marketplace/github-registry.adapter.js";
-export type { GitHubRegistryOptions } from "./adapters/plugin-marketplace/github-registry.adapter.js";
-export { NpmRegistryAdapter } from "./adapters/plugin-marketplace/npm-registry.adapter.js";
-export type { NpmRegistryOptions } from "./adapters/plugin-marketplace/npm-registry.adapter.js";
-export { CompositeMarketplaceAdapter } from "./adapters/plugin-marketplace/composite-marketplace.adapter.js";
-export type { CompositeMarketplaceOptions } from "./adapters/plugin-marketplace/composite-marketplace.adapter.js";
-export { PluginLoader } from "./adapters/plugin-marketplace/plugin-loader.js";
-export type { LoadedPlugin, PluginLoaderOptions } from "./adapters/plugin-marketplace/plugin-loader.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Adapters — Learning
-// ─────────────────────────────────────────────────────────────────────────────
-
-export { InMemoryLearningAdapter } from "./adapters/learning/index.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Adapters — Workflow
-// ─────────────────────────────────────────────────────────────────────────────
-
-export { DefaultWorkflowEngine } from "./adapters/workflow/index.js";
-export type { DefaultWorkflowEngineOptions, AgentExecutor } from "./adapters/workflow/index.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Adapters — Tracing
-// ─────────────────────────────────────────────────────────────────────────────
-
-export { InMemoryTracingAdapter } from "./adapters/tracing/index.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Adapters — Metrics
-// ─────────────────────────────────────────────────────────────────────────────
-
-export { InMemoryMetricsAdapter } from "./adapters/metrics/index.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Adapters — Telemetry (OpenTelemetry-compatible)
-// ─────────────────────────────────────────────────────────────────────────────
-
-export { ConsoleTelemetryAdapter } from "./adapters/telemetry/console-telemetry.adapter.js";
-export { OtelTelemetryAdapter } from "./adapters/telemetry/otel-telemetry.adapter.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Adapters — Logging
-// ─────────────────────────────────────────────────────────────────────────────
-
-export { ConsoleLoggingAdapter } from "./adapters/logging/index.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Adapters — Semantic Scraping
-// ─────────────────────────────────────────────────────────────────────────────
-
-export { SemanticScrapingAdapter, urlToPattern, hashTools } from "./adapters/semantic-scraping/index.js";
-
-export { DefaultChunkingAdapter } from "./adapters/chunking/index.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Adapters — Re-Ranking
-// ─────────────────────────────────────────────────────────────────────────────
-
-export { DefaultReRankingAdapter } from "./adapters/reranking/index.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Adapters — Validation
-// ─────────────────────────────────────────────────────────────────────────────
-
-export { ZodValidationAdapter } from "./adapters/validation/index.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Adapters — Tool Composition
-// ─────────────────────────────────────────────────────────────────────────────
-
-export { DefaultToolCompositionAdapter } from "./adapters/tool-composition/default-tool-composition.adapter.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Adapters — Cost Tracker
-// ─────────────────────────────────────────────────────────────────────────────
-
-export { DefaultCostTrackerAdapter } from "./adapters/cost-tracker/index.js";
-export type { CostTrackerOptions } from "./adapters/cost-tracker/index.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Adapters — Partial JSON
-// ─────────────────────────────────────────────────────────────────────────────
-
-export { createDefaultPartialJsonAdapter, DefaultPartialJsonAdapter } from "./adapters/partial-json/index.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Adapters — Runtime
-// ─────────────────────────────────────────────────────────────────────────────
-
-export { BaseRuntimeAdapter } from "./adapters/runtime/base-runtime.adapter.js";
-export { NodeRuntimeAdapter } from "./adapters/runtime/node-runtime.adapter.js";
-export { DenoRuntimeAdapter } from "./adapters/runtime/deno-runtime.adapter.js";
-export { BunRuntimeAdapter } from "./adapters/runtime/bun-runtime.adapter.js";
-export { EdgeRuntimeAdapter } from "./adapters/runtime/edge-runtime.adapter.js";
-export { detectRuntimeName, createRuntimeAdapter, createRuntimeAdapterAsync, type RuntimeName } from "./adapters/runtime/detect-runtime.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Tools — Filesystem
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Tools ──────────────────────────────────────────────────────────────────
 
 export {
   createFilesystemTools,
@@ -611,10 +310,6 @@ export {
   createGrepTool,
 } from "./tools/filesystem/index.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tools — Subagent
-// ─────────────────────────────────────────────────────────────────────────────
-
 export {
   createAsyncSubagentTools,
   SubagentRegistry,
@@ -623,7 +318,6 @@ export {
   createPollTool,
   createAwaitTool,
 } from "./tools/subagent/index.js";
-
 export type {
   AsyncSubagentToolsConfig,
   SubagentHandle,
@@ -632,10 +326,6 @@ export type {
   DispatchParams,
   PoolConfig,
 } from "./tools/subagent/index.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Tools — Planning
-// ─────────────────────────────────────────────────────────────────────────────
 
 export {
   createPlanningTools,
@@ -649,115 +339,22 @@ export {
   type PlanToGraphOptions,
 } from "./tools/planning/index.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tools — Policy
-// ─────────────────────────────────────────────────────────────────────────────
-
 export { createPolicyTools } from "./tools/policy/index.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Adapters — Token Counter (runtime-agnostic)
-// ─────────────────────────────────────────────────────────────────────────────
-
-export { ApproximateTokenCounter } from "./adapters/token-counter/approximate.adapter.js";
-// Node.js-specific: TiktokenTokenCounter → import from "gauss/node"
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Context — Token Tracking, Compression, Summarization
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Context Management ─────────────────────────────────────────────────────
 
 export { TokenTracker } from "./context/token-tracker.js";
 export { ContextManager } from "./context/context-manager.js";
 export { RollingSummarizer } from "./context/rolling-summarizer.js";
-export type {
-  ContextManagerDeps,
-  RollingSummarizerDeps,
-  TokenTrackerSnapshot,
-} from "./context/types.js";
+export type { ContextManagerDeps, RollingSummarizerDeps, TokenTrackerSnapshot } from "./context/types.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Stop Conditions
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Templates ──────────────────────────────────────────────────────────────
 
-export { createAllTodosDoneCondition } from "./agent/stop-conditions.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Runtime Detection
-// ─────────────────────────────────────────────────────────────────────────────
-
-export {
-  detectRuntime,
-  detectCapabilities,
-} from "./runtime/detect.js";
-export type {
-  RuntimeId,
-  RuntimeCapabilities,
-} from "./runtime/detect.js";
-
-// ---------------------------------------------------------------------------
-// Graph — Multi-Agent Collaboration
-// ---------------------------------------------------------------------------
-export { AgentGraph, AgentGraphBuilder } from "./graph/agent-graph.js";
-export { SharedContext } from "./graph/shared-context.js";
-export { GraphExecutor } from "./graph/graph-executor.js";
-export type { GraphCheckpoint } from "./graph/graph-executor.js";
-export type { AgentNodeConfig, NodeResult } from "./graph/agent-node.js";
-export type { ConsensusPort, ConsensusResult } from "./ports/consensus.port.js";
-export { LlmJudgeConsensus } from "./adapters/consensus/llm-judge.adapter.js";
-export { MajorityVoteConsensus } from "./adapters/consensus/majority-vote.adapter.js";
-export { DebateConsensus } from "./adapters/consensus/debate.adapter.js";
-export type { GraphConfig, GraphResult, GraphStreamEvent } from "./domain/graph.schema.js";
-export type { GraphVisualizationPort, GraphDescriptor } from "./ports/graph-visualization.port.js";
-export { AsciiGraphAdapter } from "./adapters/graph-visualization/ascii-graph.adapter.js";
-export { MermaidGraphAdapter } from "./adapters/graph-visualization/mermaid-graph.adapter.js";
-
-// Graph — Execution Primitives
-export { WorkerPool } from "./graph/worker-pool.js";
-export type { WorkerPoolConfig, WorkerPoolMetrics } from "./graph/worker-pool.js";
-export { AsyncChannel } from "./graph/async-channel.js";
-export { IncrementalReadyTracker } from "./graph/incremental-ready-tracker.js";
-export { PriorityQueue } from "./graph/priority-queue.js";
-export { TokenBudgetController } from "./graph/token-budget-controller.js";
-export type { BudgetStatus } from "./graph/token-budget-controller.js";
-export { ForkCoordinator } from "./graph/fork-coordinator.js";
-
-// Graph — Supervision & Dynamic Graphs
-export { AgentSupervisor } from "./graph/agent-supervisor.js";
-export type {
-  SupervisorStrategy,
-  ChildPolicy,
-  ChildSpec,
-  RestartIntensity,
-  SupervisorConfig,
-  ChildStatus,
-} from "./graph/agent-supervisor.js";
-export { SupervisorBuilder } from "./graph/supervisor-builder.js";
-export { DynamicAgentGraph } from "./graph/dynamic-agent-graph.js";
-export type { MutationType, MutationEntry, MutationResult } from "./graph/dynamic-agent-graph.js";
-
-// ---------------------------------------------------------------------------
-// Templates — Prompt Template System
-// ---------------------------------------------------------------------------
 export { PromptTemplate } from "./templates/index.js";
 export type { PromptTemplateConfig } from "./templates/index.js";
 
-// ---------------------------------------------------------------------------
-// Lifecycle — Startup, Shutdown, Health Management
-// ---------------------------------------------------------------------------
-export { LifecycleManager } from "./agent/lifecycle.js";
-export type { LifecycleHooks, HealthStatus } from "./agent/lifecycle.js";
+// ─── Streaming ──────────────────────────────────────────────────────────────
 
-// ---------------------------------------------------------------------------
-// Hot-Reload — Watch config files and reload agents
-// ---------------------------------------------------------------------------
-export type { HotReloadPort, HotReloadAgentConfig } from "./ports/hot-reload.port.js";
-export { FileWatcherAdapter } from "./adapters/hot-reload/index.js";
-export { AgentConfigLoader } from "./agent/agent-config-loader.js";
-export type { ModelResolver } from "./agent/agent-config-loader.js";
-
-// ---------------------------------------------------------------------------
-// Streaming — Real-Time Event Streaming
-// ---------------------------------------------------------------------------
 export { createEventStream } from "./streaming/event-stream.js";
 export { createSseHandler } from "./streaming/sse-handler.js";
 export { handleWebSocket } from "./streaming/ws-handler.js";
@@ -769,9 +366,8 @@ export type { SseHandlerOptions } from "./streaming/sse-handler.js";
 export type { WsCommand, WsHandlerOptions, WebSocketLike } from "./streaming/ws-handler.js";
 export type { DeltaEncoder } from "./streaming/delta-encoder.js";
 
-// ---------------------------------------------------------------------------
-// REST API — HTTP Server
-// ---------------------------------------------------------------------------
+// ─── HTTP Server & REST API ─────────────────────────────────────────────────
+
 export { GaussServer } from "./rest/server.js";
 export { Router } from "./rest/router.js";
 export type {
@@ -784,10 +380,119 @@ export type {
   HealthResponse,
   InfoResponse,
 } from "./rest/types.js";
+export { NodeHttpServer } from "./server/node-http.server.js";
+export { AcpServer } from "./protocols/acp/acp-server.js";
 
-// ---------------------------------------------------------------------------
-// Testing — Agent Test Harness
-// ---------------------------------------------------------------------------
+// ─── Adapters — Core ────────────────────────────────────────────────────────
+
+export { VirtualFilesystem, type DiskSyncFn } from "./adapters/filesystem/virtual-fs.adapter.js";
+export { InMemoryAdapter } from "./adapters/memory/in-memory.adapter.js";
+export { InMemoryAgentMemoryAdapter } from "./adapters/memory/in-memory-agent-memory.adapter.js";
+export { TieredAgentMemoryAdapter } from "./adapters/memory/tiered-agent-memory.adapter.js";
+export { SupabaseMemoryAdapter } from "./adapters/memory/supabase.adapter.js";
+export { InMemoryLearningAdapter } from "./adapters/learning/index.js";
+export { ApproximateTokenCounter } from "./adapters/token-counter/approximate.adapter.js";
+
+// ─── Adapters — MCP & Policy ────────────────────────────────────────────────
+
+export { GaussMcpAdapter } from "./adapters/mcp/gauss-mcp.adapter.js";
+export { AiSdkMcpAdapter } from "./adapters/mcp/ai-sdk-mcp.adapter.js";
+export { McpPolicyEngine } from "./adapters/policy/mcp-policy-engine.js";
+export { DefaultMcpServerAdapter } from "./adapters/mcp-server/index.js";
+export type { McpToolExecutor } from "./adapters/mcp-server/index.js";
+
+// ─── Adapters — Model ───────────────────────────────────────────────────────
+
+export { AiSdkModelAdapter } from "./adapters/model/ai-sdk.adapter.js";
+export { ModelRouter } from "./adapters/model/router.adapter.js";
+
+// ─── Adapters — Auth & Network ──────────────────────────────────────────────
+
+export { ApiKeyAuthAdapter, JwtAuthAdapter, CompositeAuthAdapter, RbacAuthorizationAdapter } from "./adapters/auth/auth.adapter.js";
+export { AgentNetworkAdapter } from "./adapters/agent-network/agent-network.adapter.js";
+
+// ─── Adapters — Observability ───────────────────────────────────────────────
+
+export { ConsoleTelemetryAdapter } from "./adapters/telemetry/console-telemetry.adapter.js";
+export { OtelTelemetryAdapter } from "./adapters/telemetry/otel-telemetry.adapter.js";
+export { ConsoleLoggingAdapter } from "./adapters/logging/index.js";
+export { InMemoryTracingAdapter } from "./adapters/tracing/index.js";
+export { InMemoryMetricsAdapter } from "./adapters/metrics/index.js";
+export { PrometheusMetricsAdapter } from "./adapters/metrics/prometheus.adapter.js";
+export { DefaultCostTrackerAdapter } from "./adapters/cost-tracker/index.js";
+export type { CostTrackerOptions } from "./adapters/cost-tracker/index.js";
+
+// ─── Adapters — Data Processing ─────────────────────────────────────────────
+
+export { SemanticScrapingAdapter, urlToPattern, hashTools } from "./adapters/semantic-scraping/index.js";
+export { DefaultChunkingAdapter } from "./adapters/chunking/index.js";
+export { DefaultReRankingAdapter } from "./adapters/reranking/index.js";
+export { ZodValidationAdapter } from "./adapters/validation/index.js";
+export { DefaultToolCompositionAdapter } from "./adapters/tool-composition/default-tool-composition.adapter.js";
+export { createDefaultPartialJsonAdapter, DefaultPartialJsonAdapter } from "./adapters/partial-json/index.js";
+
+// ─── Adapters — Runtime ─────────────────────────────────────────────────────
+
+export { BaseRuntimeAdapter } from "./adapters/runtime/base-runtime.adapter.js";
+export { NodeRuntimeAdapter } from "./adapters/runtime/node-runtime.adapter.js";
+export { DenoRuntimeAdapter } from "./adapters/runtime/deno-runtime.adapter.js";
+export { BunRuntimeAdapter } from "./adapters/runtime/bun-runtime.adapter.js";
+export { EdgeRuntimeAdapter } from "./adapters/runtime/edge-runtime.adapter.js";
+export { detectRuntimeName, createRuntimeAdapter, createRuntimeAdapterAsync, type RuntimeName } from "./adapters/runtime/detect-runtime.js";
+export { detectRuntime, detectCapabilities } from "./runtime/detect.js";
+export type { RuntimeId, RuntimeCapabilities } from "./runtime/detect.js";
+
+// ─── Adapters — Workflow & Compiler ─────────────────────────────────────────
+
+export { DefaultWorkflowEngine } from "./adapters/workflow/index.js";
+export type { DefaultWorkflowEngineOptions, AgentExecutor } from "./adapters/workflow/index.js";
+export { LLMNLParser } from "./adapters/compiler/llm-nl-parser.js";
+export { LLMCompilerEngine } from "./adapters/compiler/llm-compiler-engine.js";
+export { CompileFromNLService } from "./adapters/compiler/compile-from-nl.js";
+export { LLMSkillMatcher } from "./adapters/compiler/llm-skill-matcher.js";
+export { InMemorySkillRegistry } from "./adapters/compiler/inmemory-skill-registry.js";
+export { JSONSerializer } from "./adapters/compiler/json-serializer.js";
+export { MarkdownSerializer } from "./adapters/compiler/markdown-serializer.js";
+export { FileWorkflowStorage } from "./adapters/compiler/file-workflow-storage.js";
+export type { FileStorageOptions } from "./adapters/compiler/file-workflow-storage.js";
+export { DualWorkflowStorage } from "./adapters/compiler/dual-workflow-storage.js";
+export { InMemoryWorkflowStorage } from "./adapters/compiler/inmemory-workflow-storage.js";
+export { createWorkflowStorage } from "./adapters/compiler/storage-factory.js";
+export type { StorageFactoryOptions } from "./adapters/compiler/storage-factory.js";
+
+// ─── Adapters — Misc ────────────────────────────────────────────────────────
+
+export { InMemorySuspensionAdapter } from "./adapters/suspension/inmemory.adapter.js";
+export { FileSkillAdapter } from "./adapters/skills/file-skill.adapter.js";
+export { LocalShellSandboxAdapter } from "./adapters/sandbox/local-shell.adapter.js";
+export { E2BSandboxAdapter } from "./adapters/sandbox/e2b.adapter.js";
+export type { E2BSandboxConfig } from "./adapters/sandbox/e2b.adapter.js";
+export { createSandbox } from "./adapters/sandbox/factory.js";
+export type { SandboxFactoryConfig } from "./adapters/sandbox/factory.js";
+export { FileWatcherAdapter } from "./adapters/hot-reload/index.js";
+export { AgentConfigLoader } from "./agent/agent-config-loader.js";
+export type { ModelResolver } from "./agent/agent-config-loader.js";
+export { DefaultPluginRegistryAdapter } from "./adapters/plugin-registry/default-plugin-registry.adapter.js";
+export { CompositeStorageAdapter } from "./ports/storage-domain.port.js";
+export { InMemoryStorageAdapter } from "./adapters/storage/inmemory.adapter.js";
+export { FileLearningAdapter } from "./adapters/learning/file-learning.adapter.js";
+export { InMemoryVoiceAdapter } from "./adapters/voice/inmemory.adapter.js";
+export { InMemoryDatasetsAdapter } from "./adapters/datasets/inmemory.adapter.js";
+export { InMemoryDeployerAdapter } from "./adapters/deployer/inmemory.adapter.js";
+
+// ─── Adapters — Plugin Marketplace ──────────────────────────────────────────
+
+export { GitHubRegistryAdapter } from "./adapters/plugin-marketplace/github-registry.adapter.js";
+export type { GitHubRegistryOptions } from "./adapters/plugin-marketplace/github-registry.adapter.js";
+export { NpmRegistryAdapter } from "./adapters/plugin-marketplace/npm-registry.adapter.js";
+export type { NpmRegistryOptions } from "./adapters/plugin-marketplace/npm-registry.adapter.js";
+export { CompositeMarketplaceAdapter } from "./adapters/plugin-marketplace/composite-marketplace.adapter.js";
+export type { CompositeMarketplaceOptions } from "./adapters/plugin-marketplace/composite-marketplace.adapter.js";
+export { PluginLoader } from "./adapters/plugin-marketplace/plugin-loader.js";
+export type { LoadedPlugin, PluginLoaderOptions } from "./adapters/plugin-marketplace/plugin-loader.js";
+
+// ─── Testing ────────────────────────────────────────────────────────────────
+
 export { createMockProvider } from "./testing/mock-provider.js";
 export type { MockResponse } from "./testing/mock-provider.js";
 export { runAgentTest } from "./testing/agent-test-runner.js";
@@ -802,9 +507,7 @@ export {
 } from "./testing/assertions.js";
 export { createSnapshot, compareSnapshots } from "./testing/snapshot.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Evaluation Harness
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Evaluation Harness ─────────────────────────────────────────────────────
 
 export {
   DEFAULT_SEMANTIC_SEARCH_THRESHOLDS,
@@ -836,11 +539,127 @@ export type {
   SemanticSearchStressSummary,
 } from "./evals/index.js";
 
+export {
+  ScorerPipeline, createScorer,
+  exactMatchScorer, containsScorer, lengthScorer, llmJudgeScorer,
+} from "./evals/scorer.js";
+export type { Scorer, ScoreResult, ScorerContext } from "./evals/scorer.js";
+export {
+  TrajectoryRecorder, hasAgentSteps, hasToolCallRequests, hasNoErrors,
+  hasToolCallCount, completedWithin, hasOrderedSteps,
+  exportTrajectory, importTrajectory,
+} from "./evals/trajectory.js";
+export type { Trajectory, TrajectoryStep } from "./evals/trajectory.js";
 
+// ─── Playground ─────────────────────────────────────────────────────────────
 
-// ---------------------------------------------------------------------------
-// Workflow Compiler — NL → StructuredDeclaration → WorkflowDef + Skills + Agents
-// ---------------------------------------------------------------------------
+export { registerPlaygroundRoutes } from "./server/playground-api.js";
+export type { PlaygroundAgent, PlaygroundConfig } from "./server/playground-api.js";
+export { startPlayground } from "./cli/playground.js";
+export type { PlaygroundOptions } from "./cli/playground.js";
+
+// ─── Domain Schemas ─────────────────────────────────────────────────────────
+
+export {
+  TodoSchema,
+  TodoStatusSchema,
+  TodoListSchema,
+  WriteTodosInputSchema,
+  UpdateTodoInputSchema,
+  type Todo,
+  type TodoStatus,
+  type TodoList,
+  type WriteTodosInput,
+  type UpdateTodoInput,
+} from "./domain/todo.schema.js";
+
+export {
+  StepExecutionModeSchema,
+  StepStatusSchema as PlanStepStatusSchema,
+  StepPrioritySchema,
+  PlanStatusSchema,
+  PlanEventTypeSchema,
+  ResourceRequirementsSchema,
+  IOFieldSchema,
+  StepContractSchema,
+  StepResultSchema,
+  StepConditionSchema,
+  LoopConfigSchema,
+  SubStepSchema,
+  StepSchema as PlanStepSchema,
+  PhaseSchema,
+  PlanMetadataSchema,
+  PlanSchema,
+  PlanEventSchema,
+  PlanProgressSchema,
+  PhaseProgressSchema,
+  StepProgressSchema,
+  STEP_STATUS_TRANSITIONS,
+  PLAN_STATUS_TRANSITIONS,
+  isValidStepTransition,
+  isValidPlanTransition,
+  transitionStep,
+  createStep,
+  createPhase,
+  createSubStep,
+  createPlan,
+  generateStepId,
+  validatePlan,
+  calculateProgress,
+  todosToplan as todosToPlan,
+  createExamplePlan,
+  type StepExecutionMode,
+  type StepStatus as PlanStepStatus,
+  type StepPriority,
+  type PlanStatus,
+  type ResourceRequirements,
+  type IOField,
+  type StepContract,
+  type StepResult,
+  type StepCondition,
+  type LoopConfig,
+  type SubStep,
+  type Step as PlanStep,
+  type Phase,
+  type PlanMetadata,
+  type Plan,
+  type PlanEvent,
+  type PlanEventType,
+  type PlanProgress,
+  type PhaseProgress,
+  type StepProgress,
+  type PlanValidationResult,
+} from "./domain/plan.schema.js";
+
+export { CheckpointSchema, type Checkpoint } from "./domain/checkpoint.schema.js";
+export { UserProfileSchema, UserMemorySchema, SharedKnowledgeSchema, type UserProfile, type UserMemory, type UserMemoryInput, type SharedKnowledge, type SharedKnowledgeInput } from "./domain/learning.schema.js";
+export { MessageSchema, CompressedContextSchema, ConversationStateSchema, type MessageType, type CompressedContextType, type ConversationState } from "./domain/conversation.schema.js";
+export { AgentEventTypeSchema, AgentEventSchema, type AgentEventTypeValue, type AgentEventValue } from "./domain/events.schema.js";
+export { EvalMetricsSchema, EvalResultSchema, type EvalMetrics, type EvalResult } from "./domain/eval.schema.js";
+
+export type {
+  RetryConfig,
+  WorkflowStep,
+  WorkflowContext,
+  InputMapping,
+  OutputMapping,
+  WorkflowResult,
+  StepType,
+  ParallelStep,
+  ConditionalStep,
+  LoopStep,
+  ForeachStep,
+  MapStep,
+  AgentStep,
+  AnyStep,
+  WorkflowDefinition,
+  ValidationResult as WorkflowValidationResult,
+  WorkflowEventType,
+  WorkflowEvent,
+} from "./domain/workflow.schema.js";
+
+export { WorkflowBuilder, defineWorkflow } from "./domain/workflow.builder.js";
+
 export {
   StructuredDeclarationSchema,
   CompilerOutputSchema,
@@ -880,167 +699,7 @@ export type {
   CompilerOutput,
   LLMCompilerOutput,
 } from "./domain/compiler.schema.js";
-export type {
-  NLParserPort,
-  WorkflowCompilerPort,
-  CompileFromNLPort,
-  SkillRegistryPort,
-  WorkflowStoragePort,
-  StoredWorkflow,
-  StorageStrategy,
-} from "./ports/compiler.port.js";
-export { LLMNLParser } from "./adapters/compiler/llm-nl-parser.js";
-export { LLMCompilerEngine } from "./adapters/compiler/llm-compiler-engine.js";
-export { CompileFromNLService } from "./adapters/compiler/compile-from-nl.js";
-export { LLMSkillMatcher } from "./adapters/compiler/llm-skill-matcher.js";
-export { InMemorySkillRegistry } from "./adapters/compiler/inmemory-skill-registry.js";
-export { JSONSerializer } from "./adapters/compiler/json-serializer.js";
-export { MarkdownSerializer } from "./adapters/compiler/markdown-serializer.js";
-export { FileWorkflowStorage } from "./adapters/compiler/file-workflow-storage.js";
-export type { FileStorageOptions } from "./adapters/compiler/file-workflow-storage.js";
-export { DualWorkflowStorage } from "./adapters/compiler/dual-workflow-storage.js";
-export { InMemoryWorkflowStorage } from "./adapters/compiler/inmemory-workflow-storage.js";
-export { createWorkflowStorage } from "./adapters/compiler/storage-factory.js";
-export type { StorageFactoryOptions } from "./adapters/compiler/storage-factory.js";
-export type { SkillMatcherPort, SkillMatch } from "./ports/skill-matcher.port.js";
-export type { SerializerPort, SerializerFormat } from "./ports/serializer.port.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// M1: Middleware Architecture + Model Router
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Utils ──────────────────────────────────────────────────────────────────
 
-export type {
-  MiddlewarePort, MiddlewareContext, MiddlewarePriority,
-  MiddlewareChainPort, BeforeAgentChainResult,
-} from "./ports/middleware.port.js";
-export { MiddlewareChain, composeMiddleware } from "./middleware/chain.js";
-export { createLoggingMiddleware } from "./middleware/logging.js";
-export type { LoggingMiddlewareOptions, LogEntry as MiddlewareLogEntry } from "./middleware/logging.js";
-export { createCachingMiddleware } from "./middleware/caching.js";
-export type { CachingMiddlewareOptions, CacheStats } from "./middleware/caching.js";
-export { createHITLMiddleware } from "./middleware/hitl.js";
-export type { HITLDecision, HITLApprovalHandler, HITLMiddlewareOptions } from "./middleware/hitl.js";
-export { createProcessorPipeline } from "./middleware/processor.js";
-export type { InputProcessor, OutputProcessor, ProcessorPipelineOptions } from "./middleware/processor.js";
-export { AiSdkModelAdapter } from "./adapters/model/ai-sdk.adapter.js";
-export { ModelRouter } from "./adapters/model/router.adapter.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// M2: HITL Suspend/Resume + Skills + Sandbox
-// ─────────────────────────────────────────────────────────────────────────────
-
-export type { SuspensionPort, SuspendedState, ResumeDecision } from "./ports/suspension.port.js";
-export { InMemorySuspensionAdapter } from "./adapters/suspension/inmemory.adapter.js";
-export type { SkillsPort, Skill } from "./ports/skills.port.js";
-export { FileSkillAdapter } from "./adapters/skills/file-skill.adapter.js";
-export { createSkillsMiddleware } from "./middleware/skills.js";
-export type { SkillsMiddlewareOptions } from "./middleware/skills.js";
-export type { SandboxPort, ExecuteResult } from "./ports/sandbox.port.js";
-export { LocalShellSandboxAdapter } from "./adapters/sandbox/local-shell.adapter.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// M3: RAG Pipeline + Vector Stores + Enhanced Memory
-// ─────────────────────────────────────────────────────────────────────────────
-
-export type { EmbeddingPort } from "./ports/embedding.port.js";
-export { InMemoryEmbeddingAdapter } from "./adapters/embedding/inmemory.adapter.js";
-export type { VectorStorePort } from "./ports/vector-store.port.js";
-export { InMemoryVectorStore } from "./adapters/vector-store/inmemory.adapter.js";
-export type { DocumentPort } from "./ports/document.port.js";
-export { MarkdownDocumentAdapter } from "./adapters/document/markdown.adapter.js";
-export type { WorkingMemoryPort } from "./ports/working-memory.port.js";
-export { InMemoryWorkingMemory } from "./adapters/working-memory/inmemory.adapter.js";
-export { RAGPipeline } from "./rag/pipeline.js";
-export { createObservationalMemoryMiddleware } from "./middleware/observational-memory.js";
-export type { ObservationalMemoryOptions, ObservationMetadata } from "./middleware/observational-memory.js";
-export { createResultEvictionMiddleware } from "./middleware/result-eviction.js";
-export type { ResultEvictionOptions } from "./middleware/result-eviction.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// M4: Storage Abstraction + Persistent Adapters
-// ─────────────────────────────────────────────────────────────────────────────
-
-export type { StorageDomainPort } from "./ports/storage-domain.port.js";
-export { CompositeStorageAdapter } from "./ports/storage-domain.port.js";
-export { InMemoryStorageAdapter } from "./adapters/storage/inmemory.adapter.js";
-export { PrometheusMetricsAdapter } from "./adapters/metrics/prometheus.adapter.js";
-export { FileLearningAdapter } from "./adapters/learning/file-learning.adapter.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// M5: HTTP Server + Auth + Agent Networks
-// ─────────────────────────────────────────────────────────────────────────────
-
-export type {
-  HttpServerPort, HttpRequest, HttpResponse, HttpHandler, HttpMiddleware, HttpMethod, Route,
-} from "./ports/http-server.port.js";
-export { NodeHttpServer } from "./server/node-http.server.js";
-export type { AuthPort, AuthorizationPort, AuthUser, AuthResult } from "./ports/auth.port.js";
-export { ApiKeyAuthAdapter, JwtAuthAdapter, CompositeAuthAdapter, RbacAuthorizationAdapter } from "./adapters/auth/auth.adapter.js";
-export type {
-  AgentNetworkPort, NetworkTopology, NetworkAgent, DelegationRequest,
-  DelegationResult as NetworkDelegationResult,
-} from "./ports/agent-network.port.js";
-export { AgentNetworkAdapter } from "./adapters/agent-network/agent-network.adapter.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// M6: ACP + Streaming + Eval Enhancement
-// ─────────────────────────────────────────────────────────────────────────────
-
-export type { AcpServerPort, AcpMessage, AcpSession, AcpHandler } from "./ports/acp.port.js";
-export { AcpServer } from "./protocols/acp/acp-server.js";
-export {
-  ScorerPipeline, createScorer,
-  exactMatchScorer, containsScorer, lengthScorer, llmJudgeScorer,
-} from "./evals/scorer.js";
-export type { Scorer, ScoreResult, ScorerContext } from "./evals/scorer.js";
-export {
-  TrajectoryRecorder, hasAgentSteps, hasToolCallRequests, hasNoErrors,
-  hasToolCallCount, completedWithin, hasOrderedSteps,
-  exportTrajectory, importTrajectory,
-} from "./evals/trajectory.js";
-export type { Trajectory, TrajectoryStep } from "./evals/trajectory.js";
-export { SummarizationMiddleware } from "./middleware/summarization.js";
-export { ProgressEmitter } from "./agent/progress.js";
-export type { ProgressEvent, ProgressPhase, ProgressListener } from "./agent/progress.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// M7: Voice/TTS + Datasets + Deployer
-// ─────────────────────────────────────────────────────────────────────────────
-
-export type { VoicePort, VoiceConfig, VoiceEvent, VoiceEventListener } from "./ports/voice.port.js";
-export { InMemoryVoiceAdapter } from "./adapters/voice/inmemory.adapter.js";
-export type { DatasetsPort, DatasetEntry, DatasetInfo, DatasetQuery } from "./ports/datasets.port.js";
-export { InMemoryDatasetsAdapter } from "./adapters/datasets/inmemory.adapter.js";
-export type { DeployerPort, DeploymentConfig, DeploymentInfo, DeploymentStatus } from "./ports/deployer.port.js";
-export { InMemoryDeployerAdapter } from "./adapters/deployer/inmemory.adapter.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// M8: Graph-RAG — Knowledge Graph + Entity Extraction + GraphRAG Pipeline
-// ─────────────────────────────────────────────────────────────────────────────
-
-export type { KnowledgeGraphPort, GraphNode, GraphEdge, GraphQueryOptions, SubgraphResult } from "./ports/knowledge-graph.port.js";
-export { InMemoryKnowledgeGraphAdapter } from "./adapters/knowledge-graph/inmemory.adapter.js";
-export type { EntityExtractorPort, Entity, Relation, ExtractionResult } from "./ports/entity-extractor.port.js";
-export { PatternEntityExtractorAdapter, DEFAULT_ENTITY_PATTERNS } from "./adapters/entity-extractor/pattern.adapter.js";
-export type { PatternRule, RelationPattern, PatternEntityExtractorConfig } from "./adapters/entity-extractor/pattern.adapter.js";
-export { GraphRAGPipeline } from "./rag/graph-rag.pipeline.js";
-export type { GraphRAGConfig, GraphIngestResult, GraphQueryResult } from "./rag/graph-rag.pipeline.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// M9: E2B Cloud Sandbox + Sandbox Factory
-// ─────────────────────────────────────────────────────────────────────────────
-
-export { E2BSandboxAdapter } from "./adapters/sandbox/e2b.adapter.js";
-export type { E2BSandboxConfig } from "./adapters/sandbox/e2b.adapter.js";
-export { createSandbox } from "./adapters/sandbox/factory.js";
-export type { SandboxFactoryConfig } from "./adapters/sandbox/factory.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// M10: Playground — Server API + CLI Launcher
-// ─────────────────────────────────────────────────────────────────────────────
-
-export { registerPlaygroundRoutes } from "./server/playground-api.js";
-export type { PlaygroundAgent, PlaygroundConfig } from "./server/playground-api.js";
-export { startPlayground } from "./cli/playground.js";
-export type { PlaygroundOptions } from "./cli/playground.js";
-
+export { AbstractBuilder } from "./utils/abstract-builder.js";
