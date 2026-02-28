@@ -131,7 +131,7 @@ export class QdrantStoreAdapter implements VectorStorePort {
 
     const response = await this.client.search(this.collectionName, searchParams);
 
-    let results: VectorSearchResult[] = (response ?? []).map((point: any) => {
+    const results: VectorSearchResult[] = (response ?? []).map((point: any) => {
       const { _content, ...metadata } = point.payload ?? {};
       return {
         id: String(point.id),
@@ -141,10 +141,6 @@ export class QdrantStoreAdapter implements VectorStorePort {
         ...(params.includeEmbeddings && point.vector ? { embedding: point.vector } : {}),
       };
     });
-
-    if (params.minScore !== undefined) {
-      results = results.filter((r) => r.score >= params.minScore!);
-    }
 
     return results;
   }

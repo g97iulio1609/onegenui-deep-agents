@@ -115,32 +115,13 @@ export class WeaviateStoreAdapter implements VectorStorePort {
 
     for (let i = 0; i < documents.length; i += this.batchSize) {
       const batch = documents.slice(i, i + this.batchSize);
+
+      // Batch delete existing documents with matching _docId values
+      const docIds = batch.map((d) => d.id);
+      await this.batchDeleteByDocIds(docIds);
+
       let batcher = this.client.batch.objectsBatcher();
-
       for (const doc of batch) {
-        // Delete existing object with same _docId first (Weaviate upsert)
-        try {
-          const existing = await this.client.graphql
-            .get()
-            .withClassName(this.className)
-            .withWhere({ path: ["_docId"], operator: "Equal", valueText: doc.id })
-            .withFields("_additional { id }")
-            .do();
-
-          const objects = existing?.data?.Get?.[this.className] ?? [];
-          for (const obj of objects) {
-            if (obj._additional?.id) {
-              await this.client.data
-                .deleter()
-                .withClassName(this.className)
-                .withId(obj._additional.id)
-                .do();
-            }
-          }
-        } catch {
-          // Ignore — object may not exist
-        }
-
         batcher = batcher.withObject({
           class: this.className,
           properties: {
@@ -209,28 +190,62 @@ export class WeaviateStoreAdapter implements VectorStorePort {
   async delete(ids: string[]): Promise<void> {
     if (ids.length === 0) return;
     this.ensureInitialized();
+    await this.batchDeleteByDocIds(ids);
+  }
 
-    for (const id of ids) {
-      try {
-        const existing = await this.client.graphql
-          .get()
-          .withClassName(this.className)
-          .withWhere({ path: ["_docId"], operator: "Equal", valueText: id })
-          .withFields("_additional { id }")
-          .do();
+  private async batchDeleteByDocIds(docIds: string[]): Promise<void> {
+    try {
+      // Use ContainsAny for batch lookup (single query)
+      const existing = await this.client.graphql
+        .get()
+        .withClassName(this.className)
+        .withWhere({
+          path: ["_docId"],
+          operator: "ContainsAny",
+          valueTextArray: docIds,
+        })
+        .withFields("_additional { id }")
+        .do();
 
-        const objects = existing?.data?.Get?.[this.className] ?? [];
-        for (const obj of objects) {
-          if (obj._additional?.id) {
-            await this.client.data
-              .deleter()
-              .withClassName(this.className)
-              .withId(obj._additional.id)
-              .do();
-          }
+      const objects = existing?.data?.Get?.[this.className] ?? [];
+      const internalIds = objects
+        .map((obj: any) => obj._additional?.id)
+        .filter(Boolean);
+
+      // Batch delete all found internal IDs
+      if (internalIds.length > 0) {
+        let deleter = this.client.batch.objectsBatchDeleter();
+        for (const id of internalIds) {
+          deleter = deleter.withObjects({
+            class: this.className,
+            id,
+          });
         }
-      } catch {
-        // Ignore if not found
+        await deleter.do();
+      }
+    } catch {
+      // Fallback: delete one by one if batch fails
+      for (const docId of docIds) {
+        try {
+          const res = await this.client.graphql
+            .get()
+            .withClassName(this.className)
+            .withWhere({ path: ["_docId"], operator: "Equal", valueText: docId })
+            .withFields("_additional { id }")
+            .do();
+          const objs = res?.data?.Get?.[this.className] ?? [];
+          for (const obj of objs) {
+            if (obj._additional?.id) {
+              await this.client.data
+                .deleter()
+                .withClassName(this.className)
+                .withId(obj._additional.id)
+                .do();
+            }
+          }
+        } catch {
+          // Ignore if not found
+        }
       }
     }
   }

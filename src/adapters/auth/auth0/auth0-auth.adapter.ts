@@ -176,10 +176,23 @@ export class Auth0AuthAdapter implements AuthPort {
       Buffer.from(payloadB64, "base64url").toString("utf-8"),
     );
 
-    // Basic claim validation
+    // Claim validation
     const now = Math.floor(Date.now() / 1000);
     if (typeof payload.exp === "number" && now > payload.exp) {
       throw new Error("Token expired");
+    }
+    if (typeof payload.nbf === "number" && now < payload.nbf) {
+      throw new Error("Token not yet valid");
+    }
+    const expectedIssuer = `https://${this.options.domain}/`;
+    if (payload.iss && payload.iss !== expectedIssuer) {
+      throw new Error("Invalid token issuer");
+    }
+    if (this.options.audience && payload.aud) {
+      const auds = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+      if (!auds.includes(this.options.audience)) {
+        throw new Error("Invalid token audience");
+      }
     }
 
     return payload;

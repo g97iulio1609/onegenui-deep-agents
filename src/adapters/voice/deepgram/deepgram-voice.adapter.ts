@@ -83,10 +83,14 @@ export class DeepgramVoiceAdapter implements VoicePort {
 
     const chunks: Uint8Array[] = [];
     const reader = (stream as ReadableStream<Uint8Array>).getReader();
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (value) chunks.push(value);
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) chunks.push(value);
+      }
+    } finally {
+      reader.releaseLock();
     }
 
     const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
