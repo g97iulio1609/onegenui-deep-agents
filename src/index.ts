@@ -134,6 +134,12 @@ export type { AuthPort, AuthorizationPort, AuthUser, AuthResult } from "./ports/
 export type { AgentNetworkPort, NetworkTopology, NetworkAgent, DelegationRequest, DelegationResult as NetworkDelegationResult } from "./ports/agent-network.port.js";
 export type { AcpServerPort, AcpMessage, AcpSession, AcpHandler } from "./ports/acp.port.js";
 export type { VoicePort, VoiceConfig, VoiceEvent, VoiceEventListener } from "./ports/voice.port.js";
+export { OpenAIVoiceAdapter } from "./adapters/voice/openai/openai-voice.adapter.js";
+export type { OpenAIVoiceOptions } from "./adapters/voice/openai/openai-voice.adapter.js";
+export { ElevenLabsVoiceAdapter } from "./adapters/voice/elevenlabs/elevenlabs-voice.adapter.js";
+export type { ElevenLabsVoiceOptions } from "./adapters/voice/elevenlabs/elevenlabs-voice.adapter.js";
+export { VoicePipeline } from "./adapters/voice/voice-pipeline.js";
+export type { VoicePipelineConfig, VoicePipelineResult } from "./adapters/voice/voice-pipeline.js";
 export type { DatasetsPort, DatasetEntry, DatasetInfo, DatasetQuery } from "./ports/datasets.port.js";
 export type { DeployerPort, DeploymentConfig, DeploymentInfo, DeploymentStatus } from "./ports/deployer.port.js";
 export type { WorkflowPort, WorkflowEventListener } from "./ports/workflow.port.js";
