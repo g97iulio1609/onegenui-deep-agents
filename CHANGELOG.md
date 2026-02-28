@@ -5,6 +5,30 @@ All notable changes to **Gauss** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2025-07-18
+
+### 🔧 SDK Fork (gauss-sdk)
+
+- Forked Vercel AI SDK as `@giulio-leone/gauss-sdk` with 30 merged bug fixes
+- Published `@giulio-leone/gauss-sdk@1.0.0` to GitHub Package Registry
+- Switched dependency from `ai@^6.0.86` to `npm:@giulio-leone/gauss-sdk@^1.0.0`
+- Zero import changes required — uses npm alias for seamless drop-in replacement
+
+### Bug Fixes Included (from fork)
+
+- **feat(core)**: Top-level thinking configuration for reasoning models
+- **fix(ai)**: Throw AbortError from generateText instead of silently swallowing
+- **fix(ai)**: Guard toolResultsStreamController against enqueue/close on closed controller
+- **fix(ai)**: Preserve caller tool dependency chains in pruneMessages
+- **fix(ai)**: Handle missing usage data in retry logic
+- **fix(anthropic)**: Validate thinking block requirement and prevent silent reasoning drop
+- **fix(anthropic)**: Keep tools array when toolChoice is 'none'
+- **fix(openai)**: Handle stream errors in Responses API
+- **fix(openai)**: Accept empty string type in streaming tool call deltas (Azure)
+- **fix(provider-utils)**: RFC 9110 compliant User-Agent header format
+- **fix(telemetry)**: Add missing usage attributes to generateText and generateObject
+- Plus 19 more bug fixes across providers (Google, Bedrock, LangChain, React)
+
 ## [2.3.0] - 2025-07-17
 
 ### 📚 Documentation & Developer Experience
