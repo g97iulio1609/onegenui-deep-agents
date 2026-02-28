@@ -5,6 +5,45 @@ All notable changes to **Gauss** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2025-07-17
+
+### 📚 Documentation & Developer Experience
+
+#### M16: API Simplification
+- **`gauss()` one-liner**: Zero-config quickstart with env auto-detection
+- **Smart defaults**: Auto-detects OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.
+- **GaussError**: Enhanced errors with actionable suggestions
+
+#### M17: Documentation Overhaul
+- Complete rewrite of all documentation (15 files, 5000+ lines)
+- Getting Started with zero-config examples
+- Concepts guide covering 15 core concepts
+- Cookbook with 21 practical recipes
+- API Reference for all ports, adapters, providers
+- Feature docs: Voice, Teams, Multimodal, Workflows
+- Comparison matrix (57 features vs 3 competitors)
+- Migration guides from Mastra, LangChain, Agno
+
+#### M18: GitHub Pages
+- Docusaurus site at giulio-leone.github.io/gauss
+- Dark mode, search, responsive design
+- GitHub Actions auto-deployment on push
+
+#### M19: Examples Gallery
+- 17 production-ready examples (8 new)
+- Team coordination, voice pipeline, workflow DSL
+- Multimodal vision, video processing, universal provider
+- LLM recording/replay, zero-config one-liner
+
+## [2.2.0] - 2025-07-16
+
+### 🌐 Universal Provider & Video Processing
+
+- **UniversalProvider**: Wraps any @ai-sdk/* package, 40+ providers via single API
+- **Video Processing**: Frame extraction, video description, audio extraction
+- Auto-discovery of installed AI SDK providers
+- Case-insensitive factory name lookup
+
 ## [2.1.0] - 2025-07-16
 
 ### 🚀 Competitive Feature Pack — 6 New Capabilities
