@@ -142,7 +142,7 @@ export class LanceStoreAdapter implements VectorStorePort {
     if (ids.length === 0) return;
     this.ensureInitialized();
 
-    const predicate = ids.map((id) => `id = '${id}'`).join(" OR ");
+    const predicate = ids.map((id) => `id = '${id.replace(/'/g, "''")}'`).join(" OR ");
     await this.table.delete(predicate);
   }
 
@@ -185,10 +185,11 @@ export class LanceStoreAdapter implements VectorStorePort {
           conditions.push(this.buildLanceCondition(field, op, val));
         }
       } else {
+        const sf = this.escField(field);
         conditions.push(
           typeof condition === "string"
-            ? `json_extract_string(metadata, '$.${field}') = '${condition}'`
-            : `json_extract(metadata, '$.${field}') = ${condition}`,
+            ? `json_extract_string(metadata, '$.${sf}') = '${this.esc(condition)}'`
+            : `json_extract(metadata, '$.${sf}') = ${condition}`,
         );
       }
     }
@@ -197,13 +198,14 @@ export class LanceStoreAdapter implements VectorStorePort {
   }
 
   private buildLanceCondition(field: string, op: string, val: unknown): string {
-    const accessor = `json_extract(metadata, '$.${field}')`;
-    const strAccessor = `json_extract_string(metadata, '$.${field}')`;
+    const sf = this.escField(field);
+    const accessor = `json_extract(metadata, '$.${sf}')`;
+    const strAccessor = `json_extract_string(metadata, '$.${sf}')`;
     switch (op) {
       case "$eq":
-        return typeof val === "string" ? `${strAccessor} = '${val}'` : `${accessor} = ${val}`;
+        return typeof val === "string" ? `${strAccessor} = '${this.esc(val)}'` : `${accessor} = ${val}`;
       case "$ne":
-        return typeof val === "string" ? `${strAccessor} != '${val}'` : `${accessor} != ${val}`;
+        return typeof val === "string" ? `${strAccessor} != '${this.esc(val)}'` : `${accessor} != ${val}`;
       case "$gt":
         return `CAST(${accessor} AS DOUBLE) > ${val}`;
       case "$gte":
@@ -213,16 +215,24 @@ export class LanceStoreAdapter implements VectorStorePort {
       case "$lte":
         return `CAST(${accessor} AS DOUBLE) <= ${val}`;
       case "$in": {
-        const list = (val as unknown[]).map((v) => (typeof v === "string" ? `'${v}'` : v)).join(",");
+        const list = (val as unknown[]).map((v) => (typeof v === "string" ? `'${this.esc(v)}'` : v)).join(",");
         return `${strAccessor} IN (${list})`;
       }
       case "$nin": {
-        const list = (val as unknown[]).map((v) => (typeof v === "string" ? `'${v}'` : v)).join(",");
+        const list = (val as unknown[]).map((v) => (typeof v === "string" ? `'${this.esc(v)}'` : v)).join(",");
         return `${strAccessor} NOT IN (${list})`;
       }
       default:
-        return `${strAccessor} = '${val}'`;
+        return `${strAccessor} = '${this.esc(val)}'`;
     }
+  }
+
+  private esc(val: unknown): string {
+    return String(val).replace(/'/g, "''");
+  }
+
+  private escField(field: string): string {
+    return field.replace(/[^a-zA-Z0-9_.-]/g, "");
   }
 
   private ensureInitialized(): void {

@@ -215,7 +215,7 @@ export class UpstashStoreAdapter implements VectorStorePort {
   }
 
   private formatValue(val: unknown): string {
-    if (typeof val === "string") return `'${val}'`;
+    if (typeof val === "string") return `'${val.replace(/'/g, "''")}'`;
     return String(val);
   }
 

@@ -100,9 +100,10 @@ export class DuckDBStoreAdapter implements VectorStorePort {
         const embeddingStr = `[${doc.embedding.join(",")}]`;
         const metadataStr = JSON.stringify(doc.metadata).replace(/'/g, "''");
         const contentStr = doc.content.replace(/'/g, "''");
+        const idStr = doc.id.replace(/'/g, "''");
         await this.run(`
           INSERT OR REPLACE INTO ${this.tableName} (id, embedding, content, metadata)
-          VALUES ('${doc.id}', ${embeddingStr}::FLOAT[${this.dimensions}], '${contentStr}', '${metadataStr}')
+          VALUES ('${idStr}', ${embeddingStr}::FLOAT[${this.dimensions}], '${contentStr}', '${metadataStr}')
         `);
       }
     }
@@ -192,7 +193,7 @@ export class DuckDBStoreAdapter implements VectorStorePort {
           conditions.push(this.buildDuckDBCondition(field, op, val));
         }
       } else {
-        conditions.push(`json_extract_string(metadata, '$.${field}') = '${condition}'`);
+        conditions.push(`json_extract_string(metadata, '$.${this.escField(field)}') = '${this.esc(condition)}'`);
       }
     }
 
@@ -200,15 +201,16 @@ export class DuckDBStoreAdapter implements VectorStorePort {
   }
 
   private buildDuckDBCondition(field: string, op: string, val: unknown): string {
-    const accessor = `json_extract(metadata, '$.${field}')`;
+    const sf = this.escField(field);
+    const accessor = `json_extract(metadata, '$.${sf}')`;
     switch (op) {
       case "$eq":
         return typeof val === "string"
-          ? `json_extract_string(metadata, '$.${field}') = '${val}'`
+          ? `json_extract_string(metadata, '$.${sf}') = '${this.esc(val)}'`
           : `CAST(${accessor} AS DOUBLE) = ${val}`;
       case "$ne":
         return typeof val === "string"
-          ? `json_extract_string(metadata, '$.${field}') != '${val}'`
+          ? `json_extract_string(metadata, '$.${sf}') != '${this.esc(val)}'`
           : `CAST(${accessor} AS DOUBLE) != ${val}`;
       case "$gt":
         return `CAST(${accessor} AS DOUBLE) > ${val}`;
@@ -219,19 +221,27 @@ export class DuckDBStoreAdapter implements VectorStorePort {
       case "$lte":
         return `CAST(${accessor} AS DOUBLE) <= ${val}`;
       case "$in": {
-        const list = (val as unknown[]).map((v) => (typeof v === "string" ? `'${v}'` : v)).join(",");
-        return `json_extract_string(metadata, '$.${field}') IN (${list})`;
+        const list = (val as unknown[]).map((v) => (typeof v === "string" ? `'${this.esc(v)}'` : v)).join(",");
+        return `json_extract_string(metadata, '$.${sf}') IN (${list})`;
       }
       case "$nin": {
-        const list = (val as unknown[]).map((v) => (typeof v === "string" ? `'${v}'` : v)).join(",");
-        return `json_extract_string(metadata, '$.${field}') NOT IN (${list})`;
+        const list = (val as unknown[]).map((v) => (typeof v === "string" ? `'${this.esc(v)}'` : v)).join(",");
+        return `json_extract_string(metadata, '$.${sf}') NOT IN (${list})`;
       }
       default:
-        return `json_extract_string(metadata, '$.${field}') = '${val}'`;
+        return `json_extract_string(metadata, '$.${sf}') = '${this.esc(val)}'`;
     }
   }
 
   // ─── Helpers ──────────────────────────────────────────────────────────
+
+  private esc(val: unknown): string {
+    return String(val).replace(/'/g, "''");
+  }
+
+  private escField(field: string): string {
+    return field.replace(/[^a-zA-Z0-9_.-]/g, "");
+  }
 
   private createDatabase(DuckDB: any, path: string): Promise<any> {
     return new Promise((resolve, reject) => {
