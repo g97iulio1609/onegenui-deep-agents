@@ -6,6 +6,32 @@
 
 A hexagonal-architecture agent framework with built-in planning, context management, subagent orchestration, persistent memory, and MCP integration. Agents operate through a tool-loop powered by AI SDK's `ToolLoopAgent`, with filesystem, planning, and subagent tools composed via a fluent builder API.
 
+## Quickstart
+
+```bash
+# Scaffold a new project
+npx gauss init --template chat my-agent
+cd my-agent && npm install
+
+# Or install into an existing project
+npm install gauss
+```
+
+```typescript
+import { agent } from "gauss";
+import { openai } from "gauss/providers";
+
+const myAgent = agent({
+  model: openai("gpt-4o-mini"),
+  instructions: "You are a helpful assistant.",
+}).build();
+
+const result = await myAgent.run("Hello!");
+console.log(result.text);
+```
+
+**Templates:** `chat` · `tools` · `rag` · `multi-agent` · `mcp` · `auth-rest`
+
 ## Features
 
 - **Builder pattern** — fluent API with `Agent.create()`, `.minimal()`, `.full()`, and `.auto()` factory methods

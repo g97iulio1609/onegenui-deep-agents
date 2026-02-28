@@ -30,6 +30,7 @@ ${bold("Usage:")}
   gaussflow graph <config.json> [--format]     Visualize agent graph
   gaussflow dev <config.json> [--provider]     Hot-reload dev mode
   gaussflow plugin <subcommand>                Plugin management
+  gaussflow init --template <name> [dir]       Scaffold a new Gauss project
 
 ${bold("Commands:")}
   chat        Start interactive REPL chat session
@@ -134,6 +135,9 @@ async function main(): Promise<void> {
 
     case "plugin":
       return handlePlugin(positionals.slice(1));
+
+    case "init":
+      return (await import("./init.js")).handleInit(positionals.slice(1));
 
     default:
       // Treat unknown command as a direct prompt (like claude code / opencode)
