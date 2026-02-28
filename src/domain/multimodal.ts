@@ -2,7 +2,7 @@
 // Multimodal — Image processing and multimodal message types
 // =============================================================================
 
-import type { LanguageModel, LanguageModelV2 } from "ai";
+import type { LanguageModel } from "ai";
 import { generateText } from "ai";
 
 // =============================================================================
@@ -57,7 +57,7 @@ export class MultimodalAgent {
     const prompt = this.buildPrompt(messages);
 
     const result = await generateText({
-      model: this.model as LanguageModelV2,
+      model: this.model as any,
       prompt,
       system: this.instructions,
     });

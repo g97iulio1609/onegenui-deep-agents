@@ -3,10 +3,22 @@
 // Supports coordinator/specialist roles and 4 coordination strategies.
 // =============================================================================
 
-import { SharedContext } from "./shared-context.js";
 import type { AgentNode } from "./agent-node.js";
 import { EventBus } from "../agent/event-bus.js";
 import type { AgentEventType } from "../types.js";
+
+// =============================================================================
+// Lightweight team context (avoids FilesystemPort dependency)
+// =============================================================================
+
+class TeamContext {
+  private data = new Map<string, unknown>();
+
+  get(key: string): unknown { return this.data.get(key); }
+  set(key: string, value: unknown): void { this.data.set(key, value); }
+  has(key: string): boolean { return this.data.has(key); }
+  entries(): IterableIterator<[string, unknown]> { return this.data.entries(); }
+}
 
 // =============================================================================
 // Types
@@ -60,7 +72,7 @@ export class Team {
   readonly id: string;
   readonly members: ReadonlyArray<TeamMember>;
   readonly strategy: CoordinationStrategy;
-  readonly context: SharedContext;
+  readonly context: TeamContext;
   readonly eventBus: EventBus;
   private readonly maxRounds: number;
   private readonly consensusThreshold: number;
@@ -71,8 +83,8 @@ export class Team {
     this.strategy = config.strategy;
     this.maxRounds = config.maxRounds ?? 10;
     this.consensusThreshold = config.consensusThreshold ?? 0.5;
-    this.eventBus = config.eventBus ?? new EventBus();
-    this.context = new SharedContext();
+    this.eventBus = config.eventBus ?? new EventBus(`team-${config.id}`);
+    this.context = new TeamContext();
   }
 
   /** Execute the team on a task */
@@ -228,7 +240,8 @@ export class Team {
     roundNum: number
   ): Promise<TeamRound> {
     const start = Date.now();
-    const result = await member.agent.execute(input, this.context);
+    const agentFn = (member.agent as any).execute ?? (member.agent as any).run;
+    const result = await agentFn(input, this.context);
     return {
       round: roundNum,
       memberId: member.id,

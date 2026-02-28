@@ -2,7 +2,7 @@
 // LLMRecorder — Record all LLM calls for replay and testing
 // =============================================================================
 
-import type { LanguageModel, LanguageModelV2 } from "ai";
+import type { LanguageModel } from "ai";
 import { generateText } from "ai";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -67,8 +67,8 @@ export class LLMRecorder {
     const startMs = Date.now();
     const id = `call-${++this.callCount}`;
 
-    const result = await generateText({
-      model: params.model as LanguageModelV2,
+    const result = await (generateText as any)({
+      model: params.model,
       prompt: params.prompt,
       system: params.system,
     });

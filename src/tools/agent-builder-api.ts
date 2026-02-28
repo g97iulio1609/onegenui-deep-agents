@@ -104,7 +104,7 @@ export class AgentBuilderAPI {
 
     try {
       const result = await agent.execute(input);
-      return { status: 200, body: result };
+      return { status: 200, body: result as unknown as Record<string, unknown> };
     } catch (err) {
       return { status: 500, body: { error: (err as Error).message } };
     }

@@ -64,7 +64,7 @@ export class OpenAIVoiceAdapter implements VoicePort {
   async listen(audio: Uint8Array, config?: VoiceConfig): Promise<string> {
     this.emit({ type: "listening" });
 
-    const blob = new Blob([audio], { type: "audio/mp3" });
+    const blob = new Blob([audio as unknown as Blob], { type: "audio/mp3" });
     const formData = new FormData();
     formData.append("file", blob, "audio.mp3");
     formData.append("model", config?.model ?? this.sttModel);
