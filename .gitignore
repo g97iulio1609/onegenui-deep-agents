@@ -6,3 +6,4 @@ docs/build/
 firebase-debug.log
 logs/
 node_modules/
+docs/api/
