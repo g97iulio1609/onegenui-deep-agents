@@ -783,3 +783,66 @@ export {
   InMemoryAgentDebuggerAdapter,
   createDebugMiddleware,
 } from "./adapters/agent-debugger/index.js";
+
+// ─── Agent Orchestrator ─────────────────────────────────────────────────────
+
+export type {
+  AgentOrchestorPort,
+  OrchestrationPattern,
+  OrchestrationConfig,
+  OrchestrationAgent,
+  OrchestrationMessage,
+  OrchestrationOptions,
+  Orchestration,
+  OrchestrationResult,
+  OrchestrationEvent,
+} from "./ports/agent-orchestrator.port.js";
+export {
+  AgentOrchestratorAdapter,
+  createSupervisorOrchestration,
+  createSwarmOrchestration,
+  createPipelineOrchestration,
+  createMapReduceOrchestration,
+  createDebateOrchestration,
+} from "./adapters/agent-orchestrator/index.js";
+
+// ─── Structured Output ──────────────────────────────────────────────────────
+
+export type {
+  StructuredOutputPort,
+  OutputSchema,
+  ParseResult,
+  RepairResult,
+  RepairAction,
+  ValidationError,
+  OutputConstraint,
+  FormatOptions,
+  ValidationResult,
+  StreamParser,
+} from "./ports/structured-output.port.js";
+export {
+  StructuredOutputAdapter,
+  JsonStreamParser,
+  repairJson,
+  parseJson,
+  parseYaml,
+  parseCsv,
+  parseMarkdownTable,
+} from "./adapters/structured-output/index.js";
+
+// ─── Advanced Agent Memory ──────────────────────────────────────────────────
+
+export type {
+  AgentMemoryPort as AdvancedAgentMemoryPort,
+  MemoryType,
+  MemoryEntry,
+  MemoryQuery,
+  ConsolidationResult,
+  MemoryStats,
+  ScopedMemory,
+} from "./ports/advanced-agent-memory.port.js";
+export {
+  InMemoryAdvancedAgentMemoryAdapter,
+  cosineSimilarity,
+  consolidateMemories,
+} from "./adapters/agent-memory/index.js";
