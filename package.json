@@ -1,7 +1,7 @@
 {
   "name": "@giulio-leone/gauss",
-  "version": "2.3.0",
-  "description": "Gauss — AI Agent Framework built on Vercel AI SDK v6 with hexagonal architecture, multi-runtime support, plugin system, and multi-agent collaboration",
+  "version": "2.4.0",
+  "description": "Gauss \u2014 AI Agent Framework built on Gauss SDK (AI SDK fork) with hexagonal architecture, multi-runtime support, plugin system, and multi-agent collaboration",
   "license": "MIT",
   "type": "module",
   "repository": {
@@ -108,7 +108,7 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
-    "ai": "^6.0.86",
+    "ai": "npm:@giulio-leone/gauss-sdk@^1.0.0",
     "zod": "^3.25.76"
   },
   "peerDependencies": {
