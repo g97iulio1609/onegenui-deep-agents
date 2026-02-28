@@ -89,7 +89,7 @@ export function createPlaygroundWSHandler(config: PlaygroundWSConfig) {
     activeRuns.set(runId, controller);
 
     try {
-      const result = await agent.invoke(msg.prompt, { stream: true });
+      const result = await agent.invoke(msg.prompt, { stream: true, signal: controller.signal });
 
       if (typeof result === "string") {
         send(emit, { type: "token", runId, token: result });

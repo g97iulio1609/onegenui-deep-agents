@@ -8,8 +8,6 @@ import type {
   FlushResult,
 } from "../../ports/save-queue.port.js";
 
-let nextId = 1;
-
 export interface SaveQueueOptions {
   /** Max entries before forced flush (default: 1000) */
   maxSize?: number;
@@ -22,6 +20,7 @@ export class SaveQueue implements SaveQueuePort {
   private maxSize: number;
   private maxRetries: number;
   private timer: ReturnType<typeof setInterval> | null = null;
+  private nextId = 1;
 
   constructor(options: SaveQueueOptions = {}) {
     this.maxSize = options.maxSize ?? 1000;
@@ -29,7 +28,7 @@ export class SaveQueue implements SaveQueuePort {
   }
 
   enqueue(sessionId: string, key: string, value: unknown): string {
-    const id = `sq-${nextId++}`;
+    const id = `sq-${this.nextId++}`;
     const entry: SaveEntry = {
       id,
       sessionId,

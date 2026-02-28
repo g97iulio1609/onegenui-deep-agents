@@ -164,7 +164,9 @@ export function createToolCallPatchingMiddleware(
       const nameChanged = toolName !== params.toolName;
 
       if (argsChanged || nameChanged) {
-        return { args: patchedArgs };
+        const patch: BeforeToolCallResult = { args: patchedArgs };
+        if (nameChanged) (patch as Record<string, unknown>).toolName = toolName;
+        return patch;
       }
     },
 

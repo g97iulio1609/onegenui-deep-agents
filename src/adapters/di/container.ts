@@ -26,6 +26,7 @@ export class Container implements ContainerPort {
   private registrations = new Map<string, InternalRegistration>();
   private singletons = new Map<string, unknown>();
   private scoped = new Map<string, unknown>();
+  private asyncInflight = new Map<string, Promise<unknown>>();
   private parent: Container | null;
   private children: Container[] = [];
   private disposed = false;
@@ -180,10 +181,17 @@ export class Container implements ContainerPort {
       case Lifetime.SINGLETON: {
         if (this.singletons.has(key)) return this.singletons.get(key);
         if (this.parent?.singletons.has(key)) return this.parent.singletons.get(key);
-        const instance = await reg.factory(this);
         const root = this.getRoot();
-        root.singletons.set(key, instance);
-        return instance;
+        // Guard against concurrent async resolution of same singleton
+        const inflight = root.asyncInflight.get(key);
+        if (inflight) return inflight;
+        const promise = Promise.resolve(reg.factory(this)).then((instance) => {
+          root.singletons.set(key, instance);
+          root.asyncInflight.delete(key);
+          return instance;
+        });
+        root.asyncInflight.set(key, promise);
+        return promise;
       }
       case Lifetime.SCOPED: {
         if (this.scoped.has(key)) return this.scoped.get(key);
