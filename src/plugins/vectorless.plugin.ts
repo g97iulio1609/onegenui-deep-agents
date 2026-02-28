@@ -64,7 +64,7 @@ export class VectorlessPlugin extends BasePlugin {
   readonly chunks: Map<string, Chunk> = new Map();
   readonly chunkingAdapter: ChunkingPort;
   readonly rerankingAdapter: ReRankingPort;
-  private _toolsCache?: Record<string, Tool>;
+  private _toolsCache?: Record<string, Tool<any, any>>;
 
   constructor(options: VectorlessPluginOptions = {}) {
     super();
@@ -103,7 +103,7 @@ export class VectorlessPlugin extends BasePlugin {
     }
   }
 
-  get tools(): Record<string, Tool> {
+  get tools(): Record<string, Tool<any, any>> {
     if (this._toolsCache) return this._toolsCache;
     const getVectorless = this.getVectorless.bind(this);
     const getKnowledge = () => this.currentKnowledge;
@@ -125,7 +125,7 @@ export class VectorlessPlugin extends BasePlugin {
     const chunkingAdapter = this.chunkingAdapter;
     const rerankingAdapter = this.rerankingAdapter;
 
-    const toolsMap: Record<string, Tool> = {
+    const toolsMap: Record<string, Tool<any, any>> = {
       generate: tool({
         description: "Extract knowledge (entities, relations, quotes) from text. Must be called before query/search.",
         inputSchema: z.object({

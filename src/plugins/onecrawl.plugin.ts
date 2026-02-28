@@ -87,7 +87,7 @@ export class OneCrawlPlugin extends BasePlugin {
     }
   }
 
-  get tools(): Record<string, Tool> {
+  get tools(): Record<string, Tool<any, any>> {
     const maxLen = this.options.maxContentLength ?? 10000;
     const getCrawler = this.getCrawler.bind(this);
     const validator = this.validator;

@@ -50,8 +50,7 @@ export class AiSdkModelAdapter implements ModelPort {
         content: m.content,
       })),
       temperature: options.temperature,
-      maxOutputTokens: options.maxTokens,
-      stopSequences: options.stopSequences,
+      maxTokens: options.maxTokens,
     });
 
     return {
@@ -74,8 +73,7 @@ export class AiSdkModelAdapter implements ModelPort {
         content: m.content,
       })),
       temperature: options.temperature,
-      maxOutputTokens: options.maxTokens,
-      stopSequences: options.stopSequences,
+      maxTokens: options.maxTokens,
     });
 
     const usagePromise: Promise<{ inputTokens: number; outputTokens: number; totalTokens: number }> =

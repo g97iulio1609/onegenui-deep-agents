@@ -82,7 +82,7 @@ const A2A_SUBSCRIBE_SCHEMA = z.object({
 export class A2APlugin implements Plugin {
   readonly name = "a2a";
   readonly version = "1.0.0";
-  readonly tools: Record<string, Tool>;
+  readonly tools: Record<string, Tool<any, any>>;
 
   private readonly fetchImpl: typeof fetch;
   private readonly requestTimeoutMs: number;

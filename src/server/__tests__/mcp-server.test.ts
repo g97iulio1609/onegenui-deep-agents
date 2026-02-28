@@ -19,7 +19,7 @@ describe("McpServer", () => {
           parameters: { type: "object" as const, properties: { name: { type: "string" } } },
           execute: vi.fn(async (args: Record<string, unknown>) => `Hello, ${args.name}!`),
         },
-      } as unknown as Record<string, Tool>,
+      } as unknown as Record<string, Tool<any, any>>,
     });
   });
 

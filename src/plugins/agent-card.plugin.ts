@@ -65,7 +65,7 @@ const DEFAULT_ZONES: FilesystemZone[] = ["persistent", "transient"];
 export class AgentCardPlugin implements Plugin, AgentCardProvider {
   readonly name = "agent-card";
   readonly version = "1.0.0";
-  readonly tools: Record<string, Tool>;
+  readonly tools: Record<string, Tool<any, any>>;
 
   private readonly options: {
     paths: {

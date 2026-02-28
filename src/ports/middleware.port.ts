@@ -40,7 +40,7 @@ export interface MiddlewareContext {
 export interface BeforeAgentParams {
   prompt: string;
   instructions: string;
-  tools: Record<string, Tool>;
+  tools: Record<string, Tool<any, any>>;
 }
 
 export interface BeforeAgentResult {
@@ -49,7 +49,7 @@ export interface BeforeAgentResult {
   /** Modified instructions (optional) */
   instructions?: string;
   /** Additional tools to inject (merged with existing) */
-  tools?: Record<string, Tool>;
+  tools?: Record<string, Tool<any, any>>;
   /** If true, skip agent execution entirely and use `earlyResult` */
   abort?: boolean;
   /** Result to return when `abort` is true */

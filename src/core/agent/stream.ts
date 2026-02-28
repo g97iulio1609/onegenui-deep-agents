@@ -72,7 +72,7 @@ export function streamAgent(
         prompt: ctx.prompt,
         tools: config.tools,
         maxSteps: ctx.options.maxSteps ?? config.maxSteps ?? 10,
-        output: outputSpec ? { schema: outputSpec.schema } : undefined,
+        output: outputSpec ? { type: "object" as const, schema: outputSpec.schema } : undefined,
         abortSignal: abortController.signal,
       });
 

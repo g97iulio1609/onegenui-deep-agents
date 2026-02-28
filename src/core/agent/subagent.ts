@@ -34,7 +34,7 @@ export function agentsToTools(
 
     tools[name] = tool({
       description,
-      parameters: z.object({
+      inputSchema: z.object({
         prompt: z.string().describe("The task or question to delegate to this agent"),
       }),
       execute: async ({ prompt }) => {

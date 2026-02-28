@@ -108,8 +108,8 @@ export class PluginManager {
   }
 
   /** Collect all plugin tools with deterministic override protection. */
-  collectTools(): Record<string, Tool> {
-    const tools: Record<string, Tool> = {};
+  collectTools(): Record<string, Tool<any, any>> {
+    const tools: Record<string, Tool<any, any>> = {};
 
     for (const plugin of this.plugins) {
       if (!plugin.tools) continue;

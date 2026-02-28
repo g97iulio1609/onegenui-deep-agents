@@ -33,7 +33,7 @@ export interface AsyncSubagentToolsConfig {
 
 export function createAsyncSubagentTools(
   config: AsyncSubagentToolsConfig,
-): Record<string, Tool> {
+): Record<string, Tool<any, any>> {
   const { registry, parentId, currentDepth, hooks } = config;
 
   return {

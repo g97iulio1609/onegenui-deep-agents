@@ -85,7 +85,7 @@ interface AgentInternalConfig {
   subagentConfig?: Partial<SubagentConfig>;
   approvalConfig?: Required<ApprovalConfig>;
   checkpointConfig?: Required<CheckpointConfig>;
-  extraTools?: Record<string, Tool>;
+  extraTools?: Record<string, Tool<any, any>>;
   plugins?: Plugin[];
   costTracker?: CostTrackerPort;
   circuitBreaker?: CircuitBreaker;

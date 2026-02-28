@@ -47,7 +47,7 @@ function normalizeRule(input: z.infer<typeof policyRuleSchema>): PolicyRule {
   };
 }
 
-export function createPolicyTools(policyEngine: PolicyEnginePort): Record<string, Tool> {
+export function createPolicyTools(policyEngine: PolicyEnginePort): Record<string, Tool<any, any>> {
   return {
     policy_list_rules: tool({
       description: "List current policy rules sorted by priority",

@@ -198,11 +198,12 @@ export interface ToolDefinition<PARAMS = unknown, RESULT = unknown> {
 export interface ToolExecuteOptions {
   abortSignal?: AbortSignal;
   toolCallId?: string;
+  messages?: Array<{ role: string; content: string }>;
 }
 
 export type Tool<PARAMS = unknown, RESULT = unknown> = ToolDefinition<PARAMS, RESULT>;
 
-export type ToolSet = Record<string, Tool>;
+export type ToolSet = Record<string, Tool<any, any>>;
 
 // ---------------------------------------------------------------------------
 // Step result (for multi-step agent loops)

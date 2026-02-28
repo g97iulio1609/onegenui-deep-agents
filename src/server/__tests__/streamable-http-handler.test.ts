@@ -10,7 +10,7 @@ describe("createStreamableHttpHandler", () => {
     const server = new McpServer({
       name: "test",
       version: "0.1.0",
-      tools: {} as Record<string, Tool>,
+      tools: {} as Record<string, Tool<any, any>>,
     });
     handler = createStreamableHttpHandler({ server });
   });

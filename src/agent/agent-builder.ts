@@ -53,7 +53,7 @@ export class AgentBuilder extends AbstractBuilder<Agent> {
   // Telemetry
   private telemetryAdapter?: TelemetryPort;
 
-  private extraTools: Record<string, Tool> = {};
+  private extraTools: Record<string, Tool<any, any>> = {};
   private readonly plugins: Plugin[] = [];
   private lifecycleHooks?: LifecycleHooks;
 
@@ -148,7 +148,7 @@ export class AgentBuilder extends AbstractBuilder<Agent> {
     return this;
   }
 
-  withTools(tools: Record<string, Tool>): this {
+  withTools(tools: Record<string, Tool<any, any>>): this {
     Object.assign(this.extraTools, tools);
     return this;
   }

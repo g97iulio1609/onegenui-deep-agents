@@ -40,7 +40,7 @@ export class MemoryPlugin implements Plugin {
   readonly name = "memory";
   readonly version = "1.0.0";
   readonly hooks: PluginHooks;
-  readonly tools: Record<string, Tool>;
+  readonly tools: Record<string, Tool<any, any>>;
 
   private readonly adapter: AgentMemoryPort;
 
@@ -51,7 +51,7 @@ export class MemoryPlugin implements Plugin {
     this.tools = this.buildTools();
   }
 
-  private buildTools(): Record<string, Tool> {
+  private buildTools(): Record<string, Tool<any, any>> {
     return {
       "memory:store": tool({
         description: "Store a memory entry for future recall",

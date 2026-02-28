@@ -37,7 +37,7 @@ const STOP_SCHEMA = z.object({});
 export class McpServerPlugin implements Plugin {
   readonly name = "mcp-server";
   readonly version = "1.0.0";
-  readonly tools: Record<string, Tool>;
+  readonly tools: Record<string, Tool<any, any>>;
 
   private adapter?: DefaultMcpServerAdapter;
   private readonly pluginOptions: McpServerPluginOptions;

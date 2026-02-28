@@ -15,9 +15,9 @@ export interface ToolPipeline {
   pipe(tools: string[]): ToolPipeline;
   withFallback(primary: string, fallback: string): ToolPipeline;
   withMiddleware(middleware: ToolMiddleware): ToolPipeline;
-  build(): Record<string, Tool>;
+  build(): Record<string, Tool<any, any>>;
 }
 
 export interface ToolCompositionPort {
-  createPipeline(tools: Record<string, Tool>): ToolPipeline;
+  createPipeline(tools: Record<string, Tool<any, any>>): ToolPipeline;
 }

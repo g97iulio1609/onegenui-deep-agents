@@ -251,7 +251,7 @@ export class ExecutionEngine {
       // Wrap LLM call in telemetry span (safe on exception via withSpan)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result: any = await this.withSpan("llm.generate", { "llm.model": String(this.config.model) }, () =>
-        generateText(agentOptions as Parameters<typeof generateText>[0]),
+        generateText(agentOptions as unknown as Parameters<typeof generateText>[0]),
       );
 
       // Track token usage
@@ -495,7 +495,7 @@ export class ExecutionEngine {
         };
         if (this.config.output) streamAgentOptions.output = this.config.output;
 
-        const streamResult = streamText(streamAgentOptions as Parameters<typeof streamText>[0]);
+        const streamResult = streamText(streamAgentOptions as unknown as Parameters<typeof streamText>[0]);
 
         // Track cost from streaming after completion
         if (this.config.costTracker) {

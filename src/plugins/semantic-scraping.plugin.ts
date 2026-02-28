@@ -66,7 +66,7 @@ export class SemanticScrapingPlugin extends BasePlugin {
     return {};
   }
 
-  get tools(): Record<string, Tool> {
+  get tools(): Record<string, Tool<any, any>> {
     const adapter = this.adapter;
 
     return {

@@ -52,7 +52,7 @@ export interface ToolManagerConfig {
   subagents: boolean;
   subagentConfig?: Partial<SubagentConfig>;
   approvalConfig?: Required<ApprovalConfig>;
-  extraTools?: Record<string, Tool>;
+  extraTools?: Record<string, Tool<any, any>>;
 }
 
 // =============================================================================
@@ -85,8 +85,8 @@ export class ToolManager {
   // ---------------------------------------------------------------------------
 
   private registerTools(
-    target: Record<string, Tool>,
-    source: Record<string, Tool>,
+    target: Record<string, Tool<any, any>>,
+    source: Record<string, Tool<any, any>>,
     sourceLabel: string,
   ): void {
     for (const [toolName, toolDef] of Object.entries(source)) {
@@ -101,8 +101,8 @@ export class ToolManager {
   // Build catalog
   // ---------------------------------------------------------------------------
 
-  async buildToolCatalog(runMetadata?: PluginRunMetadata): Promise<Record<string, Tool>> {
-    const tools: Record<string, Tool> = {};
+  async buildToolCatalog(runMetadata?: PluginRunMetadata): Promise<Record<string, Tool<any, any>>> {
+    const tools: Record<string, Tool<any, any>> = {};
 
     this.registerTools(tools, createFilesystemTools(this.config.fs), "filesystem");
     this.registerTools(tools, this.config.extraTools ?? {}, "builder.withTools");
@@ -142,7 +142,7 @@ export class ToolManager {
     if (this.config.mcp) {
       const mcpDefs = await this.config.mcp.discoverTools();
       const mcp = this.config.mcp;
-      const mcpTools: Record<string, Tool> = {};
+      const mcpTools: Record<string, Tool<any, any>> = {};
       const selection = this.extractMcpToolsetSelection(runMetadata);
 
       for (const [name, def] of Object.entries(mcpDefs)) {
@@ -189,7 +189,7 @@ export class ToolManager {
   // ---------------------------------------------------------------------------
 
   wrapToolsWithApproval(
-    tools: Record<string, Tool>,
+    tools: Record<string, Tool<any, any>>,
     sessionId: string,
     eventBus: EventBus,
     runtime: RuntimePort,
@@ -205,12 +205,12 @@ export class ToolManager {
     applyApprovalWrapping(tools, approval, runtime);
   }
 
-  wrapToolsWithResilience(tools: Record<string, Tool>): void {
+  wrapToolsWithResilience(tools: Record<string, Tool<any, any>>): void {
     applyResilienceWrapping(tools, this.circuitBreaker, this.toolCache);
   }
 
   wrapToolsWithPolicy(
-    tools: Record<string, Tool>,
+    tools: Record<string, Tool<any, any>>,
     sessionId: string,
     runMetadata?: PluginRunMetadata,
   ): void {
@@ -221,7 +221,7 @@ export class ToolManager {
   }
 
   wrapToolsWithPlugins(
-    tools: Record<string, Tool>,
+    tools: Record<string, Tool<any, any>>,
     pluginCtx: PluginContext,
   ): void {
     applyPluginWrapping(tools, this.pluginManager, pluginCtx);
@@ -293,7 +293,7 @@ export class ToolManager {
     eventBus: EventBus,
     runtime: RuntimePort,
     runMetadata?: PluginRunMetadata,
-  ): Promise<{ tools: Record<string, Tool>; pluginCtx: PluginContext }> {
+  ): Promise<{ tools: Record<string, Tool<any, any>>; pluginCtx: PluginContext }> {
     const tools = await this.buildToolCatalog(runMetadata);
     const toolNames = Object.keys(tools);
     const setupCtx = this.createPluginSetupContext(sessionId, toolNames, eventBus);
@@ -435,7 +435,7 @@ export class ToolManager {
 
 /** Iterates all executable tools and replaces each execute with the result of `wrapFn`. */
 function wrapAllTools(
-  tools: Record<string, Tool>,
+  tools: Record<string, Tool<any, any>>,
   wrapFn: (name: string, originalExecute: (...args: unknown[]) => unknown) => (...args: unknown[]) => unknown,
 ): void {
   for (const [name, toolDef] of Object.entries(tools)) {
@@ -453,7 +453,7 @@ function wrapAllTools(
 
 /** Wraps each tool's execute with approval gating. */
 function applyApprovalWrapping(
-  tools: Record<string, Tool>,
+  tools: Record<string, Tool<any, any>>,
   approval: ApprovalManager,
   runtime: RuntimePort,
 ): void {
@@ -476,7 +476,7 @@ function applyApprovalWrapping(
 
 /** Wraps each tool's execute with circuit breaker and/or caching. */
 function applyResilienceWrapping(
-  tools: Record<string, Tool>,
+  tools: Record<string, Tool<any, any>>,
   circuitBreaker?: CircuitBreaker,
   toolCache?: ToolCache,
 ): void {
@@ -501,7 +501,7 @@ function applyResilienceWrapping(
 
 /** Wraps MCP tools with allow/deny policy checks and audit logging. */
 function applyPolicyWrapping(
-  tools: Record<string, Tool>,
+  tools: Record<string, Tool<any, any>>,
   policyEngine: PolicyEnginePort,
   context: PolicyContext,
 ): void {
@@ -534,7 +534,7 @@ function applyPolicyWrapping(
 
 /** Wraps each tool's execute with plugin before/after/onError hooks. */
 function applyPluginWrapping(
-  tools: Record<string, Tool>,
+  tools: Record<string, Tool<any, any>>,
   pluginManager: PluginManager,
   pluginCtx: PluginContext,
 ): void {

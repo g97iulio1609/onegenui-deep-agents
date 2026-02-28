@@ -102,7 +102,7 @@ export interface Plugin {
   readonly name: string;
   readonly version?: string;
   readonly hooks?: PluginHooks;
-  readonly tools?: Record<string, Tool>;
+  readonly tools?: Record<string, Tool<any, any>>;
   setup?(ctx: PluginSetupContext): Promise<void> | void;
   dispose?(): Promise<void> | void;
 }

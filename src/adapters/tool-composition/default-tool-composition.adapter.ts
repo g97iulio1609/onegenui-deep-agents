@@ -26,13 +26,13 @@ interface FallbackEntry {
 }
 
 class DefaultToolPipeline implements ToolPipeline {
-  private readonly tools: Record<string, Tool>;
+  private readonly tools: Record<string, Tool<any, any>>;
   private readonly pipes: PipeEntry[] = [];
   private readonly fallbacks: FallbackEntry[] = [];
   private readonly middlewares: ToolMiddleware[] = [];
 
   constructor(
-    tools: Record<string, Tool>,
+    tools: Record<string, Tool<any, any>>,
     pipes: PipeEntry[] = [],
     fallbacks: FallbackEntry[] = [],
     middlewares: ToolMiddleware[] = [],
@@ -70,8 +70,8 @@ class DefaultToolPipeline implements ToolPipeline {
     );
   }
 
-  build(): Record<string, Tool> {
-    const result: Record<string, Tool> = { ...this.tools };
+  build(): Record<string, Tool<any, any>> {
+    const result: Record<string, Tool<any, any>> = { ...this.tools };
 
     // Apply fallbacks — wrap primary tool to fall back on error
     for (const { primary, fallback } of this.fallbacks) {
@@ -126,7 +126,7 @@ class DefaultToolPipeline implements ToolPipeline {
   private buildPipeTool(
     pipelineName: string,
     names: string[],
-    allTools: Record<string, Tool>,
+    allTools: Record<string, Tool<any, any>>,
   ): Tool {
     const firstTool = allTools[names[0]];
     const descriptions = names
@@ -214,7 +214,7 @@ class DefaultToolPipeline implements ToolPipeline {
 // ---------------------------------------------------------------------------
 
 export class DefaultToolCompositionAdapter implements ToolCompositionPort {
-  createPipeline(tools: Record<string, Tool>): ToolPipeline {
+  createPipeline(tools: Record<string, Tool<any, any>>): ToolPipeline {
     return new DefaultToolPipeline(tools);
   }
 }

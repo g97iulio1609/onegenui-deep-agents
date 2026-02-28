@@ -9,7 +9,7 @@ import type { Tool } from "../core/llm/index.js";
 export interface McpServerOptions {
   name?: string;
   version?: string;
-  tools: Record<string, Tool>;
+  tools: Record<string, Tool<any, any>>;
 }
 
 interface JsonRpcRequest {
@@ -29,7 +29,7 @@ interface JsonRpcResponse {
 export class McpServer {
   private readonly name: string;
   private readonly version: string;
-  private readonly tools: Record<string, Tool>;
+  private readonly tools: Record<string, Tool<any, any>>;
 
   constructor(options: McpServerOptions) {
     this.name = options.name ?? "gauss-agent";
