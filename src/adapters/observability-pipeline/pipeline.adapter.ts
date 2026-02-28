@@ -17,10 +17,20 @@ export class ObservabilityPipelineAdapter implements ObservabilityPipelinePort {
   private readonly exporters = new Map<string, TraceExporter>();
   private readonly metricsCollector = new MetricsCollector();
   private readonly pendingTraces: TraceData[] = [];
+  private readonly maxTraces: number;
+
+  constructor(options?: { maxTraces?: number }) {
+    this.maxTraces = options?.maxTraces ?? 10_000;
+  }
 
   createTrace(name: string, metadata?: Record<string, unknown>): Trace {
     const trace = new TraceImpl(name, metadata);
     this.traces.push(trace);
+    // Evict oldest completed traces when over limit
+    if (this.traces.length > this.maxTraces) {
+      const idx = this.traces.findIndex((t) => t.rootSpan.endTime !== undefined);
+      if (idx >= 0) this.traces.splice(idx, 1);
+    }
     return trace;
   }
 
@@ -38,9 +48,18 @@ export class ObservabilityPipelineAdapter implements ObservabilityPipelinePort {
   }
 
   async flush(): Promise<void> {
-    const completed = this.traces
-      .filter((t) => t.rootSpan.endTime !== undefined)
-      .map((t) => t.toJSON());
+    const completedIdxs: number[] = [];
+    const completed: TraceData[] = [];
+    for (let i = 0; i < this.traces.length; i++) {
+      if (this.traces[i].rootSpan.endTime !== undefined) {
+        completedIdxs.push(i);
+        completed.push(this.traces[i].toJSON());
+      }
+    }
+    // Remove flushed traces (reverse order to preserve indices)
+    for (let i = completedIdxs.length - 1; i >= 0; i--) {
+      this.traces.splice(completedIdxs[i], 1);
+    }
 
     const toExport = [...this.pendingTraces, ...completed];
     this.pendingTraces.length = 0;

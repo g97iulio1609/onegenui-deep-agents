@@ -21,11 +21,20 @@ const PERIOD_MS: Record<string, number> = {
 export class InMemoryCostTracker implements BudgetCostTrackerPort {
   private readonly events = new Map<string, CostEvent[]>();
   private readonly budgets = new Map<string, Budget>();
+  private readonly maxEventsPerKey: number;
+
+  constructor(options?: { maxEventsPerKey?: number }) {
+    this.maxEventsPerKey = options?.maxEventsPerKey ?? 100_000;
+  }
 
   record(event: CostEvent): void {
     const e: CostEvent = { ...event, timestamp: event.timestamp ?? Date.now() };
     const list = this.events.get(e.key) ?? [];
     list.push(e);
+    // Evict oldest events when over limit
+    if (list.length > this.maxEventsPerKey) {
+      list.splice(0, list.length - this.maxEventsPerKey);
+    }
     this.events.set(e.key, list);
   }
 

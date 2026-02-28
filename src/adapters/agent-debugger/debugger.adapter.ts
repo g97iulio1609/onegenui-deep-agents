@@ -13,11 +13,21 @@ let sessionCounter = 0;
 
 export class InMemoryAgentDebuggerAdapter implements AgentDebuggerPort {
   private readonly sessions = new Map<string, DebugSessionImpl>();
+  private readonly maxSessions: number;
+
+  constructor(options?: { maxSessions?: number }) {
+    this.maxSessions = options?.maxSessions ?? 1_000;
+  }
 
   startSession(agentId: string, prompt: string): DebugSession {
     const id = `debug-${++sessionCounter}-${Date.now()}`;
     const session = new DebugSessionImpl(id, agentId, prompt);
     this.sessions.set(id, session);
+    // Evict oldest session when over limit
+    if (this.sessions.size > this.maxSessions) {
+      const oldest = this.sessions.keys().next().value;
+      if (oldest) this.sessions.delete(oldest);
+    }
     return session;
   }
 
