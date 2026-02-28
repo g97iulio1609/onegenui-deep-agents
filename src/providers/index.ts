@@ -21,3 +21,15 @@ export { ollama, type OllamaProviderOptions } from "./ollama.js";
 export { openrouter, type OpenRouterProviderOptions } from "./openrouter.js";
 export { UniversalProvider, universalProvider } from "./universal.js";
 export type { ProviderConfig, UniversalProviderOptions } from "./universal.js";
+export {
+  gauss,
+  gaussAgentRun,
+  countTokens,
+  countTokensForModel,
+  cosineSimilarity,
+  isNativeAvailable,
+  nativeVersion,
+  setNapi,
+  type GaussProviderType,
+  type GaussProviderOptions,
+} from "./gauss.js";
