@@ -846,3 +846,70 @@ export {
   cosineSimilarity,
   consolidateMemories,
 } from "./adapters/agent-memory/index.js";
+
+// ─── Guardrails ─────────────────────────────────────────────────────────────
+
+export type {
+  GuardrailsPort,
+  Guardrail,
+  GuardrailStage,
+  GuardrailAction,
+  GuardrailContext,
+  GuardrailCheckResult,
+  GuardrailResult,
+} from "./ports/guardrails.port.js";
+export {
+  GuardrailsAdapter,
+  PiiDetector,
+  InjectionDetector,
+  ContentModerator,
+  TokenBudget,
+  SchemaValidator,
+} from "./adapters/guardrails/index.js";
+
+// ─── Observability Pipeline ─────────────────────────────────────────────────
+
+export type {
+  ObservabilityPipelinePort,
+  Trace,
+  Span,
+  SpanKind,
+  SpanEvent,
+  LogLevel,
+  LogEntry,
+  TraceData,
+  SpanData,
+  MetricsSummary,
+  TraceExporter,
+} from "./ports/observability-pipeline.port.js";
+export {
+  ObservabilityPipelineAdapter,
+  TraceImpl,
+  SpanImpl,
+  MetricsCollector,
+  ConsoleExporter,
+  JsonExporter,
+} from "./adapters/observability-pipeline/index.js";
+
+// ─── Rate Limiter ───────────────────────────────────────────────────────────
+
+export type {
+  RateLimiterPort,
+  RateLimiterConfig,
+  RateLimitAlgorithm,
+  RateLimitResult,
+  RateLimitState,
+} from "./ports/rate-limiter.port.js";
+export { InMemoryRateLimiter } from "./adapters/rate-limiter/index.js";
+
+// ─── Budget Cost Tracker ────────────────────────────────────────────────────
+
+export type {
+  BudgetCostTrackerPort,
+  CostEvent,
+  CostPeriod,
+  CostSummary,
+  Budget,
+  BudgetResult,
+} from "./ports/budget-cost-tracker.port.js";
+export { InMemoryCostTracker } from "./adapters/cost-tracker/cost-tracker.adapter.js";
