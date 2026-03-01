@@ -1,6 +1,7 @@
 /**
  * Memory SDK wrapper — in-memory conversation/session store backed by Rust core.
  */
+import { randomUUID } from "node:crypto";
 import {
   create_memory,
   memory_store,
@@ -51,7 +52,7 @@ export class Memory implements Disposable {
     const entry: MemoryEntry =
       typeof entryOrRole === "string"
         ? {
-            id: crypto.randomUUID(),
+            id: randomUUID(),
             content: content!,
             entryType: (entryOrRole as MemoryEntryType) || "conversation",
             timestamp: new Date().toISOString(),
