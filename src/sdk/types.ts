@@ -61,6 +61,9 @@ export interface AgentOptions {
   seed?: number;
   stopOnTool?: string;
   outputSchema?: Record<string, unknown>;
+  thinkingBudget?: number;
+  cacheControl?: boolean;
+  codeExecution?: CodeExecutionOptions;
 }
 
 /** A citation reference from document-aware responses. */
@@ -106,6 +109,36 @@ export interface ProviderCapabilities {
   grounding: boolean;
   codeExecution: boolean;
   webSearch: boolean;
+}
+
+// ─── Code Execution (PTC) ──────────────────────────────────────────
+
+/** Configuration for programmatic code execution runtimes. */
+export interface CodeExecutionOptions {
+  /** Enable Python runtime (default: true). */
+  python?: boolean;
+  /** Enable JavaScript/Node.js runtime (default: true). */
+  javascript?: boolean;
+  /** Enable Bash runtime (default: true). */
+  bash?: boolean;
+  /** Timeout in seconds per execution (default: 30). */
+  timeoutSecs?: number;
+  /** Working directory for subprocesses. */
+  workingDir?: string;
+  /** Sandbox mode: "default" | "strict" | "permissive" (default: "default"). */
+  sandbox?: "default" | "strict" | "permissive";
+  /** Use a single unified execute_code tool instead of per-language tools. */
+  unified?: boolean;
+}
+
+/** Result of a code execution. */
+export interface CodeExecutionResult {
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+  timedOut: boolean;
+  runtime: string;
+  success: boolean;
 }
 
 // ─── Memory ────────────────────────────────────────────────────────

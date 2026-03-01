@@ -27,6 +27,8 @@ export type {
   AgentResult,
   Citation,
   ProviderCapabilities,
+  CodeExecutionOptions,
+  CodeExecutionResult,
   ToolExecutor,
   StreamCallback,
   MemoryEntry,

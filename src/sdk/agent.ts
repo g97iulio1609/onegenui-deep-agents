@@ -26,6 +26,8 @@ import {
   generate,
   generate_with_tools,
   get_provider_capabilities,
+  execute_code,
+  available_runtimes,
   version,
 } from "gauss-napi";
 
@@ -44,6 +46,20 @@ import type {
 } from "./types.js";
 
 import { resolveApiKey, detectProvider } from "./types.js";
+
+/** Transform NAPI result to SDK AgentResult (normalizes citation field names). */
+function toSdkResult(raw: any): AgentResult {
+  return {
+    ...raw,
+    citations: raw.citations?.map((c: any) => ({
+      type: c.citationType ?? c.type,
+      citedText: c.citedText,
+      documentTitle: c.documentTitle,
+      start: c.start,
+      end: c.end,
+    })),
+  };
+}
 
 // ─── Config ────────────────────────────────────────────────────────
 
@@ -92,6 +108,9 @@ export interface AgentConfig {
 
   /** Enable prompt caching (Anthropic). Auto-annotates system messages and tools. */
   cacheControl?: boolean;
+
+  /** Enable code execution runtimes. Pass `true` for all defaults, or configure. */
+  codeExecution?: boolean | import("./types.js").CodeExecutionOptions;
 }
 
 // ─── Agent Class ───────────────────────────────────────────────────
@@ -122,6 +141,13 @@ export class Agent implements Disposable {
     });
 
     if (config.tools) this._tools = [...config.tools];
+
+    // Normalize codeExecution: true → default options object
+    const ceOpt = config.codeExecution;
+    const codeExecution = ceOpt === true
+      ? { python: true, javascript: true, bash: true }
+      : ceOpt || undefined;
+
     this._options = {
       instructions: this._instructions || undefined,
       temperature: config.temperature,
@@ -133,6 +159,7 @@ export class Agent implements Disposable {
       outputSchema: config.outputSchema,
       thinkingBudget: config.thinkingBudget,
       cacheControl: config.cacheControl,
+      codeExecution,
     };
   }
 
@@ -191,13 +218,13 @@ export class Agent implements Disposable {
     const messages = typeof input === "string"
       ? [{ role: "user" as const, content: input }]
       : input;
-    return agent_run(
+    return toSdkResult(await agent_run(
       this._name,
       this.providerHandle,
       this._tools,
       messages,
       this._options
-    );
+    ));
   }
 
   /**
@@ -214,14 +241,14 @@ export class Agent implements Disposable {
     const messages = typeof input === "string"
       ? [{ role: "user" as const, content: input }]
       : input;
-    return agent_run_with_tool_executor(
+    return toSdkResult(await agent_run_with_tool_executor(
       this._name,
       this.providerHandle,
       this._tools,
       messages,
       this._options,
       toolExecutor
-    );
+    ));
   }
 
   /**
@@ -240,7 +267,7 @@ export class Agent implements Disposable {
     const messages = typeof input === "string"
       ? [{ role: "user" as const, content: input }]
       : input;
-    return agent_stream_with_tool_executor(
+    return toSdkResult(await agent_stream_with_tool_executor(
       this._name,
       this.providerHandle,
       this._tools,
@@ -248,7 +275,7 @@ export class Agent implements Disposable {
       this._options,
       onEvent,
       toolExecutor
-    );
+    ));
   }
 
   /**
@@ -348,6 +375,27 @@ export class Agent implements Disposable {
   static version(): string {
     return version();
   }
+
+  /**
+   * Execute code in a sandboxed runtime without creating a full Agent.
+   *
+   * ```ts
+   * const result = await Agent.executeCode("python", "print(2 + 2)");
+   * console.log(result.stdout); // "4\n"
+   * ```
+   */
+  static async executeCode(
+    language: "python" | "javascript" | "bash",
+    code: string,
+    options?: { timeoutSecs?: number; workingDir?: string; sandbox?: "default" | "strict" | "permissive" },
+  ): Promise<import("./types.js").CodeExecutionResult> {
+    return execute_code(language, code, options?.timeoutSecs, options?.workingDir, options?.sandbox);
+  }
+
+  /** Check which code runtimes are available on this system. */
+  static async availableRuntimes(): Promise<string[]> {
+    return available_runtimes();
+  }
 }
 
 // ─── Quick-start factory ───────────────────────────────────────────
@@ -438,7 +486,7 @@ export class AgentStream implements AsyncIterable<StreamEvent> {
       onEvent,
       this.toolExecutor
     ).then((r) => {
-      this._result = r;
+      this._result = toSdkResult(r);
       done = true;
       resolve?.();
     });
