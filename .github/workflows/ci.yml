@@ -16,16 +16,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: gauss-ts
+
+      - uses: actions/checkout@v4
+        with:
+          repository: giulio-leone/gauss-core
+          path: gauss-core
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: gauss-ts/package-lock.json
 
       - run: npm ci
+        working-directory: gauss-ts
 
       - name: TypeScript typecheck
         run: npx tsc --noEmit
+        working-directory: gauss-ts
 
   unit-test:
     name: Unit Tests (Node ${{ matrix.node-version }})
@@ -36,16 +46,26 @@ jobs:
         node-version: [18, 20, 22]
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: gauss-ts
+
+      - uses: actions/checkout@v4
+        with:
+          repository: giulio-leone/gauss-core
+          path: gauss-core
 
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
+          cache-dependency-path: gauss-ts/package-lock.json
 
       - run: npm ci
+        working-directory: gauss-ts
 
       - name: Run unit tests
         run: npx vitest run src/sdk/__tests__/ --reporter=verbose
+        working-directory: gauss-ts
 
   e2e-test:
     name: E2E Tests (NAPI Integration)
@@ -56,16 +76,38 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: gauss-ts
+
+      - uses: actions/checkout@v4
+        with:
+          repository: giulio-leone/gauss-core
+          path: gauss-core
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: gauss-core
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: gauss-ts/package-lock.json
+
+      - name: Build NAPI binary
+        working-directory: gauss-core
+        run: |
+          npm install
+          npx napi build --platform --release -p gauss-napi
 
       - run: npm ci
+        working-directory: gauss-ts
 
       - name: Run E2E integration tests
         run: npx vitest run e2e/ --reporter=verbose
+        working-directory: gauss-ts
 
   coverage:
     name: Coverage
@@ -73,23 +115,33 @@ jobs:
     needs: [unit-test]
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: gauss-ts
+
+      - uses: actions/checkout@v4
+        with:
+          repository: giulio-leone/gauss-core
+          path: gauss-core
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: gauss-ts/package-lock.json
 
       - run: npm ci
+        working-directory: gauss-ts
 
       - name: Run tests with coverage
-        run: npx vitest run --coverage --reporter=verbose
+        run: npx vitest run src/sdk/__tests__/ --coverage --reporter=verbose
+        working-directory: gauss-ts
 
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: coverage/
+          path: gauss-ts/coverage/
           retention-days: 14
 
   build:
@@ -98,22 +150,32 @@ jobs:
     needs: [lint-and-typecheck]
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: gauss-ts
+
+      - uses: actions/checkout@v4
+        with:
+          repository: giulio-leone/gauss-core
+          path: gauss-core
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: gauss-ts/package-lock.json
 
       - run: npm ci
+        working-directory: gauss-ts
 
       - name: Build with tsup
         run: npx tsup
+        working-directory: gauss-ts
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dist
-          path: dist/
+          path: gauss-ts/dist/
           retention-days: 14
 
   security:
