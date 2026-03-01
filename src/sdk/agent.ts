@@ -110,6 +110,9 @@ export interface AgentConfig {
   /** Extended thinking budget (Anthropic). Number of tokens for internal reasoning. */
   thinkingBudget?: number;
 
+  /** Reasoning effort for OpenAI o-series models. Controls how much reasoning to use. */
+  reasoningEffort?: "low" | "medium" | "high";
+
   /** Enable prompt caching (Anthropic). Auto-annotates system messages and tools. */
   cacheControl?: boolean;
 
@@ -171,6 +174,7 @@ export class Agent implements Disposable {
       stopOnTool: config.stopOnTool,
       outputSchema: config.outputSchema,
       thinkingBudget: config.thinkingBudget,
+      reasoningEffort: config.reasoningEffort,
       cacheControl: config.cacheControl,
       codeExecution,
       grounding: config.grounding,

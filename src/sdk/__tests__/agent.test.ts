@@ -323,6 +323,19 @@ describe("GroundingMetadata type", () => {
   });
 });
 
+describe("Agent reasoning options", () => {
+  it("reasoningEffort is set in options", () => {
+    const agent = new Agent({
+      name: "test-reasoning",
+      model: "o4-mini",
+      reasoningEffort: "high",
+    });
+    // @ts-ignore - accessing private for test
+    expect(agent._options.reasoningEffort).toBe("high");
+    agent.destroy();
+  });
+});
+
 describe("ImageGeneration types", () => {
   it("ImageGenerationConfig has correct structure", () => {
     const config: import("../types.js").ImageGenerationConfig = {

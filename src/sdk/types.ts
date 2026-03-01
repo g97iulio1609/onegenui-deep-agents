@@ -62,6 +62,8 @@ export interface AgentOptions {
   stopOnTool?: string;
   outputSchema?: Record<string, unknown>;
   thinkingBudget?: number;
+  /** Reasoning effort for OpenAI o-series models: "low", "medium", or "high". */
+  reasoningEffort?: "low" | "medium" | "high";
   cacheControl?: boolean;
   codeExecution?: CodeExecutionOptions;
   /** Enable Google Search grounding (Gemini only). */

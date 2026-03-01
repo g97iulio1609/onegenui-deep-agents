@@ -33,6 +33,8 @@ export interface AgentOptions {
   stopOnTool?: string
   outputSchema?: any
   thinkingBudget?: number
+  /** Reasoning effort for OpenAI o-series models: "low", "medium", or "high". */
+  reasoningEffort?: string
   cacheControl?: boolean
   codeExecution?: {
     python?: boolean
@@ -114,6 +116,7 @@ export function generate(
   temperature?: number | undefined | null,
   maxTokens?: number | undefined | null,
   thinkingBudget?: number | undefined | null,
+  reasoningEffort?: string | undefined | null,
   cacheControl?: boolean | undefined | null
 ): Promise<any>
 
@@ -122,7 +125,9 @@ export function generate_with_tools(
   messages: JsMessage[],
   tools: ToolDef[],
   temperature?: number | undefined | null,
-  maxTokens?: number | undefined | null
+  maxTokens?: number | undefined | null,
+  thinkingBudget?: number | undefined | null,
+  reasoningEffort?: string | undefined | null
 ): Promise<any>
 
 // ============ Provider Capabilities ============
