@@ -159,3 +159,26 @@ export {
   compose,
 } from "./pipeline.js";
 export type { PipeStep } from "./pipeline.js";
+export {
+  A2aClient,
+  textMessage,
+  userMessage,
+  agentMessage,
+  extractText,
+  taskText,
+} from "./a2a.js";
+export type {
+  A2aClientOptions,
+  A2aMessage,
+  A2aMessageRole,
+  AgentCard,
+  AgentCapabilities,
+  AgentSkill,
+  Artifact,
+  MessageSendConfig,
+  Part,
+  SendMessageResult,
+  Task,
+  TaskState,
+  TaskStatus,
+} from "./a2a.js";
