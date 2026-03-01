@@ -1,0 +1,108 @@
+/**
+ * Gauss SDK — Thin TypeScript wrappers over Rust core (via NAPI).
+ *
+ * Quick start:
+ *   import { gauss } from "gauss-ai";
+ *   const answer = await gauss("What is the meaning of life?");
+ *
+ * Full control:
+ *   import { Agent, Graph, Memory, Network } from "gauss-ai";
+ *
+ * All orchestration (agent loop, tool execution, middleware, plugins,
+ * graph/workflow execution) is handled by the Rust core.
+ */
+
+// ─── Quick Start ───────────────────────────────────────────────────
+export { gauss } from "./agent.js";
+
+// ─── Types ─────────────────────────────────────────────────────────
+export type {
+  ProviderOptions,
+  ProviderType,
+  ToolDef,
+  MessageRole,
+  Message,
+  JsMessage,
+  AgentOptions,
+  AgentResult,
+  ToolExecutor,
+  StreamCallback,
+  MemoryEntry,
+  RecallOptions,
+  MemoryStats,
+  VectorChunk,
+  SearchResult,
+  PiiAction,
+  CoercionStrategy,
+  EvalScorerType,
+  Handle,
+  Disposable,
+} from "./types.js";
+
+export { resolveApiKey, detectProvider } from "./types.js";
+
+// ─── Core Agent ────────────────────────────────────────────────────
+export { Agent } from "./agent.js";
+export type { AgentConfig } from "./agent.js";
+
+// ─── Memory ────────────────────────────────────────────────────────
+export { Memory } from "./memory.js";
+
+// ─── RAG / Vector Store ────────────────────────────────────────────
+export { VectorStore } from "./vector-store.js";
+
+// ─── Graph & Workflow ──────────────────────────────────────────────
+export { Graph } from "./graph.js";
+export type { GraphNodeConfig } from "./graph.js";
+export { Workflow } from "./workflow.js";
+export type { WorkflowStepConfig } from "./workflow.js";
+
+// ─── Network (Multi-Agent) ─────────────────────────────────────────
+export { Network } from "./network.js";
+
+// ─── Middleware ────────────────────────────────────────────────────
+export { MiddlewareChain } from "./middleware.js";
+
+// ─── Plugin System ─────────────────────────────────────────────────
+export { PluginRegistry } from "./plugin.js";
+
+// ─── MCP ───────────────────────────────────────────────────────────
+export { McpServer } from "./mcp.js";
+
+// ─── Guardrails ────────────────────────────────────────────────────
+export { GuardrailChain } from "./guardrail.js";
+
+// ─── HITL ──────────────────────────────────────────────────────────
+export { ApprovalManager } from "./approval.js";
+export { CheckpointStore } from "./checkpoint.js";
+
+// ─── Eval ──────────────────────────────────────────────────────────
+export { EvalRunner } from "./eval.js";
+
+// ─── Telemetry ─────────────────────────────────────────────────────
+export { Telemetry } from "./telemetry.js";
+
+// ─── Resilience ────────────────────────────────────────────────────
+export {
+  createFallbackProvider,
+  createCircuitBreaker,
+  createResilientProvider,
+  createResilientAgent,
+} from "./resilience.js";
+
+// ─── Tokens ────────────────────────────────────────────────────────
+export {
+  countTokens,
+  countTokensForModel,
+  countMessageTokens,
+  getContextWindowSize,
+} from "./tokens.js";
+
+// ─── Config ────────────────────────────────────────────────────────
+export { parseAgentConfig, resolveEnv } from "./config.js";
+
+// ─── Tool Validator ────────────────────────────────────────────────
+export { ToolValidator } from "./tool-validator.js";
+
+// ─── Stream Utils ──────────────────────────────────────────────────
+export { parsePartialJson } from "./stream.js";

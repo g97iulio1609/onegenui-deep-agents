@@ -1,7 +1,7 @@
 {
   "name": "gauss-ai",
   "version": "1.0.0",
-  "description": "Gauss — The most complete AI agent framework for TypeScript. 57+ features including multi-agent teams, RAG, workflow DSL, voice STT/TTS, multimodal vision, MCP/A2A protocols, 40+ LLM providers, hexagonal architecture, and visual agent builder.",
+  "description": "Gauss \u2014 The most complete AI agent framework for TypeScript. 57+ features including multi-agent teams, RAG, workflow DSL, voice STT/TTS, multimodal vision, MCP/A2A protocols, 40+ LLM providers, hexagonal architecture, and visual agent builder.",
   "license": "MIT",
   "type": "module",
   "keywords": [
@@ -47,89 +47,6 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
-    },
-    "./node": {
-      "types": "./dist/node/index.d.ts",
-      "import": "./dist/node/index.js",
-      "require": "./dist/node/index.cjs"
-    },
-    "./server": {
-      "types": "./dist/server/index.d.ts",
-      "import": "./dist/server/index.js"
-    },
-    "./rest": {
-      "types": "./dist/rest/index.d.ts",
-      "import": "./dist/rest/index.js",
-      "require": "./dist/rest/index.cjs"
-    },
-    "./scraping": {
-      "types": "./dist/scraping/index.d.ts",
-      "import": "./dist/scraping/index.js",
-      "require": "./dist/scraping/index.cjs"
-    },
-    "./workflow": {
-      "types": "./dist/workflow/index.d.ts",
-      "import": "./dist/workflow/index.js",
-      "require": "./dist/workflow/index.cjs"
-    },
-    "./a2a": {
-      "types": "./dist/a2a/index.d.ts",
-      "import": "./dist/a2a/index.js",
-      "require": "./dist/a2a/index.cjs"
-    },
-    "./testing": {
-      "types": "./dist/testing/index.d.ts",
-      "import": "./dist/testing/index.js",
-      "require": "./dist/testing/index.cjs"
-    },
-    "./plugins": {
-      "types": "./dist/plugins/index.d.ts",
-      "import": "./dist/plugins/index.js",
-      "require": "./dist/plugins/index.cjs"
-    },
-    "./runtime/node": {
-      "types": "./dist/runtime-node.d.ts",
-      "import": "./dist/runtime-node.js"
-    },
-    "./providers": {
-      "types": "./dist/providers/index.d.ts",
-      "import": "./dist/providers/index.js",
-      "require": "./dist/providers/index.cjs"
-    },
-    "./graph": {
-      "types": "./dist/graph/index.d.ts",
-      "import": "./dist/graph/index.js",
-      "require": "./dist/graph/index.cjs"
-    },
-    "./memory": {
-      "types": "./dist/memory/index.d.ts",
-      "import": "./dist/memory/index.js",
-      "require": "./dist/memory/index.cjs"
-    },
-    "./rag": {
-      "types": "./dist/rag/index.d.ts",
-      "import": "./dist/rag/index.js",
-      "require": "./dist/rag/index.cjs"
-    },
-    "./tools": {
-      "types": "./dist/tools/index.d.ts",
-      "import": "./dist/tools/index.js",
-      "require": "./dist/tools/index.cjs"
-    },
-    "./evals": {
-      "types": "./dist/evals/entry.d.ts",
-      "import": "./dist/evals/entry.js",
-      "require": "./dist/evals/entry.cjs"
-    },
-    "./adapters": {
-      "types": "./dist/adapters/index.d.ts",
-      "import": "./dist/adapters/index.js",
-      "require": "./dist/adapters/index.cjs"
-    },
-    "./schemas": {
-      "types": "./dist/schemas/index.d.ts",
-      "import": "./dist/schemas/index.js",
-      "require": "./dist/schemas/index.cjs"
     }
   },
   "files": [
@@ -138,9 +55,6 @@
     "LICENSE",
     "CHANGELOG.md"
   ],
-  "bin": {
-    "gauss": "./dist/cli/index.js"
-  },
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -158,67 +72,7 @@
     "docs": "typedoc --out docs src/index.ts --skipErrorChecking"
   },
   "dependencies": {
-    "zod": "^4.3.6"
-  },
-  "peerDependencies": {
-    "@ai-sdk/anthropic": "^3.0.49",
-    "@ai-sdk/google": "^3.0.33",
-    "@ai-sdk/groq": "^3.0.25",
-    "@ai-sdk/mcp": "^1.0.21",
-    "@ai-sdk/mistral": "^3.0.20",
-    "@ai-sdk/openai": "^3.0.36",
-    "@aws-sdk/client-s3": ">=3.0.0",
-    "@aws-sdk/s3-request-presigner": ">=3.0.0",
-    "@openrouter/ai-sdk-provider": "^2.2.3",
-    "@supabase/supabase-js": "^2.95.3",
-    "bullmq": ">=5.0.0",
-    "ioredis": ">=5.0.0",
-    "pg": ">=8.0.0",
-    "tiktoken": "^1.0.22"
-  },
-  "peerDependenciesMeta": {
-    "@ai-sdk/openai": {
-      "optional": true
-    },
-    "@ai-sdk/anthropic": {
-      "optional": true
-    },
-    "@ai-sdk/google": {
-      "optional": true
-    },
-    "@ai-sdk/groq": {
-      "optional": true
-    },
-    "@ai-sdk/mistral": {
-      "optional": true
-    },
-    "@ai-sdk/mcp": {
-      "optional": true
-    },
-    "@openrouter/ai-sdk-provider": {
-      "optional": true
-    },
-    "@supabase/supabase-js": {
-      "optional": true
-    },
-    "tiktoken": {
-      "optional": true
-    },
-    "pg": {
-      "optional": true
-    },
-    "ioredis": {
-      "optional": true
-    },
-    "bullmq": {
-      "optional": true
-    },
-    "@aws-sdk/client-s3": {
-      "optional": true
-    },
-    "@aws-sdk/s3-request-presigner": {
-      "optional": true
-    }
+    "gauss-napi": "file:../gauss-core/crates/gauss-napi"
   },
   "devDependencies": {
     "@ai-sdk/anthropic": "^3.0.50",
