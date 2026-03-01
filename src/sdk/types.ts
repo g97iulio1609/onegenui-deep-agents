@@ -89,6 +89,25 @@ export interface AgentResult {
   citations?: Citation[];
 }
 
+// ─── Provider Capabilities ──────────────────────────────────────────
+
+/** Feature capabilities of a provider/model combination. */
+export interface ProviderCapabilities {
+  streaming: boolean;
+  toolUse: boolean;
+  vision: boolean;
+  audio: boolean;
+  extendedThinking: boolean;
+  citations: boolean;
+  cacheControl: boolean;
+  structuredOutput: boolean;
+  reasoningEffort: boolean;
+  imageGeneration: boolean;
+  grounding: boolean;
+  codeExecution: boolean;
+  webSearch: boolean;
+}
+
 // ─── Memory ────────────────────────────────────────────────────────
 
 export type MemoryEntryType = "conversation" | "fact" | "preference" | "task" | "summary";

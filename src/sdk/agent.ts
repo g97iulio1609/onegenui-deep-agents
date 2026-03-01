@@ -25,6 +25,7 @@ import {
   agent_stream_with_tool_executor,
   generate,
   generate_with_tools,
+  get_provider_capabilities,
   version,
 } from "gauss-napi";
 
@@ -39,6 +40,7 @@ import type {
   StreamCallback,
   Handle,
   Disposable,
+  Citation,
 } from "./types.js";
 
 import { resolveApiKey, detectProvider } from "./types.js";
@@ -143,6 +145,11 @@ export class Agent implements Disposable {
 
   /** Native handle — used internally by Network, Graph, etc. */
   get handle(): Handle { return this.providerHandle; }
+
+  /** Query what features this provider/model supports. */
+  get capabilities(): import("./types.js").ProviderCapabilities {
+    return get_provider_capabilities(this.providerHandle);
+  }
 
   // ─── Fluent Configuration ───────────────────────────────────────
 
