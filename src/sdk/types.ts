@@ -69,6 +69,8 @@ export interface AgentResult {
   inputTokens: number;
   outputTokens: number;
   structuredOutput?: Record<string, unknown>;
+  /** Extended thinking output (Anthropic). */
+  thinking?: string;
 }
 
 // ─── Memory ────────────────────────────────────────────────────────

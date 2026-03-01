@@ -84,6 +84,9 @@ export interface AgentConfig {
 
   /** JSON schema for structured output. */
   outputSchema?: Record<string, unknown>;
+
+  /** Extended thinking budget (Anthropic). Number of tokens for internal reasoning. */
+  thinkingBudget?: number;
 }
 
 // ─── Agent Class ───────────────────────────────────────────────────
@@ -123,6 +126,7 @@ export class Agent implements Disposable {
       seed: config.seed,
       stopOnTool: config.stopOnTool,
       outputSchema: config.outputSchema,
+      thinkingBudget: config.thinkingBudget,
     };
   }
 
