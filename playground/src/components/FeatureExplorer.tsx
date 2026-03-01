@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FEATURES, FEATURE_CATEGORIES, type Feature } from '../data/features';
+import { CodeBlock } from './CodeBlock';
 
 type CategoryFilter = 'all' | Feature['category'];
 
@@ -72,7 +73,7 @@ export function FeatureExplorer() {
           <p className="pg-fe-detail-desc">{selected.description}</p>
           <div className="pg-code-block">
             <div className="pg-code-lang">typescript</div>
-            <pre><code>{selected.code}</code></pre>
+            <CodeBlock code={selected.code} />
           </div>
         </div>
       )}

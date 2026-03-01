@@ -1,4 +1,5 @@
 import type { ToolCall, ToolInfo } from '../types';
+import { CodeBlock } from './CodeBlock';
 
 interface ToolInspectorProps {
   tools: ToolInfo[];
@@ -42,31 +43,17 @@ export function ToolInspector({ tools, selectedTool, lastCall, onSelectTool }: T
           {selected.schema && (
             <div className="pg-tool-schema">
               <strong>Schema:</strong>
-              <pre><code className="pg-json">{syntaxHighlight(selected.schema)}</code></pre>
+              <CodeBlock code={JSON.stringify(selected.schema, null, 2)} language="json" />
             </div>
           )}
           {lastCall && (
             <div className="pg-tool-last-call">
               <strong>Last Call:</strong>
-              <pre><code className="pg-json">{syntaxHighlight({ args: lastCall.args, result: lastCall.result, durationMs: lastCall.durationMs })}</code></pre>
+              <CodeBlock code={JSON.stringify({ args: lastCall.args, result: lastCall.result, durationMs: lastCall.durationMs }, null, 2)} language="json" />
             </div>
           )}
         </div>
       )}
     </div>
   );
-}
-
-/** Simple JSON syntax highlighting via HTML spans with class names. */
-function syntaxHighlight(obj: unknown): string {
-  const json = JSON.stringify(obj, null, 2);
-  return json
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"([^"]+)"(?=\s*:)/g, '<span class="pg-json-key">"$1"</span>')
-    .replace(/:\s*"([^"]*)"/g, ': <span class="pg-json-string">"$1"</span>')
-    .replace(/:\s*(\d+\.?\d*)/g, ': <span class="pg-json-number">$1</span>')
-    .replace(/:\s*(true|false)/g, ': <span class="pg-json-bool">$1</span>')
-    .replace(/:\s*(null)/g, ': <span class="pg-json-null">$1</span>');
 }

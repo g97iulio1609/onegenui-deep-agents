@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Header } from './components/Header';
+import { SettingsModal } from './components/SettingsModal';
 import { AgentList } from './components/AgentList';
 import { ChatPanel } from './components/ChatPanel';
 import { ToolInspector } from './components/ToolInspector';
@@ -25,6 +26,7 @@ export function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [mainView, setMainView] = useState<MainView>('features');
   const [activeFeatureId, setActiveFeatureId] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const { agents, messages, timeline, isStreaming, lastToolCall, sendMessage } = useAgent();
   const { connected } = useWebSocket({ url: `ws://${window.location.host}/ws`, autoConnect: true });
@@ -61,7 +63,8 @@ export function App() {
 
   return (
     <div className="pg-app">
-      <Header connected={connected} agentCount={agents.length} />
+      <Header connected={connected} agentCount={agents.length} onSettingsClick={() => setSettingsOpen(true)} />
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
       <div className="pg-body">
         <aside className="pg-sidebar">
