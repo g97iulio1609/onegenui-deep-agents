@@ -276,7 +276,7 @@ export class Agent implements Disposable {
   async stream(
     input: string | Message[],
     onEvent: StreamCallback,
-    toolExecutor: ToolExecutor
+    toolExecutor?: ToolExecutor
   ): Promise<AgentResult> {
     this.assertNotDisposed();
     const messages = typeof input === "string"
@@ -289,7 +289,7 @@ export class Agent implements Disposable {
       messages,
       this._options,
       onEvent,
-      toolExecutor
+      toolExecutor ?? NOOP_TOOL_EXECUTOR
     ));
   }
 
@@ -303,7 +303,7 @@ export class Agent implements Disposable {
    */
   streamIter(
     input: string | Message[],
-    toolExecutor: ToolExecutor
+    toolExecutor?: ToolExecutor
   ): AgentStream {
     this.assertNotDisposed();
     const messages = typeof input === "string"
@@ -315,7 +315,7 @@ export class Agent implements Disposable {
       this._tools,
       messages,
       this._options,
-      toolExecutor
+      toolExecutor ?? NOOP_TOOL_EXECUTOR
     );
   }
 
@@ -454,7 +454,8 @@ export class Agent implements Disposable {
   }
 }
 
-// ─── Quick-start factory ───────────────────────────────────────────
+/** No-op tool executor — used when no tools are registered. */
+const NOOP_TOOL_EXECUTOR: ToolExecutor = async () => "{}";
 
 /**
  * One-liner agent call.
