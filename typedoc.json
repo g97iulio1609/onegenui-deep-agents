@@ -1,0 +1,20 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/sdk/index.ts"],
+  "out": "docs/api",
+  "tsconfig": "tsconfig.json",
+  "name": "Gauss AI — TypeScript SDK",
+  "readme": "README.md",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "excludeExternals": true,
+  "exclude": ["**/__tests__/**", "**/*.test.ts"],
+  "githubPages": false,
+  "categorizeByGroup": true,
+  "searchInComments": true,
+  "navigationLinks": {
+    "GitHub": "https://github.com/giulio-leone/gauss",
+    "npm": "https://www.npmjs.com/package/gauss-ai"
+  }
+}
