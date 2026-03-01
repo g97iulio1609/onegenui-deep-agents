@@ -67,8 +67,8 @@ describe.skipIf(!hasOpenAI)("OpenAI Provider", () => {
       const latency = Date.now() - start;
 
       expect(result).toBeDefined();
-      expect(result.output).toBeDefined();
-      expect(result.output).toContain("4");
+      expect(result.text).toBeDefined();
+      expect(result.text).toContain("4");
 
       record({
         provider: "openai",
@@ -76,12 +76,12 @@ describe.skipIf(!hasOpenAI)("OpenAI Provider", () => {
         test: "simple-completion",
         success: true,
         latencyMs: latency,
-        output: result.output,
+        output: result.text,
       });
     } finally {
       agent.destroy();
     }
-  }, 30000);
+  }, 60000);
 
   it("system instructions are followed", async () => {
     const start = Date.now();
@@ -97,7 +97,7 @@ describe.skipIf(!hasOpenAI)("OpenAI Provider", () => {
       const result = await agent.run("Say hello");
       const latency = Date.now() - start;
 
-      expect(result.output.toLowerCase()).toContain("arrr");
+      expect(result.text.toLowerCase()).toContain("arrr");
 
       record({
         provider: "openai",
@@ -105,7 +105,7 @@ describe.skipIf(!hasOpenAI)("OpenAI Provider", () => {
         test: "system-instructions",
         success: true,
         latencyMs: latency,
-        output: result.output,
+        output: result.text,
       });
     } finally {
       agent.destroy();
@@ -136,7 +136,7 @@ describe.skipIf(!hasOpenAI)("OpenAI Provider", () => {
     });
 
     try {
-      const result = await agent.runWithToolExecutor(
+      const result = await agent.runWithTools(
         "What is 15 * 23?",
         async (toolName, args) => {
           expect(toolName).toBe("calculate");
@@ -147,7 +147,7 @@ describe.skipIf(!hasOpenAI)("OpenAI Provider", () => {
       const latency = Date.now() - start;
 
       expect(result).toBeDefined();
-      expect(result.output).toContain("345");
+      expect(result.text).toContain("345");
 
       record({
         provider: "openai",
@@ -155,7 +155,7 @@ describe.skipIf(!hasOpenAI)("OpenAI Provider", () => {
         test: "tool-calling",
         success: true,
         latencyMs: latency,
-        output: result.output,
+        output: result.text,
       });
     } finally {
       agent.destroy();
@@ -210,13 +210,13 @@ describe.skipIf(!hasOpenAI)("OpenAI Provider", () => {
 
     try {
       const r1 = await agent.run("My name is Alice.");
-      expect(r1.output).toBeDefined();
+      expect(r1.text).toBeDefined();
 
       const r2 = await agent.run([
-        ...r1.messages,
+        ...[{ role: "user" as const, content: "My name is Alice." }, { role: "assistant" as const, content: r1.text }],
         { role: "user" as const, content: "What is my name?" },
       ]);
-      expect(r2.output.toLowerCase()).toContain("alice");
+      expect(r2.text.toLowerCase()).toContain("alice");
       const latency = Date.now() - start;
 
       record({
@@ -225,7 +225,7 @@ describe.skipIf(!hasOpenAI)("OpenAI Provider", () => {
         test: "multi-turn",
         success: true,
         latencyMs: latency,
-        output: r2.output,
+        output: r2.text,
       });
     } finally {
       agent.destroy();
@@ -291,7 +291,7 @@ describe.skipIf(!hasOpenRouter)("OpenRouter Provider", () => {
       const result = await agent.run("What is the capital of France? One word.");
       const latency = Date.now() - start;
 
-      expect(result.output.toLowerCase()).toContain("paris");
+      expect(result.text.toLowerCase()).toContain("paris");
 
       record({
         provider: "openrouter",
@@ -299,7 +299,7 @@ describe.skipIf(!hasOpenRouter)("OpenRouter Provider", () => {
         test: "simple-completion",
         success: true,
         latencyMs: latency,
-        output: result.output,
+        output: result.text,
       });
     } finally {
       agent.destroy();
@@ -323,7 +323,7 @@ describe.skipIf(!hasOpenRouter)("OpenRouter Provider", () => {
       const result = await agent.run("What is 10 + 10? Just the number.");
       const latency = Date.now() - start;
 
-      expect(result.output).toContain("20");
+      expect(result.text).toContain("20");
 
       record({
         provider: "openrouter",
@@ -331,7 +331,7 @@ describe.skipIf(!hasOpenRouter)("OpenRouter Provider", () => {
         test: "claude-completion",
         success: true,
         latencyMs: latency,
-        output: result.output,
+        output: result.text,
       });
     } finally {
       agent.destroy();
@@ -365,7 +365,7 @@ describe.skipIf(!hasOpenRouter)("OpenRouter Provider", () => {
     });
 
     try {
-      const result = await agent.runWithToolExecutor(
+      const result = await agent.runWithTools(
         "What's the weather in Rome?",
         async (toolName, args) => {
           expect(toolName).toBe("get_weather");
@@ -382,7 +382,7 @@ describe.skipIf(!hasOpenRouter)("OpenRouter Provider", () => {
         test: "tool-calling",
         success: true,
         latencyMs: latency,
-        output: result.output,
+        output: result.text,
       });
     } finally {
       agent.destroy();
