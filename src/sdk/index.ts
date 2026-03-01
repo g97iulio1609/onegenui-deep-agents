@@ -139,6 +139,16 @@ export {
 } from "./template.js";
 export type { PromptTemplate } from "./template.js";
 
+// ─── AGENTS.MD & SKILL.MD Parsers ────────────────────────────────
+export { AgentSpec, SkillSpec, discoverAgents } from "./spec.js";
+export type {
+  AgentSpecData,
+  AgentToolSpec,
+  SkillSpecData,
+  SkillStep,
+  SkillParam,
+} from "./spec.js";
+
 // ─── Pipeline & Async Helpers ─────────────────────────────────────
 export {
   pipe,
