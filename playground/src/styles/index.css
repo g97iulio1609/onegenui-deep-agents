@@ -1189,11 +1189,36 @@ body {
   margin: 0 0 8px;
 }
 
+.pg-fe-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .pg-fe-card-category {
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.pg-fe-card-lang {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #3178c6;
+  background: rgba(49, 120, 198, 0.12);
+  border: 1px solid rgba(49, 120, 198, 0.25);
+  border-radius: 4px;
+  padding: 1px 5px;
+  line-height: 1.4;
+}
+
+/* ─── CodeBlock Copy Button ──────────────────────────────────────────────── */
+
+.pg-codeblock-wrapper:hover .pg-codeblock-copy {
+  opacity: 1 !important;
 }
 
 /* ─── Feature Detail Panel ───────────────────────────────────────────────── */

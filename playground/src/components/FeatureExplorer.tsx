@@ -52,12 +52,15 @@ export function FeatureExplorer() {
                 <span className="pg-fe-card-status">✅</span>
               </div>
               <p className="pg-fe-card-desc">{feature.description}</p>
-              <span
-                className="pg-fe-card-category"
-                style={{ color: FEATURE_CATEGORIES[feature.category].color }}
-              >
-                {FEATURE_CATEGORIES[feature.category].label}
-              </span>
+              <div className="pg-fe-card-meta">
+                <span
+                  className="pg-fe-card-category"
+                  style={{ color: FEATURE_CATEGORIES[feature.category].color }}
+                >
+                  {FEATURE_CATEGORIES[feature.category].label}
+                </span>
+                <span className="pg-fe-card-lang">TS</span>
+              </div>
             </div>
           </button>
         ))}
