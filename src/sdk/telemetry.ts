@@ -24,8 +24,26 @@ export class Telemetry implements Disposable {
     return this._handle;
   }
 
-  recordSpan(span: Record<string, unknown>): void {
+  /** Record a span. Pass a SpanRecord object or use the convenience overload. */
+  recordSpan(span: Record<string, unknown>): void;
+  recordSpan(name: string, durationMs: number, attributes?: Record<string, unknown>): void;
+  recordSpan(
+    nameOrSpan: string | Record<string, unknown>,
+    durationMs?: number,
+    attributes?: Record<string, unknown>,
+  ): void {
     this.assertNotDisposed();
+    const span = typeof nameOrSpan === "string"
+      ? {
+          name: nameOrSpan,
+          span_type: "custom",
+          start_ms: Date.now() - (durationMs ?? 0),
+          duration_ms: durationMs ?? 0,
+          attributes: attributes ?? {},
+          status: "ok",
+          children: [],
+        }
+      : nameOrSpan;
     telemetry_record_span(this._handle, JSON.stringify(span));
   }
 

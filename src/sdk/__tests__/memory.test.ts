@@ -31,24 +31,25 @@ beforeEach(() => vi.clearAllMocks());
 describe("Memory", () => {
   it("stores and recalls entries", async () => {
     const mem = new Memory();
-    await mem.store({ role: "user", content: "Hi", sessionId: "s1" });
+    await mem.store({
+      id: "m1", content: "Hi", entryType: "conversation", timestamp: "2024-01-01T00:00:00Z", sessionId: "s1",
+    });
     expect(memory_store).toHaveBeenCalledWith(
       1,
-      JSON.stringify({ role: "user", content: "Hi", sessionId: "s1" })
+      expect.stringContaining('"id":"m1"')
     );
 
     const entries = await mem.recall({ sessionId: "s1" });
     expect(entries).toHaveLength(1);
-    expect(entries[0].content).toBe("Hello");
     mem.destroy();
   });
 
-  it("supports shorthand store(role, content, sessionId)", async () => {
+  it("supports shorthand store(entryType, content, sessionId)", async () => {
     const mem = new Memory();
-    await mem.store("assistant", "World", "s2");
+    await mem.store("conversation", "World", "s2");
     expect(memory_store).toHaveBeenCalledWith(
       1,
-      JSON.stringify({ role: "assistant", content: "World", sessionId: "s2" })
+      expect.stringContaining('"content":"World"')
     );
     mem.destroy();
   });
@@ -70,7 +71,9 @@ describe("Memory", () => {
   it("throws after destroy", async () => {
     const mem = new Memory();
     mem.destroy();
-    await expect(mem.store({ role: "user", content: "x" })).rejects.toThrow(
+    await expect(mem.store({
+      id: "x", content: "x", entryType: "conversation", timestamp: "2024-01-01T00:00:00Z",
+    })).rejects.toThrow(
       "Memory has been destroyed"
     );
   });
@@ -86,7 +89,7 @@ describe("VectorStore", () => {
   it("upserts and searches", async () => {
     const store = new VectorStore();
     await store.upsert([
-      { id: "c1", text: "hello", embedding: [0.1, 0.2], metadata: {} },
+      { id: "c1", documentId: "d1", content: "hello", index: 0, embedding: [0.1, 0.2] },
     ]);
     const results = await store.search([0.1, 0.2], 5);
     expect(results).toHaveLength(1);

@@ -14,6 +14,7 @@ import type {
   Handle,
   Disposable,
   MemoryEntry,
+  MemoryEntryType,
   RecallOptions,
 } from "./types.js";
 
@@ -22,8 +23,8 @@ import type {
  *
  * @example
  *   const mem = new Memory();
- *   await mem.store({ role: "user", content: "Hello", sessionId: "s1" });
- *   const entries = await mem.recall({ sessionId: "s1" });
+ *   await mem.store({ id: "m1", content: "Hello", entryType: "message", timestamp: new Date().toISOString() });
+ *   const entries = await mem.recall();
  *   mem.destroy();
  */
 export class Memory implements Disposable {
@@ -38,7 +39,7 @@ export class Memory implements Disposable {
     return this._handle;
   }
 
-  /** Store a memory entry. Accepts an object or role+content shorthand. */
+  /** Store a memory entry. Accepts a full entry or role+content shorthand. */
   async store(entry: MemoryEntry): Promise<void>;
   async store(role: string, content: string, sessionId?: string): Promise<void>;
   async store(
@@ -49,9 +50,27 @@ export class Memory implements Disposable {
     this.assertNotDisposed();
     const entry: MemoryEntry =
       typeof entryOrRole === "string"
-        ? { role: entryOrRole, content: content!, sessionId }
+        ? {
+            id: crypto.randomUUID(),
+            content: content!,
+            entryType: (entryOrRole as MemoryEntryType) || "conversation",
+            timestamp: new Date().toISOString(),
+            sessionId,
+          }
         : entryOrRole;
-    return memory_store(this._handle, JSON.stringify(entry));
+    // Convert to snake_case for Rust serde
+    const rustEntry = {
+      id: entry.id,
+      content: entry.content,
+      entry_type: entry.entryType,
+      timestamp: entry.timestamp,
+      tier: entry.tier,
+      metadata: entry.metadata,
+      importance: entry.importance,
+      session_id: entry.sessionId,
+      embedding: entry.embedding,
+    };
+    return memory_store(this._handle, JSON.stringify(rustEntry));
   }
 
   async recall(options?: RecallOptions): Promise<MemoryEntry[]> {

@@ -20,7 +20,7 @@ export class VectorStore implements Disposable {
   private readonly _handle: Handle;
   private disposed = false;
 
-  constructor() {
+  constructor(_options?: { dimensions?: number }) {
     this._handle = create_vector_store();
   }
 
@@ -30,7 +30,16 @@ export class VectorStore implements Disposable {
 
   async upsert(chunks: VectorChunk[]): Promise<void> {
     this.assertNotDisposed();
-    return vector_store_upsert(this._handle, JSON.stringify(chunks));
+    // Convert camelCase to snake_case for Rust serde
+    const rustChunks = chunks.map((c) => ({
+      id: c.id,
+      document_id: c.documentId,
+      content: c.content,
+      index: c.index,
+      metadata: c.metadata ?? {},
+      embedding: c.embedding,
+    }));
+    return vector_store_upsert(this._handle, JSON.stringify(rustChunks));
   }
 
   async search(embedding: number[], topK: number): Promise<SearchResult[]> {

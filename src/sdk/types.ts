@@ -73,11 +73,19 @@ export interface AgentResult {
 
 // ─── Memory ────────────────────────────────────────────────────────
 
+export type MemoryEntryType = "conversation" | "fact" | "preference" | "task" | "summary";
+export type MemoryTier = "core" | "active" | "background" | "archive";
+
 export interface MemoryEntry {
-  role: string;
+  id: string;
   content: string;
-  sessionId?: string;
+  entryType: MemoryEntryType;
+  timestamp: string;
+  tier?: MemoryTier;
   metadata?: Record<string, unknown>;
+  importance?: number;
+  sessionId?: string;
+  embedding?: number[];
 }
 
 export interface RecallOptions {
@@ -94,9 +102,11 @@ export interface MemoryStats {
 
 export interface VectorChunk {
   id: string;
-  text: string;
-  embedding: number[];
+  documentId: string;
+  content: string;
+  index: number;
   metadata?: Record<string, unknown>;
+  embedding?: number[];
 }
 
 export interface SearchResult {
@@ -120,7 +130,7 @@ export type CoercionStrategy =
 
 // ─── Eval ──────────────────────────────────────────────────────────
 
-export type EvalScorerType = "exact_match" | "contains" | "llm_judge";
+export type EvalScorerType = "exact_match" | "contains" | "length_ratio";
 
 // ─── Core ──────────────────────────────────────────────────────────
 
