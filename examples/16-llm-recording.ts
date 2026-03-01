@@ -7,7 +7,7 @@
 //
 // Usage: npx tsx examples/16-llm-recording.ts
 
-import { Agent, Telemetry, EvalRunner } from "gauss-ts";
+import { Agent, Telemetry, EvalRunner, OPENAI_DEFAULT } from "gauss-ts";
 
 async function main(): Promise<void> {
   const telemetry = new Telemetry();
@@ -16,7 +16,7 @@ async function main(): Promise<void> {
   const agent = new Agent({
     name: "recorded-agent",
     provider: "openai",
-    model: "gpt-4o",
+    model: OPENAI_DEFAULT,
     instructions: "Answer factual questions accurately and concisely.",
     temperature: 0,
   });

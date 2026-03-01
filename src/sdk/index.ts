@@ -50,6 +50,25 @@ export type {
 
 export { resolveApiKey, detectProvider } from "./types.js";
 
+// ─── Model Constants ───────────────────────────────────────────────
+export {
+  OPENAI_DEFAULT,
+  OPENAI_FAST,
+  OPENAI_REASONING,
+  OPENAI_IMAGE,
+  ANTHROPIC_DEFAULT,
+  ANTHROPIC_FAST,
+  ANTHROPIC_PREMIUM,
+  GOOGLE_DEFAULT,
+  GOOGLE_PREMIUM,
+  GOOGLE_IMAGE,
+  OPENROUTER_DEFAULT,
+  DEEPSEEK_DEFAULT,
+  DEEPSEEK_REASONING,
+  PROVIDER_DEFAULTS,
+  defaultModel,
+} from "./models.js";
+
 // ─── Core Agent ────────────────────────────────────────────────────
 export { Agent, AgentStream, batch } from "./agent.js";
 export type { AgentConfig, StreamEvent, BatchItem } from "./agent.js";

@@ -49,6 +49,7 @@ import type {
 } from "./types.js";
 
 import { resolveApiKey, detectProvider } from "./types.js";
+import { OPENAI_DEFAULT } from "./models.js";
 
 /** Transform NAPI result to SDK AgentResult (normalizes citation field names). */
 function toSdkResult(raw: any): AgentResult {
@@ -141,7 +142,7 @@ export class Agent implements Disposable {
     // Auto-detect provider/model from environment if not specified
     const detected = detectProvider();
     this._provider = config.provider ?? detected?.provider ?? "openai";
-    this._model = config.model ?? detected?.model ?? "gpt-4o";
+    this._model = config.model ?? detected?.model ?? OPENAI_DEFAULT;
     this._name = config.name ?? "agent";
     this._instructions = config.instructions ?? "";
 

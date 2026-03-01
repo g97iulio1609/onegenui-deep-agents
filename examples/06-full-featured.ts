@@ -12,6 +12,7 @@ import {
   MiddlewareChain,
   GuardrailChain,
   Telemetry,
+  OPENAI_DEFAULT,
 } from "gauss-ts";
 
 async function main(): Promise<void> {
@@ -45,7 +46,7 @@ async function main(): Promise<void> {
   const agent = new Agent({
     name: "full-pipeline",
     provider: "openai",
-    model: "gpt-4o",
+    model: OPENAI_DEFAULT,
     instructions: "You are a senior engineer. Be precise and security-conscious.",
     temperature: 0.3,
     maxSteps: 10,

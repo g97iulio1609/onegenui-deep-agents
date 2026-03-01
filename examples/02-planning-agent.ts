@@ -7,7 +7,7 @@
 //
 // Usage: npx tsx examples/02-planning-agent.ts
 
-import { Agent } from "gauss-ts";
+import { Agent, OPENAI_DEFAULT } from "gauss-ts";
 import type { ToolDef } from "gauss-ts";
 
 // ── Tool definitions ─────────────────────────────────────────────────
@@ -55,7 +55,7 @@ async function main(): Promise<void> {
   const agent = new Agent({
     name: "planner",
     provider: "openai",
-    model: "gpt-4o",
+    model: OPENAI_DEFAULT,
     instructions: "You are a project planning assistant. Use tools to manage tasks.",
     tools,
     maxSteps: 10,

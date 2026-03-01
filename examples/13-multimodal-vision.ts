@@ -7,14 +7,14 @@
 //
 // Usage: npx tsx examples/13-multimodal-vision.ts
 
-import { Agent } from "gauss-ts";
+import { Agent, OPENAI_DEFAULT } from "gauss-ts";
 import * as fs from "node:fs";
 
 async function main(): Promise<void> {
   const agent = new Agent({
     name: "vision",
     provider: "openai",
-    model: "gpt-4o", // Vision-capable model
+    model: OPENAI_DEFAULT, // Vision-capable model
     instructions: "You analyze images and describe what you see in detail.",
   });
 

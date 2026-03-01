@@ -1,3 +1,4 @@
+// Model names: sync with gauss-ts/src/sdk/models.ts
 export interface Feature {
   id: string;
   name: string;
@@ -18,7 +19,7 @@ export const FEATURES: Feature[] = [
 
 const agent = new Agent({
   name: 'assistant',
-  model: 'gpt-4o',
+  model: 'gpt-5.2',
   instructions: 'You are a helpful assistant.',
   tools: [searchTool, calculatorTool],
 });
@@ -34,8 +35,8 @@ console.log(result.content);`,
     description: 'Coordinate multiple agents in parallel or sequential team workflows with shared context.',
     code: `import { Agent, Team } from 'gauss-ts';
 
-const researcher = new Agent({ name: 'researcher', model: 'gpt-4o' });
-const writer = new Agent({ name: 'writer', model: 'gpt-4o' });
+const researcher = new Agent({ name: 'researcher', model: 'gpt-5.2' });
+const writer = new Agent({ name: 'writer', model: 'gpt-5.2' });
 
 const team = new Team({
   name: 'content-team',
@@ -355,7 +356,7 @@ export const QUICK_START_SNIPPETS = [
 
 const agent = new Agent({
   name: 'assistant',
-  model: 'gpt-4o',
+  model: 'gpt-5.2',
   instructions: 'You are a helpful assistant.',
 });
 
@@ -367,8 +368,8 @@ console.log(result.content);`,
     title: 'Team Coordination',
     code: `import { Agent, Team } from 'gauss-ts';
 
-const researcher = new Agent({ name: 'researcher', model: 'gpt-4o' });
-const writer = new Agent({ name: 'writer', model: 'gpt-4o' });
+const researcher = new Agent({ name: 'researcher', model: 'gpt-5.2' });
+const writer = new Agent({ name: 'writer', model: 'gpt-5.2' });
 
 const team = new Team({
   name: 'content-team',

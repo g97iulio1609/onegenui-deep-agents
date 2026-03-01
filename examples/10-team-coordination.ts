@@ -8,27 +8,27 @@
 //
 // Usage: npx tsx examples/10-team-coordination.ts
 
-import { Agent, Team } from "gauss-ts";
+import { Agent, Team, OPENAI_DEFAULT } from "gauss-ts";
 
 async function main(): Promise<void> {
   const analyst = new Agent({
     name: "analyst",
     provider: "openai",
-    model: "gpt-4o",
+    model: OPENAI_DEFAULT,
     instructions: "You analyze data and extract key metrics. Be quantitative.",
   });
 
   const strategist = new Agent({
     name: "strategist",
     provider: "openai",
-    model: "gpt-4o",
+    model: OPENAI_DEFAULT,
     instructions: "You develop business strategies based on analysis. Focus on actionable steps.",
   });
 
   const writer = new Agent({
     name: "writer",
     provider: "openai",
-    model: "gpt-4o",
+    model: OPENAI_DEFAULT,
     instructions: "You write executive summaries. Be clear and concise.",
   });
 

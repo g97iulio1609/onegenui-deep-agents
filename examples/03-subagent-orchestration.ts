@@ -7,28 +7,28 @@
 //
 // Usage: npx tsx examples/03-subagent-orchestration.ts
 
-import { Agent, Team } from "gauss-ts";
+import { Agent, Team, OPENAI_DEFAULT } from "gauss-ts";
 
 async function main(): Promise<void> {
   // ── Specialized agents ─────────────────────────────────────────────
   const researcher = new Agent({
     name: "researcher",
     provider: "openai",
-    model: "gpt-4o",
+    model: OPENAI_DEFAULT,
     instructions: "You are a research specialist. Provide detailed findings on the given topic.",
   });
 
   const writer = new Agent({
     name: "writer",
     provider: "openai",
-    model: "gpt-4o",
+    model: OPENAI_DEFAULT,
     instructions: "You are a technical writer. Take research findings and produce a clear, structured summary.",
   });
 
   const reviewer = new Agent({
     name: "reviewer",
     provider: "openai",
-    model: "gpt-4o",
+    model: OPENAI_DEFAULT,
     instructions: "You are a code/content reviewer. Review the text for accuracy and suggest improvements.",
   });
 

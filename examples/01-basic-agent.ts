@@ -9,14 +9,14 @@
 //
 // Usage: npx tsx examples/01-basic-agent.ts
 
-import { Agent, gauss, batch } from "gauss-ts";
+import { Agent, gauss, batch, OPENAI_DEFAULT } from "gauss-ts";
 
 async function main(): Promise<void> {
   // ── 1. Full Agent ──────────────────────────────────────────────────
   const agent = new Agent({
     name: "assistant",
     provider: "openai",
-    model: "gpt-4o",
+    model: OPENAI_DEFAULT,
     instructions: "You are a helpful coding assistant. Be concise.",
     temperature: 0.7,
     maxSteps: 5,
@@ -34,7 +34,7 @@ async function main(): Promise<void> {
   // ── 3. batch() for parallel prompts ────────────────────────────────
   const items = await batch(
     ["Translate 'hello' to French", "Translate 'hello' to Spanish", "Translate 'hello' to Japanese"],
-    { provider: "openai", model: "gpt-4o", concurrency: 3 },
+    { provider: "openai", model: OPENAI_DEFAULT, concurrency: 3 },
   );
   for (const item of items) {
     console.log(`[batch] ${item.input} → ${item.result?.text ?? item.error?.message}`);

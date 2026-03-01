@@ -8,13 +8,13 @@
 //
 // Usage: npx tsx examples/21-structured-output.ts
 
-import { Agent, structured } from "gauss-ts";
+import { Agent, structured, OPENAI_DEFAULT } from "gauss-ts";
 
 async function main(): Promise<void> {
   const agent = new Agent({
     name: "extractor",
     provider: "openai",
-    model: "gpt-4o",
+    model: OPENAI_DEFAULT,
     instructions: "You extract structured data from text. Always respond with valid JSON.",
     temperature: 0,
   });

@@ -7,7 +7,14 @@
 //
 // Usage: npx tsx examples/15-universal-provider.ts
 
-import { Agent } from "gauss-ts";
+import {
+  Agent,
+  OPENAI_DEFAULT,
+  ANTHROPIC_DEFAULT,
+  GOOGLE_DEFAULT,
+  DEEPSEEK_DEFAULT,
+  PROVIDER_DEFAULTS,
+} from "gauss-ts";
 import type { AgentConfig } from "gauss-ts";
 
 const prompt = "Say 'Hello from <your model name>' in exactly one sentence.";
@@ -18,37 +25,37 @@ const providers: Array<AgentConfig & { envKey: string }> = [
     envKey: "OPENAI_API_KEY",
     name: "openai-agent",
     provider: "openai",
-    model: "gpt-4o",
+    model: OPENAI_DEFAULT,
   },
   {
     envKey: "ANTHROPIC_API_KEY",
     name: "anthropic-agent",
     provider: "anthropic",
-    model: "claude-sonnet-4-20250514",
+    model: ANTHROPIC_DEFAULT,
   },
   {
     envKey: "GOOGLE_API_KEY",
     name: "google-agent",
     provider: "google",
-    model: "gemini-2.0-flash",
+    model: GOOGLE_DEFAULT,
   },
   {
     envKey: "GROQ_API_KEY",
     name: "groq-agent",
     provider: "groq",
-    model: "llama-3.3-70b-versatile",
+    model: PROVIDER_DEFAULTS.groq,
   },
   {
     envKey: "DEEPSEEK_API_KEY",
     name: "deepseek-agent",
     provider: "deepseek",
-    model: "deepseek-chat",
+    model: DEEPSEEK_DEFAULT,
   },
   {
     envKey: "", // Ollama needs no key
     name: "ollama-agent",
     provider: "ollama",
-    model: "llama3",
+    model: PROVIDER_DEFAULTS.ollama,
     providerOptions: { baseUrl: "http://localhost:11434" },
   },
 ];

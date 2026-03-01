@@ -280,6 +280,8 @@ export interface Disposable {
 
 // ─── Environment helpers ───────────────────────────────────────────
 
+import { PROVIDER_DEFAULTS } from "./models.js";
+
 const ENV_KEYS: Record<string, string> = {
   openai: "OPENAI_API_KEY",
   anthropic: "ANTHROPIC_API_KEY",
@@ -298,16 +300,16 @@ export function resolveApiKey(provider: ProviderType): string {
 
 /** Auto-detect the best available provider from environment variables. */
 export function detectProvider(): { provider: ProviderType; model: string } | undefined {
-  const checks: Array<{ env: string; provider: ProviderType; model: string }> = [
-    { env: "OPENAI_API_KEY", provider: "openai", model: "gpt-4o" },
-    { env: "ANTHROPIC_API_KEY", provider: "anthropic", model: "claude-sonnet-4-20250514" },
-    { env: "GOOGLE_API_KEY", provider: "google", model: "gemini-2.0-flash" },
-    { env: "GROQ_API_KEY", provider: "groq", model: "llama-3.3-70b-versatile" },
-    { env: "DEEPSEEK_API_KEY", provider: "deepseek", model: "deepseek-chat" },
+  const checks: Array<{ env: string; provider: ProviderType }> = [
+    { env: "OPENAI_API_KEY", provider: "openai" },
+    { env: "ANTHROPIC_API_KEY", provider: "anthropic" },
+    { env: "GOOGLE_API_KEY", provider: "google" },
+    { env: "GROQ_API_KEY", provider: "groq" },
+    { env: "DEEPSEEK_API_KEY", provider: "deepseek" },
   ];
-  for (const { env, provider, model } of checks) {
+  for (const { env, provider } of checks) {
     if (typeof process !== "undefined" && process.env[env]) {
-      return { provider, model };
+      return { provider, model: PROVIDER_DEFAULTS[provider] };
     }
   }
   return undefined;

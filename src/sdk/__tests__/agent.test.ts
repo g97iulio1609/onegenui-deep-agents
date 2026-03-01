@@ -81,7 +81,7 @@ describe("Agent", () => {
       process.env.OPENAI_API_KEY = "sk-env-test";
       const agent = new Agent();
       expect(agent.provider).toBe("openai");
-      expect(agent.model).toBe("gpt-4o");
+      expect(agent.model).toBe("gpt-5.2");
       delete process.env.OPENAI_API_KEY;
       agent.destroy();
     });
