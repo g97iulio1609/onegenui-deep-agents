@@ -48,20 +48,20 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
   return (
     <div
       style={{
-        position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)",
+        position: "fixed", inset: 0, background: "var(--pg-overlay-bg)",
         display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
       }}
       onClick={onClose}
     >
       <div
         style={{
-          background: "#1e1e2e", borderRadius: 12, padding: 24, width: 480,
-          border: "1px solid #313244", color: "#cdd6f4",
+          background: "var(--pg-surface)", borderRadius: 12, padding: 24, width: 480,
+          border: "1px solid var(--pg-border)", color: "var(--pg-text)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
         <h2 style={{ margin: "0 0 16px", fontSize: 20 }}>⚙️ API Settings</h2>
-        <p style={{ color: "#a6adc8", fontSize: 14, margin: "0 0 20px" }}>
+        <p style={{ color: "var(--pg-text-muted)", fontSize: 14, margin: "0 0 20px" }}>
           Enter your API keys to enable providers. Keys are stored in memory only.
         </p>
 
@@ -75,8 +75,8 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
               <span>{label}</span>
               <span style={{
                 fontSize: 12, padding: "2px 8px", borderRadius: 99,
-                background: status[key] ? "#a6e3a1" : "#f38ba8",
-                color: "#1e1e2e",
+                background: status[key] ? "var(--pg-status-ok)" : "var(--pg-status-err)",
+                color: "var(--pg-status-text)",
               }}>
                 {status[key] ? "✓ configured" : "missing"}
               </span>
@@ -88,8 +88,8 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
               placeholder={placeholder}
               style={{
                 width: "100%", padding: "8px 12px", borderRadius: 8,
-                border: "1px solid #313244", background: "#11111b",
-                color: "#cdd6f4", fontSize: 14, boxSizing: "border-box",
+                border: "1px solid var(--pg-border)", background: "var(--pg-bg)",
+                color: "var(--pg-text)", fontSize: 14, boxSizing: "border-box",
               }}
             />
           </div>
@@ -97,12 +97,12 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
 
         <div style={{ display: "flex", gap: 8, marginTop: 20, justifyContent: "flex-end" }}>
           <button onClick={onClose} style={{
-            padding: "8px 16px", borderRadius: 8, border: "1px solid #313244",
-            background: "transparent", color: "#cdd6f4", cursor: "pointer",
+            padding: "8px 16px", borderRadius: 8, border: "1px solid var(--pg-border)",
+            background: "transparent", color: "var(--pg-text)", cursor: "pointer",
           }}>Cancel</button>
           <button onClick={save} disabled={saving} style={{
             padding: "8px 16px", borderRadius: 8, border: "none",
-            background: "#89b4fa", color: "#1e1e2e", cursor: "pointer", fontWeight: 600,
+            background: "var(--pg-accent)", color: "var(--pg-user-msg-color)", cursor: "pointer", fontWeight: 600,
           }}>{saving ? "Saving..." : "Save Keys"}</button>
         </div>
       </div>

@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AgentInfo, ChatMessage, TimelineEntry, ToolCall, PlaygroundEvent } from '../types';
+import { DEMO_AGENTS } from '../data/demo-agents';
 
 export function useAgent() {
-  const [agents, setAgents] = useState<AgentInfo[]>([]);
+  const [agents, setAgents] = useState<AgentInfo[]>(DEMO_AGENTS);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -13,7 +14,7 @@ export function useAgent() {
     fetch('/api/agents')
       .then((r) => r.json())
       .then((data: AgentInfo[]) => setAgents(data))
-      .catch(() => {/* ignore */});
+      .catch(() => setAgents(DEMO_AGENTS));
   }, []);
 
   const sendMessage = useCallback(

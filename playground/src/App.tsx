@@ -13,6 +13,7 @@ import { QuickStart } from './components/QuickStart';
 import { useAgent } from './hooks/useAgent';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useMetrics } from './hooks/useMetrics';
+import { useTheme } from './hooks/useTheme';
 import { FEATURES } from './data/features';
 import type { AgentInfo } from './types';
 
@@ -27,7 +28,9 @@ export function App() {
   const [mainView, setMainView] = useState<MainView>('features');
   const [activeFeatureId, setActiveFeatureId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const { theme, toggle: toggleTheme } = useTheme();
   const { agents, messages, timeline, isStreaming, lastToolCall, sendMessage } = useAgent();
   const { connected } = useWebSocket({ url: `ws://${window.location.host}/ws`, autoConnect: true });
   const metrics = useMetrics(timeline, messages);
@@ -63,11 +66,18 @@ export function App() {
 
   return (
     <div className="pg-app">
-      <Header connected={connected} agentCount={agents.length} onSettingsClick={() => setSettingsOpen(true)} />
+      <Header
+        connected={connected}
+        agentCount={agents.length}
+        onSettingsClick={() => setSettingsOpen(true)}
+        theme={theme}
+        onThemeToggle={toggleTheme}
+        onMenuToggle={() => setSidebarOpen((prev) => !prev)}
+      />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
       <div className="pg-body">
-        <aside className="pg-sidebar">
+        <aside className={`pg-sidebar ${sidebarOpen ? 'pg-sidebar--open' : ''}`}>
           {/* View switcher */}
           <div className="pg-sidebar-nav">
             <button

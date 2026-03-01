@@ -5,14 +5,20 @@ interface HeaderProps {
   connected: boolean;
   agentCount: number;
   onSettingsClick?: () => void;
+  theme?: 'dark' | 'light';
+  onThemeToggle?: () => void;
+  onMenuToggle?: () => void;
 }
 
-export function Header({ connected, agentCount, onSettingsClick }: HeaderProps) {
+export function Header({ connected, agentCount, onSettingsClick, theme, onThemeToggle, onMenuToggle }: HeaderProps) {
   const status: ConnectionStatus = connected ? 'connected' : 'disconnected';
 
   return (
     <header className="pg-header">
       <div className="pg-header-left">
+        <button className="pg-hamburger" onClick={onMenuToggle} aria-label="Toggle sidebar">
+          ☰
+        </button>
         <h1 className="pg-header-title">⚡ Gauss Playground</h1>
         <span className="pg-header-version">v1.0.0</span>
       </div>
@@ -20,13 +26,17 @@ export function Header({ connected, agentCount, onSettingsClick }: HeaderProps) 
         <span className="pg-header-features">{FEATURES.length} features</span>
         <span className="pg-header-agents">{agentCount} agent{agentCount !== 1 ? 's' : ''}</span>
         <button
+          className="pg-theme-toggle"
+          onClick={onThemeToggle}
+          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+          aria-label="Toggle theme"
+        >
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
+        <button
           className="pg-header-settings-btn"
           onClick={onSettingsClick}
           title="API Settings"
-          style={{
-            background: 'none', border: '1px solid #313244', borderRadius: 8,
-            color: '#cdd6f4', cursor: 'pointer', padding: '4px 10px', fontSize: 16,
-          }}
         >⚙️</button>
         <span className={`pg-connection-badge pg-connection-badge--${status}`}>
           <span className="pg-connection-dot" />

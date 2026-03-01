@@ -6,14 +6,14 @@ import "prismjs/components/prism-bash";
 import "prismjs/components/prism-json";
 
 const THEME_CSS = `
-.token.comment, .token.prolog, .token.doctype, .token.cdata { color: #6c7086; }
-.token.punctuation { color: #9399b2; }
-.token.property, .token.tag, .token.boolean, .token.number, .token.constant, .token.symbol { color: #fab387; }
-.token.selector, .token.attr-name, .token.string, .token.char, .token.builtin { color: #a6e3a1; }
-.token.operator, .token.entity, .token.url { color: #89dceb; }
-.token.atrule, .token.attr-value, .token.keyword { color: #cba6f7; }
-.token.function, .token.class-name { color: #89b4fa; }
-.token.regex, .token.important, .token.variable { color: #f9e2af; }
+.token.comment, .token.prolog, .token.doctype, .token.cdata { color: var(--pg-syn-comment); }
+.token.punctuation { color: var(--pg-syn-punctuation); }
+.token.property, .token.tag, .token.boolean, .token.number, .token.constant, .token.symbol { color: var(--pg-syn-property); }
+.token.selector, .token.attr-name, .token.string, .token.char, .token.builtin { color: var(--pg-syn-string); }
+.token.operator, .token.entity, .token.url { color: var(--pg-syn-operator); }
+.token.atrule, .token.attr-value, .token.keyword { color: var(--pg-syn-keyword); }
+.token.function, .token.class-name { color: var(--pg-syn-function); }
+.token.regex, .token.important, .token.variable { color: var(--pg-syn-variable); }
 .token.important, .token.bold { font-weight: bold; }
 .token.italic { font-style: italic; }
 `;
@@ -63,9 +63,9 @@ export function CodeBlock({ code, language = "typescript" }: CodeBlockProps) {
           position: "absolute",
           top: 8,
           right: 8,
-          background: copied ? "rgba(166,227,161,0.2)" : "rgba(255,255,255,0.08)",
-          color: copied ? "#a6e3a1" : "#9399b2",
-          border: "1px solid rgba(255,255,255,0.1)",
+          background: copied ? "rgba(var(--pg-success), 0.2)" : "var(--pg-copy-bg)",
+          color: copied ? "var(--pg-success)" : "var(--pg-text-muted)",
+          border: "1px solid var(--pg-copy-border)",
           borderRadius: 6,
           padding: "4px 10px",
           fontSize: 12,
@@ -78,7 +78,7 @@ export function CodeBlock({ code, language = "typescript" }: CodeBlockProps) {
         {copied ? "Copied!" : "Copy"}
       </button>
       <pre style={{
-        background: "#11111b",
+        background: "var(--pg-code-bg)",
         borderRadius: 8,
         padding: 16,
         overflow: "auto",
