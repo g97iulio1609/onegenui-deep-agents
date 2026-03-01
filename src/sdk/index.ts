@@ -57,6 +57,10 @@ export type { GraphNodeConfig } from "./graph.js";
 export { Workflow } from "./workflow.js";
 export type { WorkflowStepConfig } from "./workflow.js";
 
+// ─── Team ──────────────────────────────────────────────────────────
+export { Team } from "./team.js";
+export type { TeamStrategy, TeamResult } from "./team.js";
+
 // ─── Network (Multi-Agent) ─────────────────────────────────────────
 export { Network } from "./network.js";
 

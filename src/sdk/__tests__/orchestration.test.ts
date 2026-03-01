@@ -30,13 +30,21 @@ vi.mock("gauss-napi", () => ({
   network_delegate: vi.fn(async () => ({ result: "delegated" })),
   network_agent_cards: vi.fn(() => [{ name: "a1" }]),
   destroy_network: vi.fn(),
+
+  // Team
+  create_team: vi.fn(() => 40),
+  team_add_agent: vi.fn(),
+  team_set_strategy: vi.fn(),
+  team_run: vi.fn(async () => ({ finalText: "done", results: [{ text: "a1 output", steps: 1, inputTokens: 10, outputTokens: 20 }] })),
+  destroy_team: vi.fn(),
 }));
 
 import { Agent } from "../agent.js";
 import { Graph } from "../graph.js";
 import { Workflow } from "../workflow.js";
 import { Network } from "../network.js";
-import { graph_add_node, graph_add_edge, destroy_graph } from "gauss-napi";
+import { Team } from "../team.js";
+import { graph_add_node, graph_add_edge, destroy_graph, team_add_agent, team_set_strategy, destroy_team } from "gauss-napi";
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -107,5 +115,49 @@ describe("Network", () => {
     net.destroy();
     a1.destroy();
     a2.destroy();
+  });
+});
+
+describe("Team", () => {
+  it("builds and runs a sequential team", async () => {
+    const a1 = new Agent({ name: "researcher", providerOptions: { apiKey: "k" } });
+    const a2 = new Agent({ name: "writer", providerOptions: { apiKey: "k" } });
+
+    const team = new Team("content-team")
+      .add(a1)
+      .add(a2);
+
+    expect(team_add_agent).toHaveBeenCalledTimes(2);
+    expect(team_add_agent).toHaveBeenCalledWith(40, "researcher", 100, undefined);
+    expect(team_add_agent).toHaveBeenCalledWith(40, "writer", 100, undefined);
+
+    const result = await team.run("Write about AI");
+    expect(result.finalText).toBe("done");
+    expect(result.results).toHaveLength(1);
+
+    team.destroy();
+    a1.destroy();
+    a2.destroy();
+    expect(destroy_team).toHaveBeenCalledOnce();
+  });
+
+  it("supports parallel strategy", () => {
+    const team = new Team("parallel-team").strategy("parallel");
+    expect(team_set_strategy).toHaveBeenCalledWith(40, "parallel");
+    team.destroy();
+  });
+
+  it("supports custom instructions per agent", () => {
+    const a = new Agent({ name: "helper", providerOptions: { apiKey: "k" } });
+    const team = new Team("team").add(a, "custom instructions");
+    expect(team_add_agent).toHaveBeenCalledWith(40, "helper", 100, "custom instructions");
+    team.destroy();
+    a.destroy();
+  });
+
+  it("throws after destroy", async () => {
+    const team = new Team("disposable");
+    team.destroy();
+    await expect(team.run("test")).rejects.toThrow("Team has been destroyed");
   });
 });
