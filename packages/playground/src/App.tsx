@@ -74,7 +74,7 @@ export function App() {
             </div>
             {/* Tab content */}
             <div style={{ flex: 1, overflow: "auto" }}>
-              {tab === "chat" && <AgentChat agentName={selected} />}
+              {tab === "chat" && <AgentChat agentName={selected} agents={agents.map(a => ({ id: a.name, name: a.name, description: a.description }))} />}
               {tab === "tools" && <ToolInspector agentName={selected} />}
               {tab === "memory" && <MemoryViewer agentName={selected} />}
               {tab === "graph" && <GraphVisualizer agentName={selected} />}

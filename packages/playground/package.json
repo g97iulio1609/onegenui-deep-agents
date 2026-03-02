@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@gauss-ai/chat": "file:../gauss-chat",
+    "@gauss-ai/react": "file:../gauss-react",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
