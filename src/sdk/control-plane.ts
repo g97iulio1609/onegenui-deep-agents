@@ -17,9 +17,13 @@ import { estimateCost } from "./tokens.js";
 import {
   evaluatePolicyDiff,
   evaluatePolicyGate,
+  evaluatePolicyRolloutGuardrails,
   explainRoutingTarget,
+  type PolicyDiffSummary,
   type ResolveRoutingTargetOptions,
   type PolicyGateSummary,
+  type PolicyRolloutGateResult,
+  type PolicyRolloutGuardrails,
   type RoutingDecisionExplanation,
   type RoutingPolicy,
 } from "./routing-policy.js";
@@ -118,6 +122,7 @@ export interface ControlPlaneOpsCapabilities {
   supportsPolicyExplainTraces: boolean;
   supportsPolicyExplainDiff: boolean;
   supportsPolicyLifecycle: boolean;
+  supportsPolicyDriftMonitoring: boolean;
   hostedDashboardPath: string;
   hostedTenantDashboardPath: string;
   policyExplainPath: string;
@@ -126,6 +131,7 @@ export interface ControlPlaneOpsCapabilities {
   policyExplainTracePath: string;
   policyExplainDiffPath: string;
   policyLifecycleBasePath: string;
+  policyDriftPath: string;
 }
 
 type ControlPlanePolicyLifecycleStatus = "draft" | "validated" | "approved" | "promoted";
@@ -144,8 +150,18 @@ interface ControlPlanePolicyLifecycleVersion {
 export interface ControlPlanePolicyExplainTrace {
   traceId: string;
   generatedAt: string;
-  mode: "single" | "batch" | "simulate" | "diff";
+  mode: "single" | "batch" | "simulate" | "diff" | "drift";
   payload: unknown;
+}
+
+export interface ControlPlanePolicyDriftAlert {
+  ok: boolean;
+  alert: boolean;
+  generatedAt: string;
+  baselineVersionId: string | null;
+  candidateVersionId: string | null;
+  diff: PolicyDiffSummary;
+  guardrails: PolicyRolloutGateResult;
 }
 
 export interface ControlPlaneOpsHealth {
@@ -197,6 +213,7 @@ export class ControlPlane implements Disposable {
   private readonly explainTraces: ControlPlanePolicyExplainTrace[] = [];
   private nextExplainTraceId = 1;
   private latestExplainTraceId: string | null = null;
+  private readonly policyDriftAlertHooks: Array<(alert: ControlPlanePolicyDriftAlert) => void> = [];
   private readonly policyLifecycleVersions: ControlPlanePolicyLifecycleVersion[] = [];
   private nextPolicyLifecycleVersion = 1;
   private activePolicyVersionId: string | null = null;
@@ -239,6 +256,14 @@ export class ControlPlane implements Disposable {
     this.assertContextAllowed(context);
     this.context = { ...context };
     return this;
+  }
+
+  onPolicyDriftAlert(hook: (alert: ControlPlanePolicyDriftAlert) => void): () => void {
+    this.policyDriftAlertHooks.push(hook);
+    return () => {
+      const index = this.policyDriftAlertHooks.indexOf(hook);
+      if (index >= 0) this.policyDriftAlertHooks.splice(index, 1);
+    };
   }
 
   setCostUsage(usage: ControlPlaneUsage): this {
@@ -430,6 +455,12 @@ export class ControlPlane implements Disposable {
         if (pathname === "/api/ops/policy/lifecycle/versions") {
           res.setHeader("Content-Type", "application/json; charset=utf-8");
           res.end(JSON.stringify(this.opsPolicyLifecycleVersions(), null, 2));
+          return;
+        }
+
+        if (pathname === "/api/ops/policy/drift") {
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.end(JSON.stringify(this.opsPolicyDrift(parsed.searchParams), null, 2));
           return;
         }
 
@@ -758,6 +789,32 @@ export class ControlPlane implements Disposable {
     return parsed as RoutingPolicy;
   }
 
+  private parseOptionalPolicyFromQuery(params: URLSearchParams, key: string): RoutingPolicy | undefined {
+    const raw = params.get(key);
+    if (!raw || raw.trim().length === 0) return undefined;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      throw new ValidationError(`Invalid ${key} JSON payload`, key);
+    }
+    if (!parsed || typeof parsed !== "object") {
+      throw new ValidationError(`${key} must be a JSON object`, key);
+    }
+    return parsed as RoutingPolicy;
+  }
+
+  private parsePolicyDriftGuardrails(params: URLSearchParams): PolicyRolloutGuardrails {
+    const maxChanged = this.parseOptionalNumber(params.get("maxChanged"), "maxChanged");
+    const maxRegressions = this.parseOptionalNumber(params.get("maxRegressions"), "maxRegressions");
+    const minCandidatePassRate = this.parseOptionalNumber(params.get("minCandidatePassRate"), "minCandidatePassRate");
+    return {
+      ...(maxChanged !== undefined ? { maxChanged } : {}),
+      ...(maxRegressions !== undefined ? { maxRegressions } : {}),
+      ...(minCandidatePassRate !== undefined ? { minCandidatePassRate } : {}),
+    };
+  }
+
   private cloneRoutingPolicy(policy: RoutingPolicy): RoutingPolicy {
     return JSON.parse(JSON.stringify(policy)) as RoutingPolicy;
   }
@@ -955,6 +1012,7 @@ export class ControlPlane implements Disposable {
       supportsPolicyExplainTraces: true,
       supportsPolicyExplainDiff: true,
       supportsPolicyLifecycle: true,
+      supportsPolicyDriftMonitoring: true,
       hostedDashboardPath: "/ops",
       hostedTenantDashboardPath: "/ops/tenants",
       policyExplainPath: "/api/ops/policy/explain",
@@ -963,6 +1021,7 @@ export class ControlPlane implements Disposable {
       policyExplainTracePath: "/api/ops/policy/explain/traces",
       policyExplainDiffPath: "/api/ops/policy/explain/diff",
       policyLifecycleBasePath: "/api/ops/policy/lifecycle",
+      policyDriftPath: "/api/ops/policy/drift",
     };
   }
 
@@ -1059,7 +1118,7 @@ export class ControlPlane implements Disposable {
   }
 
   private recordPolicyExplainTrace(
-    mode: "single" | "batch" | "simulate" | "diff",
+    mode: "single" | "batch" | "simulate" | "diff" | "drift",
     payload: unknown,
   ): ControlPlanePolicyExplainTrace {
     const trace: ControlPlanePolicyExplainTrace = {
@@ -1211,6 +1270,45 @@ export class ControlPlane implements Disposable {
       results: diff.results,
     };
     const trace = this.recordPolicyExplainTrace("diff", response);
+    return { ...response, traceId: trace.traceId };
+  }
+
+  private opsPolicyDrift(params: URLSearchParams): ControlPlanePolicyDriftAlert & { traceId: string } {
+    const scenarios = this.parsePolicyExplainBatchScenarios(params);
+    const baselineVersionId = params.get("baselineVersion");
+    const candidateVersionId = params.get("candidateVersion");
+
+    const baselineFromVersion = baselineVersionId
+      ? this.cloneRoutingPolicy(this.findLifecycleVersion(baselineVersionId).policy)
+      : this.activePolicyVersionId
+        ? this.cloneRoutingPolicy(this.findLifecycleVersion(this.activePolicyVersionId).policy)
+        : undefined;
+    const candidateFromVersion = candidateVersionId
+      ? this.cloneRoutingPolicy(this.findLifecycleVersion(candidateVersionId).policy)
+      : undefined;
+
+    const baselinePolicy = this.parseOptionalPolicyFromQuery(params, "baselinePolicy") ?? baselineFromVersion;
+    const candidatePolicy = this.parseOptionalPolicyFromQuery(params, "candidatePolicy")
+      ?? candidateFromVersion
+      ?? this.routingPolicy;
+
+    const diff = evaluatePolicyDiff(candidatePolicy, scenarios, baselinePolicy);
+    const guardrails = evaluatePolicyRolloutGuardrails(diff, this.parsePolicyDriftGuardrails(params));
+    const response: ControlPlanePolicyDriftAlert = {
+      ok: guardrails.ok,
+      alert: !guardrails.ok,
+      generatedAt: new Date().toISOString(),
+      baselineVersionId: baselineVersionId ?? this.activePolicyVersionId ?? null,
+      candidateVersionId: candidateVersionId ?? null,
+      diff,
+      guardrails,
+    };
+    if (response.alert) {
+      for (const hook of this.policyDriftAlertHooks) {
+        hook(response);
+      }
+    }
+    const trace = this.recordPolicyExplainTrace("drift", response);
     return { ...response, traceId: trace.traceId };
   }
 

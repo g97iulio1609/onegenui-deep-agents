@@ -235,6 +235,8 @@ console.log(explanation.decision?.selectedBy); // "direct" | "alias:..." | "fall
 // GET /api/ops/policy/lifecycle/approve?version=policy-v1
 // GET /api/ops/policy/lifecycle/promote?version=policy-v1
 // GET /api/ops/policy/lifecycle/versions
+// Policy drift monitoring:
+// GET /api/ops/policy/drift?scenarios=<json>&candidatePolicy=<json>&maxRegressions=0
 ```
 
 ### Unified Control Plane (M51 foundation)

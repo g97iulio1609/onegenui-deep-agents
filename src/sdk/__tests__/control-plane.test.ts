@@ -84,6 +84,7 @@ describe("ControlPlane", () => {
       supportsPolicyExplainTraces: boolean;
       supportsPolicyExplainDiff: boolean;
       supportsPolicyLifecycle: boolean;
+      supportsPolicyDriftMonitoring: boolean;
       hostedDashboardPath: string;
       hostedTenantDashboardPath: string;
       policyExplainPath: string;
@@ -92,6 +93,7 @@ describe("ControlPlane", () => {
       policyExplainTracePath: string;
       policyExplainDiffPath: string;
       policyLifecycleBasePath: string;
+      policyDriftPath: string;
     };
     expect(caps.supportsMultiplex).toBe(true);
     expect(caps.supportsOpsSummary).toBe(true);
@@ -101,6 +103,7 @@ describe("ControlPlane", () => {
     expect(caps.supportsPolicyExplainTraces).toBe(true);
     expect(caps.supportsPolicyExplainDiff).toBe(true);
     expect(caps.supportsPolicyLifecycle).toBe(true);
+    expect(caps.supportsPolicyDriftMonitoring).toBe(true);
     expect(caps.hostedDashboardPath).toBe("/ops");
     expect(caps.hostedTenantDashboardPath).toBe("/ops/tenants");
     expect(caps.policyExplainPath).toBe("/api/ops/policy/explain");
@@ -109,6 +112,7 @@ describe("ControlPlane", () => {
     expect(caps.policyExplainTracePath).toBe("/api/ops/policy/explain/traces");
     expect(caps.policyExplainDiffPath).toBe("/api/ops/policy/explain/diff");
     expect(caps.policyLifecycleBasePath).toBe("/api/ops/policy/lifecycle");
+    expect(caps.policyDriftPath).toBe("/api/ops/policy/drift");
 
     const healthRes = await fetch(`${url}/api/ops/health`);
     expect(healthRes.status).toBe(200);
@@ -244,6 +248,35 @@ describe("ControlPlane", () => {
     expect(versions.ok).toBe(true);
     expect(versions.activeVersionId).toBe(draft.version.versionId);
     expect(versions.versions.some((item) => item.versionId === draft.version.versionId)).toBe(true);
+
+    const driftAlerts: Array<{ alert: boolean; diff: { regressions: number } }> = [];
+    cp.onPolicyDriftAlert((alert) => driftAlerts.push(alert));
+    const driftScenarios = encodeURIComponent(JSON.stringify([
+      { provider: "openai", model: "gpt-5.2", hour: 10, tags: "rollout" },
+    ]));
+    const candidatePolicy = encodeURIComponent(JSON.stringify({
+      allowedHoursUtc: [22],
+      governance: { rules: [{ type: "require_tag", tag: "rollout" }] },
+    }));
+    const driftRes = await fetch(
+      `${url}/api/ops/policy/drift?scenarios=${driftScenarios}&candidatePolicy=${candidatePolicy}&maxRegressions=0`,
+    );
+    expect(driftRes.status).toBe(200);
+    const drift = await driftRes.json() as {
+      ok: boolean;
+      alert: boolean;
+      traceId: string;
+      diff: { regressions: number };
+      guardrails: { ok: boolean };
+    };
+    expect(drift.traceId.startsWith("trace-")).toBe(true);
+    expect(drift.ok).toBe(false);
+    expect(drift.alert).toBe(true);
+    expect(drift.diff.regressions).toBe(1);
+    expect(drift.guardrails.ok).toBe(false);
+    expect(driftAlerts).toHaveLength(1);
+    expect(driftAlerts[0]?.alert).toBe(true);
+    expect(driftAlerts[0]?.diff.regressions).toBe(1);
 
     const opsRes = await fetch(`${url}/ops`);
     const opsHtml = await opsRes.text();
