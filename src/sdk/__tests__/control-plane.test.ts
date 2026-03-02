@@ -83,6 +83,7 @@ describe("ControlPlane", () => {
       supportsPolicyExplainBatch: boolean;
       supportsPolicyExplainTraces: boolean;
       supportsPolicyExplainDiff: boolean;
+      supportsPolicyLifecycle: boolean;
       hostedDashboardPath: string;
       hostedTenantDashboardPath: string;
       policyExplainPath: string;
@@ -90,6 +91,7 @@ describe("ControlPlane", () => {
       policyExplainSimulatePath: string;
       policyExplainTracePath: string;
       policyExplainDiffPath: string;
+      policyLifecycleBasePath: string;
     };
     expect(caps.supportsMultiplex).toBe(true);
     expect(caps.supportsOpsSummary).toBe(true);
@@ -98,6 +100,7 @@ describe("ControlPlane", () => {
     expect(caps.supportsPolicyExplainBatch).toBe(true);
     expect(caps.supportsPolicyExplainTraces).toBe(true);
     expect(caps.supportsPolicyExplainDiff).toBe(true);
+    expect(caps.supportsPolicyLifecycle).toBe(true);
     expect(caps.hostedDashboardPath).toBe("/ops");
     expect(caps.hostedTenantDashboardPath).toBe("/ops/tenants");
     expect(caps.policyExplainPath).toBe("/api/ops/policy/explain");
@@ -105,6 +108,7 @@ describe("ControlPlane", () => {
     expect(caps.policyExplainSimulatePath).toBe("/api/ops/policy/explain/simulate");
     expect(caps.policyExplainTracePath).toBe("/api/ops/policy/explain/traces");
     expect(caps.policyExplainDiffPath).toBe("/api/ops/policy/explain/diff");
+    expect(caps.policyLifecycleBasePath).toBe("/api/ops/policy/lifecycle");
 
     const healthRes = await fetch(`${url}/api/ops/health`);
     expect(healthRes.status).toBe(200);
@@ -198,6 +202,48 @@ describe("ControlPlane", () => {
     expect(traces.traces.some((item) => item.mode === "batch")).toBe(true);
     expect(traces.traces.some((item) => item.mode === "simulate")).toBe(true);
     expect(traces.traces.some((item) => item.mode === "diff")).toBe(true);
+
+    const lifecyclePolicy = encodeURIComponent(JSON.stringify({
+      allowedHoursUtc: [10],
+      maxTotalCostUsd: 0.2,
+      governance: { rules: [{ type: "require_tag", tag: "rollout" }] },
+    }));
+    const draftRes = await fetch(`${url}/api/ops/policy/lifecycle/draft?policy=${lifecyclePolicy}`);
+    expect(draftRes.status).toBe(200);
+    const draft = await draftRes.json() as { ok: boolean; version: { versionId: string; status: string } };
+    expect(draft.ok).toBe(true);
+    expect(draft.version.status).toBe("draft");
+
+    const lifecycleScenarios = encodeURIComponent(JSON.stringify([
+      { provider: "openai", model: "gpt-5.2", hour: 10, tags: "rollout" },
+    ]));
+    const validateRes = await fetch(
+      `${url}/api/ops/policy/lifecycle/validate?version=${draft.version.versionId}&scenarios=${lifecycleScenarios}`,
+    );
+    expect(validateRes.status).toBe(200);
+    const validated = await validateRes.json() as { ok: boolean; version: { status: string } };
+    expect(validated.ok).toBe(true);
+    expect(validated.version.status).toBe("validated");
+
+    const approveRes = await fetch(`${url}/api/ops/policy/lifecycle/approve?version=${draft.version.versionId}`);
+    expect(approveRes.status).toBe(200);
+    const approved = await approveRes.json() as { ok: boolean; version: { status: string } };
+    expect(approved.ok).toBe(true);
+    expect(approved.version.status).toBe("approved");
+
+    const promoteRes = await fetch(`${url}/api/ops/policy/lifecycle/promote?version=${draft.version.versionId}`);
+    expect(promoteRes.status).toBe(200);
+    const promoted = await promoteRes.json() as { ok: boolean; activeVersionId: string | null; version: { status: string } };
+    expect(promoted.ok).toBe(true);
+    expect(promoted.activeVersionId).toBe(draft.version.versionId);
+    expect(promoted.version.status).toBe("promoted");
+
+    const versionsRes = await fetch(`${url}/api/ops/policy/lifecycle/versions`);
+    expect(versionsRes.status).toBe(200);
+    const versions = await versionsRes.json() as { ok: boolean; activeVersionId: string | null; versions: Array<{ versionId: string }> };
+    expect(versions.ok).toBe(true);
+    expect(versions.activeVersionId).toBe(draft.version.versionId);
+    expect(versions.versions.some((item) => item.versionId === draft.version.versionId)).toBe(true);
 
     const opsRes = await fetch(`${url}/ops`);
     const opsHtml = await opsRes.text();

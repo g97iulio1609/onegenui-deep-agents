@@ -16,8 +16,10 @@ import type { ApprovalManager } from "./approval.js";
 import { estimateCost } from "./tokens.js";
 import {
   evaluatePolicyDiff,
+  evaluatePolicyGate,
   explainRoutingTarget,
   type ResolveRoutingTargetOptions,
+  type PolicyGateSummary,
   type RoutingDecisionExplanation,
   type RoutingPolicy,
 } from "./routing-policy.js";
@@ -115,6 +117,7 @@ export interface ControlPlaneOpsCapabilities {
   supportsPolicyExplainBatch: boolean;
   supportsPolicyExplainTraces: boolean;
   supportsPolicyExplainDiff: boolean;
+  supportsPolicyLifecycle: boolean;
   hostedDashboardPath: string;
   hostedTenantDashboardPath: string;
   policyExplainPath: string;
@@ -122,6 +125,20 @@ export interface ControlPlaneOpsCapabilities {
   policyExplainSimulatePath: string;
   policyExplainTracePath: string;
   policyExplainDiffPath: string;
+  policyLifecycleBasePath: string;
+}
+
+type ControlPlanePolicyLifecycleStatus = "draft" | "validated" | "approved" | "promoted";
+
+interface ControlPlanePolicyLifecycleVersion {
+  versionId: string;
+  status: ControlPlanePolicyLifecycleStatus;
+  createdAt: string;
+  validatedAt?: string;
+  approvedAt?: string;
+  promotedAt?: string;
+  policy: RoutingPolicy;
+  validation?: PolicyGateSummary;
 }
 
 export interface ControlPlanePolicyExplainTrace {
@@ -180,6 +197,9 @@ export class ControlPlane implements Disposable {
   private readonly explainTraces: ControlPlanePolicyExplainTrace[] = [];
   private nextExplainTraceId = 1;
   private latestExplainTraceId: string | null = null;
+  private readonly policyLifecycleVersions: ControlPlanePolicyLifecycleVersion[] = [];
+  private nextPolicyLifecycleVersion = 1;
+  private activePolicyVersionId: string | null = null;
   private server: Server | null = null;
 
   constructor(options: ControlPlaneOptions = {}) {
@@ -380,6 +400,36 @@ export class ControlPlane implements Disposable {
         if (pathname === "/api/ops/policy/explain/traces") {
           res.setHeader("Content-Type", "application/json; charset=utf-8");
           res.end(JSON.stringify(this.opsPolicyExplainTraces(parsed.searchParams), null, 2));
+          return;
+        }
+
+        if (pathname === "/api/ops/policy/lifecycle/draft") {
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.end(JSON.stringify(this.opsPolicyLifecycleDraft(parsed.searchParams), null, 2));
+          return;
+        }
+
+        if (pathname === "/api/ops/policy/lifecycle/validate") {
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.end(JSON.stringify(this.opsPolicyLifecycleValidate(parsed.searchParams), null, 2));
+          return;
+        }
+
+        if (pathname === "/api/ops/policy/lifecycle/approve") {
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.end(JSON.stringify(this.opsPolicyLifecycleApprove(parsed.searchParams), null, 2));
+          return;
+        }
+
+        if (pathname === "/api/ops/policy/lifecycle/promote") {
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.end(JSON.stringify(this.opsPolicyLifecyclePromote(parsed.searchParams), null, 2));
+          return;
+        }
+
+        if (pathname === "/api/ops/policy/lifecycle/versions") {
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.end(JSON.stringify(this.opsPolicyLifecycleVersions(), null, 2));
           return;
         }
 
@@ -691,6 +741,175 @@ export class ControlPlane implements Disposable {
     });
   }
 
+  private parseLifecyclePolicy(params: URLSearchParams): RoutingPolicy {
+    const raw = params.get("policy");
+    if (!raw) {
+      throw new ValidationError("Missing policy query parameter", "policy");
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      throw new ValidationError("Invalid policy JSON payload", "policy");
+    }
+    if (!parsed || typeof parsed !== "object") {
+      throw new ValidationError("policy must be a JSON object", "policy");
+    }
+    return parsed as RoutingPolicy;
+  }
+
+  private cloneRoutingPolicy(policy: RoutingPolicy): RoutingPolicy {
+    return JSON.parse(JSON.stringify(policy)) as RoutingPolicy;
+  }
+
+  private summarizeLifecycleVersion(version: ControlPlanePolicyLifecycleVersion): {
+    versionId: string;
+    status: ControlPlanePolicyLifecycleStatus;
+    createdAt: string;
+    validatedAt?: string;
+    approvedAt?: string;
+    promotedAt?: string;
+    hasValidation: boolean;
+    validation?: PolicyGateSummary;
+  } {
+    return {
+      versionId: version.versionId,
+      status: version.status,
+      createdAt: version.createdAt,
+      validatedAt: version.validatedAt,
+      approvedAt: version.approvedAt,
+      promotedAt: version.promotedAt,
+      hasValidation: !!version.validation,
+      validation: version.validation,
+    };
+  }
+
+  private findLifecycleVersion(versionId: string): ControlPlanePolicyLifecycleVersion {
+    const found = this.policyLifecycleVersions.find((item) => item.versionId === versionId);
+    if (!found) {
+      throw new ValidationError(`Unknown lifecycle version "${versionId}"`, "version");
+    }
+    return found;
+  }
+
+  private opsPolicyLifecycleDraft(params: URLSearchParams): {
+    ok: true;
+    version: ReturnType<ControlPlane["summarizeLifecycleVersion"]>;
+  } {
+    const now = new Date().toISOString();
+    const version: ControlPlanePolicyLifecycleVersion = {
+      versionId: `policy-v${this.nextPolicyLifecycleVersion++}`,
+      status: "draft",
+      createdAt: now,
+      policy: this.cloneRoutingPolicy(this.parseLifecyclePolicy(params)),
+    };
+    this.policyLifecycleVersions.push(version);
+    return {
+      ok: true,
+      version: this.summarizeLifecycleVersion(version),
+    };
+  }
+
+  private opsPolicyLifecycleValidate(params: URLSearchParams): {
+    ok: boolean;
+    version: ReturnType<ControlPlane["summarizeLifecycleVersion"]>;
+    validation: PolicyGateSummary;
+  } {
+    const versionId = params.get("version");
+    if (!versionId) {
+      throw new ValidationError("Missing version query parameter", "version");
+    }
+    const version = this.findLifecycleVersion(versionId);
+    const scenarios = this.parsePolicyExplainBatchScenarios(params).map((scenario) => ({
+      provider: scenario.provider,
+      model: scenario.model,
+      options: scenario.options,
+    }));
+    const validation = evaluatePolicyGate(version.policy, scenarios);
+    version.validation = validation;
+    if (validation.failed === 0) {
+      version.status = "validated";
+      version.validatedAt = new Date().toISOString();
+    }
+    return {
+      ok: validation.failed === 0,
+      version: this.summarizeLifecycleVersion(version),
+      validation,
+    };
+  }
+
+  private opsPolicyLifecycleApprove(params: URLSearchParams): {
+    ok: boolean;
+    version: ReturnType<ControlPlane["summarizeLifecycleVersion"]>;
+    error?: string;
+  } {
+    const versionId = params.get("version");
+    if (!versionId) {
+      throw new ValidationError("Missing version query parameter", "version");
+    }
+    const version = this.findLifecycleVersion(versionId);
+    if (!version.validation || version.validation.failed > 0 || version.status !== "validated") {
+      return {
+        ok: false,
+        version: this.summarizeLifecycleVersion(version),
+        error: "version must pass validation before approval",
+      };
+    }
+    version.status = "approved";
+    version.approvedAt = new Date().toISOString();
+    return {
+      ok: true,
+      version: this.summarizeLifecycleVersion(version),
+    };
+  }
+
+  private opsPolicyLifecyclePromote(params: URLSearchParams): {
+    ok: boolean;
+    activeVersionId: string | null;
+    version: ReturnType<ControlPlane["summarizeLifecycleVersion"]>;
+    error?: string;
+  } {
+    const versionId = params.get("version");
+    if (!versionId) {
+      throw new ValidationError("Missing version query parameter", "version");
+    }
+    const version = this.findLifecycleVersion(versionId);
+    if (version.status !== "approved") {
+      return {
+        ok: false,
+        activeVersionId: this.activePolicyVersionId,
+        version: this.summarizeLifecycleVersion(version),
+        error: "version must be approved before promotion",
+      };
+    }
+    for (const item of this.policyLifecycleVersions) {
+      if (item.versionId !== versionId && item.status === "promoted") {
+        item.status = "approved";
+      }
+    }
+    version.status = "promoted";
+    version.promotedAt = new Date().toISOString();
+    this.activePolicyVersionId = version.versionId;
+    this.routingPolicy = this.cloneRoutingPolicy(version.policy);
+    return {
+      ok: true,
+      activeVersionId: this.activePolicyVersionId,
+      version: this.summarizeLifecycleVersion(version),
+    };
+  }
+
+  private opsPolicyLifecycleVersions(): {
+    ok: true;
+    activeVersionId: string | null;
+    versions: Array<ReturnType<ControlPlane["summarizeLifecycleVersion"]>>;
+  } {
+    return {
+      ok: true,
+      activeVersionId: this.activePolicyVersionId,
+      versions: this.policyLifecycleVersions.map((item) => this.summarizeLifecycleVersion(item)),
+    };
+  }
+
   private buildStreamEvent(
     channel: ControlPlaneStreamChannel,
     filters: ControlPlaneContext,
@@ -735,6 +954,7 @@ export class ControlPlane implements Disposable {
       supportsPolicyExplainBatch: true,
       supportsPolicyExplainTraces: true,
       supportsPolicyExplainDiff: true,
+      supportsPolicyLifecycle: true,
       hostedDashboardPath: "/ops",
       hostedTenantDashboardPath: "/ops/tenants",
       policyExplainPath: "/api/ops/policy/explain",
@@ -742,6 +962,7 @@ export class ControlPlane implements Disposable {
       policyExplainSimulatePath: "/api/ops/policy/explain/simulate",
       policyExplainTracePath: "/api/ops/policy/explain/traces",
       policyExplainDiffPath: "/api/ops/policy/explain/diff",
+      policyLifecycleBasePath: "/api/ops/policy/lifecycle",
     };
   }
 
