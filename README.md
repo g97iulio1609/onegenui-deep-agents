@@ -181,6 +181,8 @@ const cp = new ControlPlane({
 cp.setCostUsage({ inputTokens: 1200, outputTokens: 600 });
 const { url } = await cp.startServer("127.0.0.1", 0);
 console.log(`Control Plane: ${url}`);
+// SSE stream (single event for quick checks):
+// GET ${url}/api/stream?channel=timeline&once=1
 ```
 
 ---

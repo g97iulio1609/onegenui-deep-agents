@@ -173,4 +173,31 @@ describe("ControlPlane", () => {
 
     await cp.stopServer();
   });
+
+  it("exposes SSE stream endpoint for timeline/dag updates", async () => {
+    const cp = new ControlPlane({
+      telemetry: {
+        exportSpans: () => [{ name: "s1" }],
+        exportMetrics: () => ({ totalSpans: 1 }),
+      },
+      approvals: {
+        listPending: () => [],
+      },
+    });
+    cp.withContext({ tenantId: "t-1", sessionId: "s-1", runId: "r-1" }).snapshot();
+
+    const { url } = await cp.startServer("127.0.0.1", 0);
+    const streamRes = await fetch(`${url}/api/stream?channel=timeline&once=1`);
+    expect(streamRes.status).toBe(200);
+    expect(streamRes.headers.get("content-type")).toContain("text/event-stream");
+    const body = await streamRes.text();
+    expect(body).toContain("event: timeline");
+    const dataLine = body.split("\n").find((line) => line.startsWith("data: "));
+    expect(dataLine).toBeDefined();
+    const event = JSON.parse((dataLine ?? "").slice(6)) as { event: string; payload: unknown[] };
+    expect(event.event).toBe("timeline");
+    expect(Array.isArray(event.payload)).toBe(true);
+
+    await cp.stopServer();
+  });
 });

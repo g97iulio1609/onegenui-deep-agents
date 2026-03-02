@@ -67,6 +67,15 @@ export interface ControlPlaneTimelinePoint {
   totalCostUsd: number;
 }
 
+export type ControlPlaneStreamChannel = "snapshot" | "timeline" | "dag";
+
+export interface ControlPlaneStreamEvent {
+  event: ControlPlaneStreamChannel;
+  generatedAt: string;
+  context: ControlPlaneContext;
+  payload: unknown;
+}
+
 export class ControlPlane implements Disposable {
   private readonly telemetry?: Pick<Telemetry, "exportSpans" | "exportMetrics">;
   private readonly approvals?: Pick<ApprovalManager, "listPending">;
@@ -217,6 +226,30 @@ export class ControlPlane implements Disposable {
           return;
         }
 
+        if (pathname === "/api/stream") {
+          const filters = this.applyAuthClaims(this.parseContextFilters(parsed.searchParams));
+          const channel = this.parseStreamChannel(parsed.searchParams.get("channel"));
+          const once = parsed.searchParams.get("once") === "1";
+          res.statusCode = 200;
+          res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+          res.setHeader("Cache-Control", "no-cache");
+          res.setHeader("Connection", "keep-alive");
+          this.writeSseEvent(res, this.buildStreamEvent(channel, filters));
+          if (once) {
+            res.end();
+            return;
+          }
+
+          const timer = setInterval(() => {
+            if (res.writableEnded || res.destroyed) return;
+            this.writeSseEvent(res, this.buildStreamEvent(channel, filters));
+          }, 1000);
+          const cleanup = () => clearInterval(timer);
+          req.on("close", cleanup);
+          req.on("aborted", cleanup);
+          return;
+        }
+
         if (pathname === "/") {
           res.setHeader("Content-Type", "text/html; charset=utf-8");
           res.end(this.renderDashboardHtml());
@@ -301,12 +334,42 @@ export class ControlPlane implements Disposable {
     throw new ValidationError(`Unknown section "${section}"`, "section");
   }
 
+  private parseStreamChannel(channel: string | null): ControlPlaneStreamChannel {
+    if (channel === null || channel === "snapshot") return "snapshot";
+    if (channel === "timeline" || channel === "dag") return channel;
+    throw new ValidationError(`Unknown stream channel "${channel}"`, "channel");
+  }
+
   private parseContextFilters(params: URLSearchParams): ControlPlaneContext {
     return {
       tenantId: params.get("tenant") ?? undefined,
       sessionId: params.get("session") ?? undefined,
       runId: params.get("run") ?? undefined,
     };
+  }
+
+  private buildStreamEvent(
+    channel: ControlPlaneStreamChannel,
+    filters: ControlPlaneContext,
+  ): ControlPlaneStreamEvent {
+    const snap = this.captureSnapshot();
+    const payload =
+      channel === "timeline"
+        ? this.getTimeline(filters)
+        : channel === "dag"
+          ? this.getDag(filters)
+          : this.filterHistory(filters).slice(-1)[0] ?? snap;
+    return {
+      event: channel,
+      generatedAt: snap.generatedAt,
+      context: { ...filters },
+      payload,
+    };
+  }
+
+  private writeSseEvent(res: import("node:http").ServerResponse, event: ControlPlaneStreamEvent): void {
+    res.write(`event: ${event.event}\n`);
+    res.write(`data: ${JSON.stringify(event)}\n\n`);
   }
 
   private applyAuthClaims(filters: ControlPlaneContext): ControlPlaneContext {
