@@ -109,9 +109,12 @@ export interface ControlPlaneOpsCapabilities {
   supportsOpsSummary: boolean;
   supportsOpsTenants: boolean;
   supportsPolicyExplain: boolean;
+  supportsPolicyExplainBatch: boolean;
   hostedDashboardPath: string;
   hostedTenantDashboardPath: string;
   policyExplainPath: string;
+  policyExplainBatchPath: string;
+  policyExplainSimulatePath: string;
 }
 
 export interface ControlPlaneOpsHealth {
@@ -338,6 +341,18 @@ export class ControlPlane implements Disposable {
           return;
         }
 
+        if (pathname === "/api/ops/policy/explain/batch") {
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.end(JSON.stringify(this.opsPolicyExplainBatch(parsed.searchParams), null, 2));
+          return;
+        }
+
+        if (pathname === "/api/ops/policy/explain/simulate") {
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.end(JSON.stringify(this.opsPolicyExplainSimulation(parsed.searchParams), null, 2));
+          return;
+        }
+
         if (pathname === "/api/stream") {
           const filters = this.applyAuthClaims(this.parseContextFilters(parsed.searchParams));
           const channels = this.parseStreamChannels(parsed.searchParams);
@@ -516,42 +531,71 @@ export class ControlPlane implements Disposable {
     return value as ProviderType;
   }
 
-  private parsePolicyExplainOptions(params: URLSearchParams): {
+  private parseOptionalNumber(raw: string | null, key: string): number | undefined {
+    if (raw === null || raw.trim().length === 0) return undefined;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) {
+      throw new ValidationError(`Invalid ${key} "${raw}"`, key);
+    }
+    return parsed;
+  }
+
+  private parsePolicyExplainScenario(raw: {
+    provider?: unknown;
+    model?: unknown;
+    available?: unknown;
+    cost?: unknown;
+    rpm?: unknown;
+    hour?: unknown;
+    tags?: unknown;
+  }): {
     provider: ProviderType;
     model: string;
     options: ResolveRoutingTargetOptions;
   } {
-    const provider = this.parsePolicyProvider(params.get("provider") ?? "openai");
-    const model = params.get("model") ?? "gpt-5.2";
+    const provider = this.parsePolicyProvider(
+      typeof raw.provider === "string" && raw.provider.trim().length > 0
+        ? raw.provider
+        : "openai",
+    );
+    const model = typeof raw.model === "string" && raw.model.trim().length > 0
+      ? raw.model
+      : "gpt-5.2";
 
-    const parseNumber = (raw: string | null, key: string): number | undefined => {
-      if (raw === null || raw.trim().length === 0) return undefined;
-      const parsed = Number(raw);
-      if (!Number.isFinite(parsed)) {
-        throw new ValidationError(`Invalid ${key} "${raw}"`, key);
-      }
-      return parsed;
-    };
-
-    const availableRaw = params.get("available");
-    const availableProviders = availableRaw
-      ? availableRaw
-        .split(",")
-        .map((value) => value.trim())
+    const availableValues = Array.isArray(raw.available)
+      ? raw.available
+      : typeof raw.available === "string"
+        ? raw.available.split(",")
+        : [];
+    const availableProviders = availableValues.length > 0
+      ? availableValues
+        .map((value) => String(value).trim())
         .filter((value) => value.length > 0)
         .map((value) => this.parsePolicyProvider(value))
       : undefined;
-    const tags = params.get("tags");
-    const governanceTags = tags
-      ? tags
-        .split(",")
-        .map((value) => value.trim())
+    const tagValues = Array.isArray(raw.tags)
+      ? raw.tags
+      : typeof raw.tags === "string"
+        ? raw.tags.split(",")
+        : [];
+    const governanceTags = tagValues.length > 0
+      ? tagValues
+        .map((value) => String(value).trim())
         .filter((value) => value.length > 0)
       : undefined;
 
-    const cost = parseNumber(params.get("cost"), "cost");
-    const rpm = parseNumber(params.get("rpm"), "rpm");
-    const hour = parseNumber(params.get("hour"), "hour");
+    const cost = this.parseOptionalNumber(
+      raw.cost !== undefined && raw.cost !== null ? String(raw.cost) : null,
+      "cost",
+    );
+    const rpm = this.parseOptionalNumber(
+      raw.rpm !== undefined && raw.rpm !== null ? String(raw.rpm) : null,
+      "rpm",
+    );
+    const hour = this.parseOptionalNumber(
+      raw.hour !== undefined && raw.hour !== null ? String(raw.hour) : null,
+      "hour",
+    );
 
     return {
       provider,
@@ -564,6 +608,56 @@ export class ControlPlane implements Disposable {
         governanceTags,
       },
     };
+  }
+
+  private parsePolicyExplainOptions(params: URLSearchParams): {
+    provider: ProviderType;
+    model: string;
+    options: ResolveRoutingTargetOptions;
+  } {
+    return this.parsePolicyExplainScenario({
+      provider: params.get("provider"),
+      model: params.get("model"),
+      available: params.get("available"),
+      cost: params.get("cost"),
+      rpm: params.get("rpm"),
+      hour: params.get("hour"),
+      tags: params.get("tags"),
+    });
+  }
+
+  private parsePolicyExplainBatchScenarios(params: URLSearchParams): Array<{
+    provider: ProviderType;
+    model: string;
+    options: ResolveRoutingTargetOptions;
+  }> {
+    const raw = params.get("scenarios");
+    if (!raw) {
+      throw new ValidationError("Missing scenarios query parameter", "scenarios");
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      throw new ValidationError("Invalid scenarios JSON payload", "scenarios");
+    }
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      throw new ValidationError("scenarios must be a non-empty array", "scenarios");
+    }
+    return parsed.map((item, index) => {
+      if (typeof item !== "object" || item === null) {
+        throw new ValidationError(`Scenario ${index} must be an object`, "scenarios");
+      }
+      return this.parsePolicyExplainScenario(item as {
+        provider?: unknown;
+        model?: unknown;
+        available?: unknown;
+        cost?: unknown;
+        rpm?: unknown;
+        hour?: unknown;
+        tags?: unknown;
+      });
+    });
   }
 
   private buildStreamEvent(
@@ -607,9 +701,12 @@ export class ControlPlane implements Disposable {
       supportsOpsSummary: true,
       supportsOpsTenants: true,
       supportsPolicyExplain: true,
+      supportsPolicyExplainBatch: true,
       hostedDashboardPath: "/ops",
       hostedTenantDashboardPath: "/ops/tenants",
       policyExplainPath: "/api/ops/policy/explain",
+      policyExplainBatchPath: "/api/ops/policy/explain/batch",
+      policyExplainSimulatePath: "/api/ops/policy/explain/simulate",
     };
   }
 
@@ -713,6 +810,55 @@ export class ControlPlane implements Disposable {
       parsed.model,
       parsed.options,
     );
+  }
+
+  private opsPolicyExplainBatch(params: URLSearchParams): {
+    ok: true;
+    total: number;
+    passed: number;
+    failed: number;
+    results: Array<{
+      index: number;
+      input: { provider: ProviderType; model: string };
+      explanation: RoutingDecisionExplanation;
+    }>;
+  } {
+    const scenarios = this.parsePolicyExplainBatchScenarios(params);
+    const results = scenarios.map((scenario, index) => ({
+      index,
+      input: {
+        provider: scenario.provider,
+        model: scenario.model,
+      },
+      explanation: explainRoutingTarget(
+        this.routingPolicy,
+        scenario.provider,
+        scenario.model,
+        scenario.options,
+      ),
+    }));
+    const passed = results.filter((item) => item.explanation.ok).length;
+    return {
+      ok: true,
+      total: results.length,
+      passed,
+      failed: results.length - passed,
+      results,
+    };
+  }
+
+  private opsPolicyExplainSimulation(params: URLSearchParams): {
+    ok: true;
+    total: number;
+    passed: number;
+    failed: number;
+    results: Array<{
+      index: number;
+      input: { provider: ProviderType; model: string };
+      explanation: RoutingDecisionExplanation;
+    }>;
+  } {
+    return this.opsPolicyExplainBatch(params);
   }
 
   private emitStreamBatch(

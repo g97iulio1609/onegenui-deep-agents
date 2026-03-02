@@ -80,17 +80,23 @@ describe("ControlPlane", () => {
       supportsOpsSummary: boolean;
       supportsOpsTenants: boolean;
       supportsPolicyExplain: boolean;
+      supportsPolicyExplainBatch: boolean;
       hostedDashboardPath: string;
       hostedTenantDashboardPath: string;
       policyExplainPath: string;
+      policyExplainBatchPath: string;
+      policyExplainSimulatePath: string;
     };
     expect(caps.supportsMultiplex).toBe(true);
     expect(caps.supportsOpsSummary).toBe(true);
     expect(caps.supportsOpsTenants).toBe(true);
     expect(caps.supportsPolicyExplain).toBe(true);
+    expect(caps.supportsPolicyExplainBatch).toBe(true);
     expect(caps.hostedDashboardPath).toBe("/ops");
     expect(caps.hostedTenantDashboardPath).toBe("/ops/tenants");
     expect(caps.policyExplainPath).toBe("/api/ops/policy/explain");
+    expect(caps.policyExplainBatchPath).toBe("/api/ops/policy/explain/batch");
+    expect(caps.policyExplainSimulatePath).toBe("/api/ops/policy/explain/simulate");
 
     const healthRes = await fetch(`${url}/api/ops/health`);
     expect(healthRes.status).toBe(200);
@@ -123,6 +129,33 @@ describe("ControlPlane", () => {
     expect(explain.decision?.provider).toBe("openai");
     expect(explain.decision?.selectedBy).toBe("direct");
     expect(explain.checks.some((item) => item.check === "selection" && item.status === "passed")).toBe(true);
+
+    const scenarios = encodeURIComponent(JSON.stringify([
+      { provider: "openai", model: "gpt-5.2", hour: 10 },
+      { provider: "openai", model: "gpt-5.2", hour: 22 },
+    ]));
+    const batchRes = await fetch(`${url}/api/ops/policy/explain/batch?scenarios=${scenarios}`);
+    expect(batchRes.status).toBe(200);
+    const batch = await batchRes.json() as {
+      ok: boolean;
+      total: number;
+      passed: number;
+      failed: number;
+      results: Array<{ explanation: { ok: boolean } }>;
+    };
+    expect(batch.ok).toBe(true);
+    expect(batch.total).toBe(2);
+    expect(batch.passed).toBe(1);
+    expect(batch.failed).toBe(1);
+    expect(batch.results[0]?.explanation.ok).toBe(true);
+    expect(batch.results[1]?.explanation.ok).toBe(false);
+
+    const simulateRes = await fetch(`${url}/api/ops/policy/explain/simulate?scenarios=${scenarios}`);
+    expect(simulateRes.status).toBe(200);
+    const simulation = await simulateRes.json() as { total: number; passed: number; failed: number };
+    expect(simulation.total).toBe(2);
+    expect(simulation.passed).toBe(1);
+    expect(simulation.failed).toBe(1);
 
     const opsRes = await fetch(`${url}/ops`);
     const opsHtml = await opsRes.text();
