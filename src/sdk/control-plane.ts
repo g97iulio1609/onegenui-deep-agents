@@ -57,6 +57,7 @@ export interface ControlPlaneOptions {
   authClaims?: ControlPlaneAuthClaims;
   persistPath?: string;
   historyLimit?: number;
+  streamReplayLimit?: number;
   context?: ControlPlaneContext;
 }
 
@@ -70,6 +71,7 @@ export interface ControlPlaneTimelinePoint {
 export type ControlPlaneStreamChannel = "snapshot" | "timeline" | "dag";
 
 export interface ControlPlaneStreamEvent {
+  id: number;
   event: ControlPlaneStreamChannel;
   generatedAt: string;
   context: ControlPlaneContext;
@@ -84,9 +86,12 @@ export class ControlPlane implements Disposable {
   private authClaims?: ControlPlaneAuthClaims;
   private readonly persistPath?: string;
   private readonly historyLimit: number;
+  private readonly streamReplayLimit: number;
   private context: ControlPlaneContext;
   private latestCost: ReturnType<typeof estimateCost> | null = null;
   private readonly history: ControlPlaneSnapshot[] = [];
+  private nextStreamEventId = 1;
+  private readonly streamEvents: ControlPlaneStreamEvent[] = [];
   private server: Server | null = null;
 
   constructor(options: ControlPlaneOptions = {}) {
@@ -97,6 +102,7 @@ export class ControlPlane implements Disposable {
     this.authClaims = options.authClaims;
     this.persistPath = options.persistPath;
     this.historyLimit = options.historyLimit ?? 200;
+    this.streamReplayLimit = options.streamReplayLimit ?? 500;
     this.context = { ...(options.context ?? {}) };
   }
 
@@ -228,13 +234,22 @@ export class ControlPlane implements Disposable {
 
         if (pathname === "/api/stream") {
           const filters = this.applyAuthClaims(this.parseContextFilters(parsed.searchParams));
-          const channel = this.parseStreamChannel(parsed.searchParams.get("channel"));
+          const channels = this.parseStreamChannels(parsed.searchParams);
+          for (const channel of channels) {
+            this.assertChannelAllowed(channel);
+          }
           const once = parsed.searchParams.get("once") === "1";
+          const lastEventId = this.parseLastEventId(req, parsed.searchParams);
           res.statusCode = 200;
           res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
           res.setHeader("Cache-Control", "no-cache");
           res.setHeader("Connection", "keep-alive");
-          this.writeSseEvent(res, this.buildStreamEvent(channel, filters));
+          const replayed = this.replayStreamEvents(res, channels, filters, lastEventId);
+          if (once && replayed > 0) {
+            res.end();
+            return;
+          }
+          this.emitStreamBatch(res, channels, filters);
           if (once) {
             res.end();
             return;
@@ -242,7 +257,7 @@ export class ControlPlane implements Disposable {
 
           const timer = setInterval(() => {
             if (res.writableEnded || res.destroyed) return;
-            this.writeSseEvent(res, this.buildStreamEvent(channel, filters));
+            this.emitStreamBatch(res, channels, filters);
           }, 1000);
           const cleanup = () => clearInterval(timer);
           req.on("close", cleanup);
@@ -340,6 +355,34 @@ export class ControlPlane implements Disposable {
     throw new ValidationError(`Unknown stream channel "${channel}"`, "channel");
   }
 
+  private parseStreamChannels(params: URLSearchParams): ControlPlaneStreamChannel[] {
+    const channelsParam = params.get("channels");
+    if (!channelsParam) {
+      return [this.parseStreamChannel(params.get("channel"))];
+    }
+    const channels = channelsParam
+      .split(",")
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0)
+      .map((value) => this.parseStreamChannel(value));
+    if (channels.length === 0) {
+      return ["snapshot"];
+    }
+    return [...new Set(channels)];
+  }
+
+  private parseLastEventId(req: IncomingMessage, params: URLSearchParams): number | null {
+    const fromQuery = params.get("lastEventId");
+    const fromHeader = req.headers["last-event-id"];
+    const raw = fromQuery ?? (typeof fromHeader === "string" ? fromHeader : null);
+    if (raw === null) return null;
+    const parsed = Number.parseInt(raw, 10);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      throw new ValidationError(`Invalid lastEventId "${raw}"`, "lastEventId");
+    }
+    return parsed;
+  }
+
   private parseContextFilters(params: URLSearchParams): ControlPlaneContext {
     return {
       tenantId: params.get("tenant") ?? undefined,
@@ -351,25 +394,71 @@ export class ControlPlane implements Disposable {
   private buildStreamEvent(
     channel: ControlPlaneStreamChannel,
     filters: ControlPlaneContext,
+    snap: ControlPlaneSnapshot,
   ): ControlPlaneStreamEvent {
-    const snap = this.captureSnapshot();
     const payload =
       channel === "timeline"
         ? this.getTimeline(filters)
         : channel === "dag"
           ? this.getDag(filters)
           : this.filterHistory(filters).slice(-1)[0] ?? snap;
-    return {
+    const event: ControlPlaneStreamEvent = {
+      id: this.nextStreamEventId++,
       event: channel,
       generatedAt: snap.generatedAt,
-      context: { ...filters },
+      context: { ...snap.context },
       payload,
     };
+    this.streamEvents.push(event);
+    if (this.streamEvents.length > this.streamReplayLimit) {
+      this.streamEvents.shift();
+    }
+    return event;
   }
 
   private writeSseEvent(res: import("node:http").ServerResponse, event: ControlPlaneStreamEvent): void {
+    res.write(`id: ${event.id}\n`);
     res.write(`event: ${event.event}\n`);
     res.write(`data: ${JSON.stringify(event)}\n\n`);
+  }
+
+  private emitStreamBatch(
+    res: import("node:http").ServerResponse,
+    channels: ControlPlaneStreamChannel[],
+    filters: ControlPlaneContext,
+  ): void {
+    const snapshot = this.captureSnapshot();
+    for (const channel of channels) {
+      this.writeSseEvent(res, this.buildStreamEvent(channel, filters, snapshot));
+    }
+  }
+
+  private replayStreamEvents(
+    res: import("node:http").ServerResponse,
+    channels: ControlPlaneStreamChannel[],
+    filters: ControlPlaneContext,
+    lastEventId: number | null,
+  ): number {
+    if (lastEventId === null) return 0;
+    let replayed = 0;
+    for (const event of this.streamEvents) {
+      if (event.id <= lastEventId) continue;
+      if (!channels.includes(event.event)) continue;
+      if (!this.matchesContext(event.context, filters)) continue;
+      this.writeSseEvent(res, event);
+      replayed += 1;
+    }
+    return replayed;
+  }
+
+  private assertChannelAllowed(channel: ControlPlaneStreamChannel): void {
+    const roles = (this.authClaims?.roles ?? []).map((role) => role.toLowerCase());
+    if (roles.length === 0) return;
+    if (roles.includes("admin") || roles.includes("operator")) return;
+    if ((channel === "snapshot" || channel === "timeline") && (roles.includes("viewer") || roles.includes("reader"))) {
+      return;
+    }
+    throw new ControlPlaneForbiddenError(`Forbidden stream channel "${channel}"`);
   }
 
   private applyAuthClaims(filters: ControlPlaneContext): ControlPlaneContext {

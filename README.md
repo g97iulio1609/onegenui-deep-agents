@@ -181,8 +181,10 @@ const cp = new ControlPlane({
 cp.setCostUsage({ inputTokens: 1200, outputTokens: 600 });
 const { url } = await cp.startServer("127.0.0.1", 0);
 console.log(`Control Plane: ${url}`);
-// SSE stream (single event for quick checks):
-// GET ${url}/api/stream?channel=timeline&once=1
+// SSE stream:
+// single event quick-check -> GET ${url}/api/stream?channel=timeline&once=1
+// multiplex channels -> GET ${url}/api/stream?channels=snapshot,timeline&once=1
+// reconnect/replay cursor -> GET ${url}/api/stream?channel=snapshot&lastEventId=42
 ```
 
 ---

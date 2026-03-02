@@ -191,12 +191,71 @@ describe("ControlPlane", () => {
     expect(streamRes.status).toBe(200);
     expect(streamRes.headers.get("content-type")).toContain("text/event-stream");
     const body = await streamRes.text();
+    expect(body).toContain("id: ");
     expect(body).toContain("event: timeline");
     const dataLine = body.split("\n").find((line) => line.startsWith("data: "));
     expect(dataLine).toBeDefined();
     const event = JSON.parse((dataLine ?? "").slice(6)) as { event: string; payload: unknown[] };
     expect(event.event).toBe("timeline");
     expect(Array.isArray(event.payload)).toBe(true);
+
+    await cp.stopServer();
+  });
+
+  it("supports stream channel multiplex and replay cursor", async () => {
+    const cp = new ControlPlane({
+      telemetry: {
+        exportSpans: () => [{ name: "s1" }],
+        exportMetrics: () => ({ totalSpans: 1 }),
+      },
+      approvals: {
+        listPending: () => [],
+      },
+    });
+
+    const { url } = await cp.startServer("127.0.0.1", 0);
+    const first = await fetch(`${url}/api/stream?channel=snapshot&once=1`);
+    const firstBody = await first.text();
+    const firstIdLine = firstBody.split("\n").find((line) => line.startsWith("id: "));
+    expect(firstIdLine).toBeDefined();
+    const firstId = Number.parseInt((firstIdLine ?? "id: 0").slice(4), 10);
+
+    const second = await fetch(`${url}/api/stream?channels=snapshot,timeline&once=1`);
+    const secondBody = await second.text();
+    expect(secondBody).toContain("event: snapshot");
+    expect(secondBody).toContain("event: timeline");
+
+    const replay = await fetch(`${url}/api/stream?channel=snapshot&once=1&lastEventId=${firstId}`);
+    const replayBody = await replay.text();
+    const replayIds = replayBody
+      .split("\n")
+      .filter((line) => line.startsWith("id: "))
+      .map((line) => Number.parseInt(line.slice(4), 10));
+    expect(replayIds.every((id) => id > firstId)).toBe(true);
+
+    await cp.stopServer();
+  });
+
+  it("enforces stream channel RBAC roles", async () => {
+    const cp = new ControlPlane({
+      authToken: "claims-token",
+      authClaims: {
+        roles: ["viewer"],
+      },
+      telemetry: {
+        exportSpans: () => [{ name: "s1" }],
+        exportMetrics: () => ({ totalSpans: 1 }),
+      },
+      approvals: {
+        listPending: () => [],
+      },
+    });
+
+    const { url } = await cp.startServer("127.0.0.1", 0);
+    const forbidden = await fetch(`${url}/api/stream?channel=dag&once=1&token=claims-token`);
+    expect(forbidden.status).toBe(403);
+    const allowed = await fetch(`${url}/api/stream?channel=timeline&once=1&token=claims-token`);
+    expect(allowed.status).toBe(200);
 
     await cp.stopServer();
   });

@@ -51,5 +51,60 @@ describe("ControlPlane E2E", () => {
     expect(lines.length).toBeGreaterThan(0);
     rmSync(persistPath, { force: true });
   });
-});
 
+  it("streams snapshot events in simple hosted flow", async () => {
+    const cp = new ControlPlane({
+      telemetry: {
+        exportSpans: () => [{ name: "simple" }],
+        exportMetrics: () => ({ totalSpans: 1 }),
+      },
+      approvals: {
+        listPending: () => [],
+      },
+    });
+
+    cp.withContext({ tenantId: "t-simple", sessionId: "s-simple", runId: "r-simple" }).snapshot();
+    const { url } = await cp.startServer("127.0.0.1", 0);
+    const stream = await fetch(`${url}/api/stream?channel=snapshot&once=1`);
+    expect(stream.status).toBe(200);
+    const body = await stream.text();
+    expect(body).toContain("event: snapshot");
+    const dataLine = body.split("\n").find((line) => line.startsWith("data: "));
+    const event = JSON.parse((dataLine ?? "").slice(6)) as { event: string; payload: { context: { tenantId?: string } } };
+    expect(event.event).toBe("snapshot");
+    expect(event.payload.context.tenantId).toBe("t-simple");
+    await cp.stopServer();
+  });
+
+  it("streams scoped timeline events and rejects forbidden claims scopes", async () => {
+    const cp = new ControlPlane({
+      authToken: "stream-token",
+      authClaims: {
+        tenantId: "tenant-a",
+        allowedSessionIds: ["session-a"],
+      },
+      telemetry: {
+        exportSpans: () => [{ name: "collect" }],
+        exportMetrics: () => ({ totalSpans: 1 }),
+      },
+      approvals: {
+        listPending: () => [],
+      },
+    });
+
+    cp.withContext({ tenantId: "tenant-a", sessionId: "session-a", runId: "run-a" }).snapshot();
+    const { url } = await cp.startServer("127.0.0.1", 0);
+
+    const allowed = await fetch(`${url}/api/stream?token=stream-token&channel=timeline&once=1`);
+    expect(allowed.status).toBe(200);
+    const allowedBody = await allowed.text();
+    const dataLine = allowedBody.split("\n").find((line) => line.startsWith("data: "));
+    const event = JSON.parse((dataLine ?? "").slice(6)) as { payload: Array<{ spanCount: number }> };
+    expect(Array.isArray(event.payload)).toBe(true);
+
+    const forbidden = await fetch(`${url}/api/stream?token=stream-token&channel=timeline&tenant=tenant-b&once=1`);
+    expect(forbidden.status).toBe(403);
+
+    await cp.stopServer();
+  });
+});
