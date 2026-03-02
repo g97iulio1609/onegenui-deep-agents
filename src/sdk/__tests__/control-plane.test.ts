@@ -84,6 +84,7 @@ describe("ControlPlane", () => {
       supportsPolicyExplainTraces: boolean;
       supportsPolicyExplainDiff: boolean;
       supportsPolicyLifecycle: boolean;
+      supportsPolicyLifecycleRbac: boolean;
       supportsPolicyDriftMonitoring: boolean;
       hostedDashboardPath: string;
       hostedTenantDashboardPath: string;
@@ -93,6 +94,8 @@ describe("ControlPlane", () => {
       policyExplainTracePath: string;
       policyExplainDiffPath: string;
       policyLifecycleBasePath: string;
+      policyLifecycleRoleParam: string;
+      policyLifecycleAuditFields: string[];
       policyDriftPath: string;
     };
     expect(caps.supportsMultiplex).toBe(true);
@@ -103,6 +106,7 @@ describe("ControlPlane", () => {
     expect(caps.supportsPolicyExplainTraces).toBe(true);
     expect(caps.supportsPolicyExplainDiff).toBe(true);
     expect(caps.supportsPolicyLifecycle).toBe(true);
+    expect(caps.supportsPolicyLifecycleRbac).toBe(true);
     expect(caps.supportsPolicyDriftMonitoring).toBe(true);
     expect(caps.hostedDashboardPath).toBe("/ops");
     expect(caps.hostedTenantDashboardPath).toBe("/ops/tenants");
@@ -112,6 +116,8 @@ describe("ControlPlane", () => {
     expect(caps.policyExplainTracePath).toBe("/api/ops/policy/explain/traces");
     expect(caps.policyExplainDiffPath).toBe("/api/ops/policy/explain/diff");
     expect(caps.policyLifecycleBasePath).toBe("/api/ops/policy/lifecycle");
+    expect(caps.policyLifecycleRoleParam).toBe("role");
+    expect(caps.policyLifecycleAuditFields).toContain("approvedByRole");
     expect(caps.policyDriftPath).toBe("/api/ops/policy/drift");
 
     const healthRes = await fetch(`${url}/api/ops/health`);
@@ -298,6 +304,80 @@ describe("ControlPlane", () => {
 
     const allowed = await fetch(`${url}/api/snapshot?token=secret-token`);
     expect(allowed.status).toBe(200);
+
+    await cp.stopServer();
+  });
+
+  it("enforces lifecycle RBAC roles and includes audit metadata", async () => {
+    const cp = new ControlPlane({
+      authToken: "claims-token",
+      authClaims: {
+        roles: ["author"],
+      },
+    });
+    const { url } = await cp.startServer("127.0.0.1", 0);
+    const policy = encodeURIComponent(JSON.stringify({}));
+    const scenarios = encodeURIComponent(JSON.stringify([{ provider: "openai", model: "gpt-5.2" }]));
+
+    const draftRes = await fetch(
+      `${url}/api/ops/policy/lifecycle/draft?token=claims-token&role=author&actor=alice&comment=${encodeURIComponent("draft created")}&policy=${policy}`,
+    );
+    expect(draftRes.status).toBe(200);
+    const draft = await draftRes.json() as {
+      version: {
+        versionId: string;
+        audit?: { draftedByRole?: string; draftedBy?: string; draftComment?: string };
+      };
+    };
+    expect(draft.version.audit?.draftedByRole).toBe("author");
+    expect(draft.version.audit?.draftedBy).toBe("alice");
+
+    const validateRes = await fetch(
+      `${url}/api/ops/policy/lifecycle/validate?token=claims-token&version=${draft.version.versionId}&role=author&scenarios=${scenarios}`,
+    );
+    expect(validateRes.status).toBe(200);
+    const validated = await validateRes.json() as {
+      ok: boolean;
+      version: { audit?: { validatedByRole?: string } };
+    };
+    expect(validated.ok).toBe(true);
+    expect(validated.version.audit?.validatedByRole).toBe("author");
+
+    const approveForbidden = await fetch(
+      `${url}/api/ops/policy/lifecycle/approve?token=claims-token&version=${draft.version.versionId}&role=author`,
+    );
+    expect(approveForbidden.status).toBe(403);
+
+    cp.withAuthClaims({ roles: ["reviewer"] });
+    const approveRes = await fetch(
+      `${url}/api/ops/policy/lifecycle/approve?token=claims-token&version=${draft.version.versionId}&role=reviewer&actor=bob`,
+    );
+    expect(approveRes.status).toBe(200);
+    const approved = await approveRes.json() as {
+      ok: boolean;
+      version: { audit?: { approvedByRole?: string; approvedBy?: string } };
+    };
+    expect(approved.ok).toBe(true);
+    expect(approved.version.audit?.approvedByRole).toBe("reviewer");
+    expect(approved.version.audit?.approvedBy).toBe("bob");
+
+    const promoteForbidden = await fetch(
+      `${url}/api/ops/policy/lifecycle/promote?token=claims-token&version=${draft.version.versionId}&role=reviewer`,
+    );
+    expect(promoteForbidden.status).toBe(403);
+
+    cp.withAuthClaims({ roles: ["promoter"] });
+    const promoteRes = await fetch(
+      `${url}/api/ops/policy/lifecycle/promote?token=claims-token&version=${draft.version.versionId}&role=promoter&comment=${encodeURIComponent("ready for prod")}`,
+    );
+    expect(promoteRes.status).toBe(200);
+    const promoted = await promoteRes.json() as {
+      ok: boolean;
+      version: { audit?: { promotedByRole?: string; promotionComment?: string } };
+    };
+    expect(promoted.ok).toBe(true);
+    expect(promoted.version.audit?.promotedByRole).toBe("promoter");
+    expect(promoted.version.audit?.promotionComment).toBe("ready for prod");
 
     await cp.stopServer();
   });

@@ -122,6 +122,7 @@ export interface ControlPlaneOpsCapabilities {
   supportsPolicyExplainTraces: boolean;
   supportsPolicyExplainDiff: boolean;
   supportsPolicyLifecycle: boolean;
+  supportsPolicyLifecycleRbac: boolean;
   supportsPolicyDriftMonitoring: boolean;
   hostedDashboardPath: string;
   hostedTenantDashboardPath: string;
@@ -131,10 +132,27 @@ export interface ControlPlaneOpsCapabilities {
   policyExplainTracePath: string;
   policyExplainDiffPath: string;
   policyLifecycleBasePath: string;
+  policyLifecycleRoleParam: string;
+  policyLifecycleAuditFields: string[];
   policyDriftPath: string;
 }
 
 type ControlPlanePolicyLifecycleStatus = "draft" | "validated" | "approved" | "promoted";
+
+interface ControlPlanePolicyLifecycleAudit {
+  draftedByRole?: string;
+  draftedBy?: string;
+  draftComment?: string;
+  validatedByRole?: string;
+  validatedBy?: string;
+  validationComment?: string;
+  approvedByRole?: string;
+  approvedBy?: string;
+  approvalComment?: string;
+  promotedByRole?: string;
+  promotedBy?: string;
+  promotionComment?: string;
+}
 
 interface ControlPlanePolicyLifecycleVersion {
   versionId: string;
@@ -145,6 +163,7 @@ interface ControlPlanePolicyLifecycleVersion {
   promotedAt?: string;
   policy: RoutingPolicy;
   validation?: PolicyGateSummary;
+  audit?: ControlPlanePolicyLifecycleAudit;
 }
 
 export interface ControlPlanePolicyExplainTrace {
@@ -828,6 +847,7 @@ export class ControlPlane implements Disposable {
     promotedAt?: string;
     hasValidation: boolean;
     validation?: PolicyGateSummary;
+    audit?: ControlPlanePolicyLifecycleAudit;
   } {
     return {
       versionId: version.versionId,
@@ -838,6 +858,7 @@ export class ControlPlane implements Disposable {
       promotedAt: version.promotedAt,
       hasValidation: !!version.validation,
       validation: version.validation,
+      audit: version.audit,
     };
   }
 
@@ -849,16 +870,65 @@ export class ControlPlane implements Disposable {
     return found;
   }
 
+  private resolveLifecycleActor(
+    action: "draft" | "validate" | "approve" | "promote",
+    allowedRoles: string[],
+    params: URLSearchParams,
+  ): { role: string; actor?: string; comment?: string } {
+    const requestedRoleRaw = params.get("role");
+    const requestedRole = requestedRoleRaw?.trim().toLowerCase();
+
+    const claimRoles = (this.authClaims?.roles ?? [])
+      .map((role) => role.trim().toLowerCase())
+      .filter((role) => role.length > 0);
+
+    if (claimRoles.length > 0) {
+      if (requestedRole && !claimRoles.includes(requestedRole)) {
+        throw new ControlPlaneForbiddenError(`Forbidden lifecycle role "${requestedRole}"`);
+      }
+      if (requestedRole && !allowedRoles.includes(requestedRole)) {
+        throw new ControlPlaneForbiddenError(`Forbidden lifecycle action "${action}"`);
+      }
+      const effectiveRole = requestedRole ?? claimRoles.find((role) => allowedRoles.includes(role));
+      if (!effectiveRole) {
+        throw new ControlPlaneForbiddenError(`Forbidden lifecycle action "${action}"`);
+      }
+      const actor = params.get("actor")?.trim() || undefined;
+      const comment = params.get("comment")?.trim() || undefined;
+      return { role: effectiveRole, actor, comment };
+    }
+
+    if (requestedRole && !allowedRoles.includes(requestedRole)) {
+      throw new ControlPlaneForbiddenError(`Forbidden lifecycle action "${action}"`);
+    }
+    const actor = params.get("actor")?.trim() || undefined;
+    const comment = params.get("comment")?.trim() || undefined;
+    return { role: requestedRole ?? allowedRoles[0]!, actor, comment };
+  }
+
+  private mergeLifecycleAudit(
+    version: ControlPlanePolicyLifecycleVersion,
+    patch: Partial<ControlPlanePolicyLifecycleAudit>,
+  ): void {
+    version.audit = { ...(version.audit ?? {}), ...patch };
+  }
+
   private opsPolicyLifecycleDraft(params: URLSearchParams): {
     ok: true;
     version: ReturnType<ControlPlane["summarizeLifecycleVersion"]>;
   } {
+    const actor = this.resolveLifecycleActor("draft", ["author", "operator", "admin"], params);
     const now = new Date().toISOString();
     const version: ControlPlanePolicyLifecycleVersion = {
       versionId: `policy-v${this.nextPolicyLifecycleVersion++}`,
       status: "draft",
       createdAt: now,
       policy: this.cloneRoutingPolicy(this.parseLifecyclePolicy(params)),
+      audit: {
+        draftedByRole: actor.role,
+        draftedBy: actor.actor,
+        draftComment: actor.comment,
+      },
     };
     this.policyLifecycleVersions.push(version);
     return {
@@ -872,6 +942,7 @@ export class ControlPlane implements Disposable {
     version: ReturnType<ControlPlane["summarizeLifecycleVersion"]>;
     validation: PolicyGateSummary;
   } {
+    const actor = this.resolveLifecycleActor("validate", ["author", "reviewer", "operator", "admin"], params);
     const versionId = params.get("version");
     if (!versionId) {
       throw new ValidationError("Missing version query parameter", "version");
@@ -884,6 +955,11 @@ export class ControlPlane implements Disposable {
     }));
     const validation = evaluatePolicyGate(version.policy, scenarios);
     version.validation = validation;
+    this.mergeLifecycleAudit(version, {
+      validatedByRole: actor.role,
+      validatedBy: actor.actor,
+      validationComment: actor.comment,
+    });
     if (validation.failed === 0) {
       version.status = "validated";
       version.validatedAt = new Date().toISOString();
@@ -900,6 +976,7 @@ export class ControlPlane implements Disposable {
     version: ReturnType<ControlPlane["summarizeLifecycleVersion"]>;
     error?: string;
   } {
+    const actor = this.resolveLifecycleActor("approve", ["reviewer", "operator", "admin"], params);
     const versionId = params.get("version");
     if (!versionId) {
       throw new ValidationError("Missing version query parameter", "version");
@@ -914,6 +991,11 @@ export class ControlPlane implements Disposable {
     }
     version.status = "approved";
     version.approvedAt = new Date().toISOString();
+    this.mergeLifecycleAudit(version, {
+      approvedByRole: actor.role,
+      approvedBy: actor.actor,
+      approvalComment: actor.comment,
+    });
     return {
       ok: true,
       version: this.summarizeLifecycleVersion(version),
@@ -926,6 +1008,7 @@ export class ControlPlane implements Disposable {
     version: ReturnType<ControlPlane["summarizeLifecycleVersion"]>;
     error?: string;
   } {
+    const actor = this.resolveLifecycleActor("promote", ["promoter", "operator", "admin"], params);
     const versionId = params.get("version");
     if (!versionId) {
       throw new ValidationError("Missing version query parameter", "version");
@@ -946,6 +1029,11 @@ export class ControlPlane implements Disposable {
     }
     version.status = "promoted";
     version.promotedAt = new Date().toISOString();
+    this.mergeLifecycleAudit(version, {
+      promotedByRole: actor.role,
+      promotedBy: actor.actor,
+      promotionComment: actor.comment,
+    });
     this.activePolicyVersionId = version.versionId;
     this.routingPolicy = this.cloneRoutingPolicy(version.policy);
     return {
@@ -1012,6 +1100,7 @@ export class ControlPlane implements Disposable {
       supportsPolicyExplainTraces: true,
       supportsPolicyExplainDiff: true,
       supportsPolicyLifecycle: true,
+      supportsPolicyLifecycleRbac: true,
       supportsPolicyDriftMonitoring: true,
       hostedDashboardPath: "/ops",
       hostedTenantDashboardPath: "/ops/tenants",
@@ -1021,6 +1110,13 @@ export class ControlPlane implements Disposable {
       policyExplainTracePath: "/api/ops/policy/explain/traces",
       policyExplainDiffPath: "/api/ops/policy/explain/diff",
       policyLifecycleBasePath: "/api/ops/policy/lifecycle",
+      policyLifecycleRoleParam: "role",
+      policyLifecycleAuditFields: [
+        "draftedByRole",
+        "validatedByRole",
+        "approvedByRole",
+        "promotedByRole",
+      ],
       policyDriftPath: "/api/ops/policy/drift",
     };
   }
