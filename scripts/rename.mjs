@@ -204,12 +204,12 @@ console.log("\n📦 Step 3: Updating package.json...");
 const pkgPath = join(ROOT, "package.json");
 const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
 const oldName = pkg.name;
-pkg.name = "gauss";
+pkg.name = "gauss-ts";
 // Also update description if it references Gauss
 if (pkg.description) {
   pkg.description = pkg.description.replace(/Gauss/g, "Gauss");
 }
-console.log(`   name: "${oldName}" → "gauss"`);
+console.log(`   name: "${oldName}" → "gauss-ts"`);
 if (!DRY_RUN) writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf-8");
 
 // ── Step 4: Add backward compat aliases to index.ts ─────────────────────────
