@@ -11,7 +11,7 @@ export default defineConfig({
     tools: "src/tools.ts",
   },
   format: ["cjs", "esm"],
-  splitting: true,
+  splitting: false,
   dts: true,
   clean: true,
   sourcemap: true,
