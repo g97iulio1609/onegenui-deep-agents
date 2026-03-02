@@ -53,6 +53,7 @@ export interface ControlPlaneSnapshot {
   metrics: unknown;
   pendingApprovals: unknown;
   latestCost: ReturnType<typeof estimateCost> | null;
+  latestExplainTraceId: string | null;
 }
 
 export type ControlPlaneSection = "spans" | "metrics" | "pendingApprovals" | "latestCost";
@@ -88,6 +89,7 @@ export interface ControlPlaneTimelinePoint {
   spanCount: number;
   pendingApprovalsCount: number;
   totalCostUsd: number;
+  latestExplainTraceId?: string | null;
 }
 
 export type ControlPlaneStreamChannel = "snapshot" | "timeline" | "dag";
@@ -110,11 +112,20 @@ export interface ControlPlaneOpsCapabilities {
   supportsOpsTenants: boolean;
   supportsPolicyExplain: boolean;
   supportsPolicyExplainBatch: boolean;
+  supportsPolicyExplainTraces: boolean;
   hostedDashboardPath: string;
   hostedTenantDashboardPath: string;
   policyExplainPath: string;
   policyExplainBatchPath: string;
   policyExplainSimulatePath: string;
+  policyExplainTracePath: string;
+}
+
+export interface ControlPlanePolicyExplainTrace {
+  traceId: string;
+  generatedAt: string;
+  mode: "single" | "batch" | "simulate";
+  payload: unknown;
 }
 
 export interface ControlPlaneOpsHealth {
@@ -163,6 +174,9 @@ export class ControlPlane implements Disposable {
   private readonly history: ControlPlaneSnapshot[] = [];
   private nextStreamEventId = 1;
   private readonly streamEvents: ControlPlaneStreamEvent[] = [];
+  private readonly explainTraces: ControlPlanePolicyExplainTrace[] = [];
+  private nextExplainTraceId = 1;
+  private latestExplainTraceId: string | null = null;
   private server: Server | null = null;
 
   constructor(options: ControlPlaneOptions = {}) {
@@ -231,6 +245,7 @@ export class ControlPlane implements Disposable {
       spanCount: Array.isArray(item.spans) ? item.spans.length : 0,
       pendingApprovalsCount: Array.isArray(item.pendingApprovals) ? item.pendingApprovals.length : 0,
       totalCostUsd: item.latestCost?.totalCostUsd ?? 0,
+      latestExplainTraceId: item.latestExplainTraceId,
     }));
   }
 
@@ -353,6 +368,12 @@ export class ControlPlane implements Disposable {
           return;
         }
 
+        if (pathname === "/api/ops/policy/explain/traces") {
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.end(JSON.stringify(this.opsPolicyExplainTraces(parsed.searchParams), null, 2));
+          return;
+        }
+
         if (pathname === "/api/stream") {
           const filters = this.applyAuthClaims(this.parseContextFilters(parsed.searchParams));
           const channels = this.parseStreamChannels(parsed.searchParams);
@@ -458,6 +479,7 @@ export class ControlPlane implements Disposable {
       metrics: this.telemetry?.exportMetrics() ?? {},
       pendingApprovals: this.approvals?.listPending() ?? [],
       latestCost: this.latestCost,
+      latestExplainTraceId: this.latestExplainTraceId,
     };
     this.history.push(snapshot);
     if (this.history.length > this.historyLimit) {
@@ -702,11 +724,13 @@ export class ControlPlane implements Disposable {
       supportsOpsTenants: true,
       supportsPolicyExplain: true,
       supportsPolicyExplainBatch: true,
+      supportsPolicyExplainTraces: true,
       hostedDashboardPath: "/ops",
       hostedTenantDashboardPath: "/ops/tenants",
       policyExplainPath: "/api/ops/policy/explain",
       policyExplainBatchPath: "/api/ops/policy/explain/batch",
       policyExplainSimulatePath: "/api/ops/policy/explain/simulate",
+      policyExplainTracePath: "/api/ops/policy/explain/traces",
     };
   }
 
@@ -802,18 +826,46 @@ export class ControlPlane implements Disposable {
       .sort((a, b) => a.tenantId.localeCompare(b.tenantId));
   }
 
-  private opsPolicyExplain(params: URLSearchParams): RoutingDecisionExplanation {
+  private recordPolicyExplainTrace(
+    mode: "single" | "batch" | "simulate",
+    payload: unknown,
+  ): ControlPlanePolicyExplainTrace {
+    const trace: ControlPlanePolicyExplainTrace = {
+      traceId: `trace-${this.nextExplainTraceId++}`,
+      generatedAt: new Date().toISOString(),
+      mode,
+      payload,
+    };
+    this.latestExplainTraceId = trace.traceId;
+    this.explainTraces.push(trace);
+    if (this.explainTraces.length > this.historyLimit) {
+      this.explainTraces.shift();
+    }
+    return trace;
+  }
+
+  private opsPolicyExplain(params: URLSearchParams): RoutingDecisionExplanation & { traceId: string } {
     const parsed = this.parsePolicyExplainOptions(params);
-    return explainRoutingTarget(
+    const explanation = explainRoutingTarget(
       this.routingPolicy,
       parsed.provider,
       parsed.model,
       parsed.options,
     );
+    const trace = this.recordPolicyExplainTrace("single", {
+      input: {
+        provider: parsed.provider,
+        model: parsed.model,
+        options: parsed.options,
+      },
+      explanation,
+    });
+    return { ...explanation, traceId: trace.traceId };
   }
 
   private opsPolicyExplainBatch(params: URLSearchParams): {
     ok: true;
+    traceId: string;
     total: number;
     passed: number;
     failed: number;
@@ -824,6 +876,26 @@ export class ControlPlane implements Disposable {
     }>;
   } {
     const scenarios = this.parsePolicyExplainBatchScenarios(params);
+    const response = this.buildPolicyExplainBatchResponse(scenarios);
+    const trace = this.recordPolicyExplainTrace("batch", response);
+    return { ...response, traceId: trace.traceId };
+  }
+
+  private buildPolicyExplainBatchResponse(scenarios: Array<{
+    provider: ProviderType;
+    model: string;
+    options: ResolveRoutingTargetOptions;
+  }>): {
+    ok: true;
+    total: number;
+    passed: number;
+    failed: number;
+    results: Array<{
+      index: number;
+      input: { provider: ProviderType; model: string };
+      explanation: RoutingDecisionExplanation;
+    }>;
+  } {
     const results = scenarios.map((scenario, index) => ({
       index,
       input: {
@@ -849,6 +921,7 @@ export class ControlPlane implements Disposable {
 
   private opsPolicyExplainSimulation(params: URLSearchParams): {
     ok: true;
+    traceId: string;
     total: number;
     passed: number;
     failed: number;
@@ -858,7 +931,24 @@ export class ControlPlane implements Disposable {
       explanation: RoutingDecisionExplanation;
     }>;
   } {
-    return this.opsPolicyExplainBatch(params);
+    const scenarios = this.parsePolicyExplainBatchScenarios(params);
+    const response = this.buildPolicyExplainBatchResponse(scenarios);
+    const trace = this.recordPolicyExplainTrace("simulate", response);
+    return { ...response, traceId: trace.traceId };
+  }
+
+  private opsPolicyExplainTraces(params: URLSearchParams): {
+    total: number;
+    traces: ControlPlanePolicyExplainTrace[];
+  } {
+    const traceId = params.get("traceId");
+    const traces = traceId
+      ? this.explainTraces.filter((item) => item.traceId === traceId)
+      : this.explainTraces;
+    return {
+      total: traces.length,
+      traces,
+    };
   }
 
   private emitStreamBatch(

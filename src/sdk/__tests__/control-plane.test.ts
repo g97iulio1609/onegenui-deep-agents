@@ -81,22 +81,26 @@ describe("ControlPlane", () => {
       supportsOpsTenants: boolean;
       supportsPolicyExplain: boolean;
       supportsPolicyExplainBatch: boolean;
+      supportsPolicyExplainTraces: boolean;
       hostedDashboardPath: string;
       hostedTenantDashboardPath: string;
       policyExplainPath: string;
       policyExplainBatchPath: string;
       policyExplainSimulatePath: string;
+      policyExplainTracePath: string;
     };
     expect(caps.supportsMultiplex).toBe(true);
     expect(caps.supportsOpsSummary).toBe(true);
     expect(caps.supportsOpsTenants).toBe(true);
     expect(caps.supportsPolicyExplain).toBe(true);
     expect(caps.supportsPolicyExplainBatch).toBe(true);
+    expect(caps.supportsPolicyExplainTraces).toBe(true);
     expect(caps.hostedDashboardPath).toBe("/ops");
     expect(caps.hostedTenantDashboardPath).toBe("/ops/tenants");
     expect(caps.policyExplainPath).toBe("/api/ops/policy/explain");
     expect(caps.policyExplainBatchPath).toBe("/api/ops/policy/explain/batch");
     expect(caps.policyExplainSimulatePath).toBe("/api/ops/policy/explain/simulate");
+    expect(caps.policyExplainTracePath).toBe("/api/ops/policy/explain/traces");
 
     const healthRes = await fetch(`${url}/api/ops/health`);
     expect(healthRes.status).toBe(200);
@@ -122,10 +126,12 @@ describe("ControlPlane", () => {
     expect(explainRes.status).toBe(200);
     const explain = await explainRes.json() as {
       ok: boolean;
+      traceId: string;
       decision?: { provider: string; model: string; selectedBy: string };
       checks: Array<{ check: string; status: string }>;
     };
     expect(explain.ok).toBe(true);
+    expect(explain.traceId.startsWith("trace-")).toBe(true);
     expect(explain.decision?.provider).toBe("openai");
     expect(explain.decision?.selectedBy).toBe("direct");
     expect(explain.checks.some((item) => item.check === "selection" && item.status === "passed")).toBe(true);
@@ -138,12 +144,14 @@ describe("ControlPlane", () => {
     expect(batchRes.status).toBe(200);
     const batch = await batchRes.json() as {
       ok: boolean;
+      traceId: string;
       total: number;
       passed: number;
       failed: number;
       results: Array<{ explanation: { ok: boolean } }>;
     };
     expect(batch.ok).toBe(true);
+    expect(batch.traceId.startsWith("trace-")).toBe(true);
     expect(batch.total).toBe(2);
     expect(batch.passed).toBe(1);
     expect(batch.failed).toBe(1);
@@ -152,10 +160,22 @@ describe("ControlPlane", () => {
 
     const simulateRes = await fetch(`${url}/api/ops/policy/explain/simulate?scenarios=${scenarios}`);
     expect(simulateRes.status).toBe(200);
-    const simulation = await simulateRes.json() as { total: number; passed: number; failed: number };
+    const simulation = await simulateRes.json() as { traceId: string; total: number; passed: number; failed: number };
+    expect(simulation.traceId.startsWith("trace-")).toBe(true);
     expect(simulation.total).toBe(2);
     expect(simulation.passed).toBe(1);
     expect(simulation.failed).toBe(1);
+
+    const tracesRes = await fetch(`${url}/api/ops/policy/explain/traces`);
+    expect(tracesRes.status).toBe(200);
+    const traces = await tracesRes.json() as {
+      total: number;
+      traces: Array<{ traceId: string; mode: string }>;
+    };
+    expect(traces.total).toBeGreaterThanOrEqual(3);
+    expect(traces.traces.some((item) => item.mode === "single")).toBe(true);
+    expect(traces.traces.some((item) => item.mode === "batch")).toBe(true);
+    expect(traces.traces.some((item) => item.mode === "simulate")).toBe(true);
 
     const opsRes = await fetch(`${url}/ops`);
     const opsHtml = await opsRes.text();

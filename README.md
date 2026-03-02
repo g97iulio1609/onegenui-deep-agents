@@ -241,6 +241,7 @@ console.log(`Control Plane: ${url}`);
 // hosted policy explain -> GET ${url}/api/ops/policy/explain?provider=openai&model=gpt-5.2
 // hosted policy explain batch -> GET ${url}/api/ops/policy/explain/batch?scenarios=[...]
 // hosted policy simulation -> GET ${url}/api/ops/policy/explain/simulate?scenarios=[...]
+// hosted policy explain traces -> GET ${url}/api/ops/policy/explain/traces
 // hosted ops dashboard -> GET ${url}/ops
 // hosted tenant dashboard -> GET ${url}/ops/tenants
 ```
