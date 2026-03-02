@@ -7,11 +7,21 @@ export interface RoutingCandidate {
   maxCostUsd?: number;
 }
 
+export type GovernanceRule =
+  | { type: "require_tag"; tag: string }
+  | { type: "deny_provider"; provider: ProviderType }
+  | { type: "allow_provider"; provider: ProviderType };
+
+export interface GovernancePolicyPack {
+  rules: GovernanceRule[];
+}
+
 export interface RoutingPolicy {
   aliases?: Record<string, RoutingCandidate[]>;
   fallbackOrder?: ProviderType[];
   maxTotalCostUsd?: number;
   maxRequestsPerMinute?: number;
+  governance?: GovernancePolicyPack;
 }
 
 export interface ResolvedRoutingTarget {
@@ -24,6 +34,7 @@ export interface ResolveRoutingTargetOptions {
   availableProviders?: ProviderType[];
   estimatedCostUsd?: number;
   currentRequestsPerMinute?: number;
+  governanceTags?: string[];
 }
 
 export function enforceRoutingCostLimit(
@@ -44,6 +55,29 @@ export function enforceRoutingRateLimit(
     requestsPerMinute > policy.maxRequestsPerMinute
   ) {
     throw new Error(`routing policy rejected rate ${requestsPerMinute}`);
+  }
+}
+
+export function enforceRoutingGovernance(
+  policy: RoutingPolicy | undefined,
+  provider: ProviderType,
+  tags?: string[],
+): void {
+  const rules = policy?.governance?.rules ?? [];
+  if (rules.length === 0) return;
+  const allow = rules
+    .filter((rule): rule is Extract<GovernanceRule, { type: "allow_provider" }> => rule.type === "allow_provider")
+    .map((rule) => rule.provider);
+  if (allow.length > 0 && !allow.includes(provider)) {
+    throw new Error(`routing policy governance rejected provider ${provider}`);
+  }
+  for (const rule of rules) {
+    if (rule.type === "deny_provider" && rule.provider === provider) {
+      throw new Error(`routing policy governance rejected provider ${provider}`);
+    }
+    if (rule.type === "require_tag" && tags !== undefined && !tags.includes(rule.tag)) {
+      throw new Error(`routing policy governance missing tag ${rule.tag}`);
+    }
   }
 }
 
@@ -70,6 +104,7 @@ export function resolveRoutingTarget(
   model: string,
   options: ResolveRoutingTargetOptions = {},
 ): ResolvedRoutingTarget {
+  const governanceTags = options.governanceTags;
   if (options.estimatedCostUsd !== undefined) {
     enforceRoutingCostLimit(policy, options.estimatedCostUsd);
   }
@@ -82,6 +117,7 @@ export function resolveRoutingTarget(
     const sorted = [...candidates].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
     const availableProviders = options.availableProviders;
     if (!availableProviders || availableProviders.length === 0) {
+      enforceRoutingGovernance(policy, sorted[0].provider, governanceTags);
       return {
         provider: sorted[0].provider,
         model: sorted[0].model,
@@ -91,6 +127,7 @@ export function resolveRoutingTarget(
     const available = new Set(availableProviders);
     const availableCandidate = sorted.find((candidate) => available.has(candidate.provider));
     if (availableCandidate) {
+      enforceRoutingGovernance(policy, availableCandidate.provider, governanceTags);
       return {
         provider: availableCandidate.provider,
         model: availableCandidate.model,
@@ -101,8 +138,10 @@ export function resolveRoutingTarget(
 
   const fallback = resolveFallbackProvider(policy, options.availableProviders ?? []);
   if (fallback && fallback !== provider) {
+    enforceRoutingGovernance(policy, fallback, governanceTags);
     return { provider: fallback, model, selectedBy: `fallback:${fallback}` };
   }
 
+  enforceRoutingGovernance(policy, provider, governanceTags);
   return { provider, model, selectedBy: "direct" };
 }

@@ -5,6 +5,18 @@ All notable changes to **Gauss** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.6] - 2026-03-02
+
+### Added
+
+- Policy-governance DSL in routing policy: provider `allow`/`deny` rules and required governance tags for runtime route enforcement.
+- Runtime routing-context governance tags plumbing for alias and fallback decisions.
+
+### Changed
+
+- `A2aClient` now includes an HTTP JSON-RPC fallback path when native A2A symbols are unavailable in `gauss-napi`.
+- Expanded routing policy tests and docs for governance DSL usage.
+
 ## [2.0.5] - 2026-03-02
 
 ### Added

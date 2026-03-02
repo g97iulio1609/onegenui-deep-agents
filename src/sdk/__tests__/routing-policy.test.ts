@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import {
   enforceRoutingCostLimit,
+  enforceRoutingGovernance,
   enforceRoutingRateLimit,
   resolveFallbackProvider,
   resolveRoutingTarget,
@@ -75,5 +76,38 @@ describe("routing-policy helpers", () => {
       "routing policy rejected rate 11",
     );
     expect(() => enforceRoutingRateLimit({ maxRequestsPerMinute: 10 }, 10)).not.toThrow();
+  });
+
+  it("enforces governance provider and required tags", () => {
+    const policy = {
+      governance: {
+        rules: [
+          { type: "allow_provider" as const, provider: "openai" as const },
+          { type: "require_tag" as const, tag: "pci" },
+        ],
+      },
+    };
+
+    expect(() => enforceRoutingGovernance(policy, "openai", ["pci"])).not.toThrow();
+    expect(() => enforceRoutingGovernance(policy, "anthropic", ["pci"])).toThrow(
+      "routing policy governance rejected provider anthropic",
+    );
+    expect(() => enforceRoutingGovernance(policy, "openai", [])).toThrow(
+      "routing policy governance missing tag pci",
+    );
+  });
+
+  it("applies governance rules during route resolution", () => {
+    expect(() =>
+      resolveRoutingTarget(
+        {
+          governance: {
+            rules: [{ type: "deny_provider", provider: "openai" }],
+          },
+        },
+        "openai",
+        "gpt-5.2",
+      ),
+    ).toThrow("routing policy governance rejected provider openai");
   });
 });

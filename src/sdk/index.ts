@@ -85,9 +85,12 @@ export { enterprisePreset, enterpriseRun } from "./enterprise.js";
 export type { EnterprisePresetOptions } from "./enterprise.js";
 export {
   enforceRoutingCostLimit,
+  enforceRoutingGovernance,
   enforceRoutingRateLimit,
   resolveFallbackProvider,
   resolveRoutingTarget,
+  type GovernancePolicyPack,
+  type GovernanceRule,
   type RoutingPolicy,
   type RoutingCandidate,
   type ResolvedRoutingTarget,

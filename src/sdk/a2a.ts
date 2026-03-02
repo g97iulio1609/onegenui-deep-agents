@@ -12,13 +12,30 @@
  * ```
  */
 
-import {
-  a2aDiscover,
-  a2aSendMessage,
-  a2aAsk,
-  a2aGetTask,
-  a2aCancelTask,
-} from 'gauss-napi';
+import * as napi from 'gauss-napi';
+
+type A2aNativeFn =
+  | 'a2aDiscover'
+  | 'a2aSendMessage'
+  | 'a2aAsk'
+  | 'a2aGetTask'
+  | 'a2aCancelTask';
+
+function resolveA2aFn(name: A2aNativeFn): (...args: unknown[]) => unknown {
+  const direct = (napi as Record<string, unknown>)[name];
+  if (typeof direct === 'function') return direct as (...args: unknown[]) => unknown;
+  const fallback = (napi as { default?: Record<string, unknown> }).default?.[name];
+  if (typeof fallback === 'function') return fallback as (...args: unknown[]) => unknown;
+  throw new TypeError(`gauss-napi is missing ${name}`);
+}
+
+function isNativeA2aUnavailable(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.message.includes('not available in this gauss-napi build') ||
+      error.message.includes('gauss-napi is missing'))
+  );
+}
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -170,6 +187,7 @@ export interface A2aClientOptions {
 export class A2aClient {
   private readonly baseUrl: string;
   private readonly authToken?: string;
+  private rpcId = 0;
 
   constructor(options: A2aClientOptions | string) {
     if (typeof options === 'string') {
@@ -185,8 +203,21 @@ export class A2aClient {
    * The card is served at `/.well-known/agent.json`.
    */
   async discover(): Promise<AgentCard> {
-    const raw = await a2aDiscover(this.baseUrl, this.authToken ?? undefined);
-    return raw as AgentCard;
+    try {
+      const discover = resolveA2aFn('a2aDiscover');
+      const raw = await discover(this.baseUrl, this.authToken ?? undefined);
+      return raw as AgentCard;
+    } catch (error) {
+      if (!isNativeA2aUnavailable(error)) throw error;
+      const response = await fetch(`${this.baseUrl.replace(/\/+$/, '')}/.well-known/agent.json`, {
+        method: 'GET',
+        headers: this.buildHeaders(),
+      });
+      if (!response.ok) {
+        throw new Error(`A2A discover failed (${response.status})`);
+      }
+      return (await response.json()) as AgentCard;
+    }
   }
 
   /**
@@ -196,18 +227,28 @@ export class A2aClient {
     message: A2aMessage,
     config?: MessageSendConfig,
   ): Promise<SendMessageResult> {
-    const raw = await a2aSendMessage(
-      this.baseUrl,
-      this.authToken ?? undefined,
-      JSON.stringify(message),
-      config ? JSON.stringify(config) : undefined,
-    );
+    let raw: { _type?: string } & Record<string, unknown>;
+    try {
+      const sendMessage = resolveA2aFn('a2aSendMessage');
+      raw = (await sendMessage(
+        this.baseUrl,
+        this.authToken ?? undefined,
+        JSON.stringify(message),
+        config ? JSON.stringify(config) : undefined,
+      )) as { _type?: string } & Record<string, unknown>;
+    } catch (error) {
+      if (!isNativeA2aUnavailable(error)) throw error;
+      raw = await this.rpc<{ _type?: string } & Record<string, unknown>>('message/send', {
+        message: message as unknown as Record<string, unknown>,
+        config: config as unknown as Record<string, unknown> | undefined,
+      });
+    }
     if (raw._type === 'task') {
       const { _type, ...task } = raw;
-      return { type: 'task', task: task as Task };
+      return { type: 'task', task: task as unknown as Task };
     }
     const { _type, ...msg } = raw;
-    return { type: 'message', message: msg as A2aMessage };
+    return { type: 'message', message: msg as unknown as A2aMessage };
   }
 
   /**
@@ -215,7 +256,18 @@ export class A2aClient {
    * Sends the text, polls until the task completes, and returns the final text.
    */
   async ask(text: string): Promise<string> {
-    return a2aAsk(this.baseUrl, this.authToken ?? undefined, text);
+    try {
+      const ask = resolveA2aFn('a2aAsk');
+      return ask(this.baseUrl, this.authToken ?? undefined, text) as Promise<string>;
+    } catch (error) {
+      if (!isNativeA2aUnavailable(error)) throw error;
+      const result = await this.sendMessage(userMessage(text));
+      if (result.type === 'message') return extractText(result.message);
+      const fromTask = taskText(result.task);
+      if (fromTask) return fromTask;
+      const task = await this.getTask(result.task.id);
+      return taskText(task) ?? '';
+    }
   }
 
   /**
@@ -224,13 +276,22 @@ export class A2aClient {
    * @param historyLength - Optional number of history messages to include.
    */
   async getTask(taskId: string, historyLength?: number): Promise<Task> {
-    const raw = await a2aGetTask(
-      this.baseUrl,
-      this.authToken ?? undefined,
-      taskId,
-      historyLength ?? undefined,
-    );
-    return raw as Task;
+    try {
+      const getTask = resolveA2aFn('a2aGetTask');
+      const raw = await getTask(
+        this.baseUrl,
+        this.authToken ?? undefined,
+        taskId,
+        historyLength ?? undefined,
+      );
+      return raw as Task;
+    } catch (error) {
+      if (!isNativeA2aUnavailable(error)) throw error;
+      return this.rpc<Task>('tasks/get', {
+        id: taskId,
+        historyLength: historyLength ?? undefined,
+      });
+    }
   }
 
   /**
@@ -238,12 +299,55 @@ export class A2aClient {
    * @param taskId - The task identifier to cancel.
    */
   async cancelTask(taskId: string): Promise<Task> {
-    const raw = await a2aCancelTask(
-      this.baseUrl,
-      this.authToken ?? undefined,
-      taskId,
-    );
-    return raw as Task;
+    try {
+      const cancelTask = resolveA2aFn('a2aCancelTask');
+      const raw = await cancelTask(
+        this.baseUrl,
+        this.authToken ?? undefined,
+        taskId,
+      );
+      return raw as Task;
+    } catch (error) {
+      if (!isNativeA2aUnavailable(error)) throw error;
+      return this.rpc<Task>('tasks/cancel', { id: taskId });
+    }
+  }
+
+  private buildHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+    };
+    if (this.authToken) headers.Authorization = `Bearer ${this.authToken}`;
+    return headers;
+  }
+
+  private async rpc<T>(method: string, params: Record<string, unknown>): Promise<T> {
+    const response = await fetch(this.baseUrl, {
+      method: 'POST',
+      headers: {
+        ...this.buildHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: ++this.rpcId,
+        method,
+        params,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error(`A2A request failed (${response.status})`);
+    }
+    const payload = (await response.json()) as {
+      result?: T;
+      error?: { code?: number; message?: string };
+    };
+    if (payload.error) {
+      throw new Error(
+        payload.error.message ?? `A2A RPC error (${payload.error.code ?? 'unknown'})`,
+      );
+    }
+    return payload.result as T;
   }
 }
 

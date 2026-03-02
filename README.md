@@ -156,14 +156,21 @@ const c = new Agent({
     fallbackOrder: ["anthropic", "openai"],
     maxTotalCostUsd: 2.0,
     maxRequestsPerMinute: 60,
+    governance: {
+      rules: [
+        { type: "allow_provider", provider: "openai" },
+        { type: "require_tag", tag: "pci" },
+      ],
+    },
   },
 });
 
-// Runtime policy-router decision (availability + budget + rate)
+// Runtime policy-router decision (availability + budget + rate + governance tags)
 const routed = c.withRoutingContext({
   availableProviders: ["openai"],
   estimatedCostUsd: 1.2,
   currentRequestsPerMinute: 20,
+  governanceTags: ["pci"],
 });
 ```
 
