@@ -69,6 +69,7 @@ describe("ControlPlane", () => {
         allowedHoursUtc: [9, 10, 11],
       },
     });
+    cp.registerPolicyDriftSink("webhook://ops-audit");
     cp.withContext({ tenantId: "t-1", sessionId: "s-1", runId: "r-1" }).snapshot();
     cp.withContext({ tenantId: "t-2", sessionId: "s-2", runId: "r-2" }).snapshot();
     const { url } = await cp.startServer("127.0.0.1", 0);
@@ -86,6 +87,9 @@ describe("ControlPlane", () => {
       supportsPolicyLifecycle: boolean;
       supportsPolicyLifecycleRbac: boolean;
       supportsPolicyDriftMonitoring: boolean;
+      supportsPolicyDriftScheduler: boolean;
+      supportsPolicyDriftWindows: boolean;
+      supportsPolicyDriftAlertSinks: boolean;
       hostedDashboardPath: string;
       hostedTenantDashboardPath: string;
       policyExplainPath: string;
@@ -97,6 +101,8 @@ describe("ControlPlane", () => {
       policyLifecycleRoleParam: string;
       policyLifecycleAuditFields: string[];
       policyDriftPath: string;
+      policyDriftSchedulePath: string;
+      policyDriftScheduleRunPath: string;
     };
     expect(caps.supportsMultiplex).toBe(true);
     expect(caps.supportsOpsSummary).toBe(true);
@@ -108,6 +114,9 @@ describe("ControlPlane", () => {
     expect(caps.supportsPolicyLifecycle).toBe(true);
     expect(caps.supportsPolicyLifecycleRbac).toBe(true);
     expect(caps.supportsPolicyDriftMonitoring).toBe(true);
+    expect(caps.supportsPolicyDriftScheduler).toBe(true);
+    expect(caps.supportsPolicyDriftWindows).toBe(true);
+    expect(caps.supportsPolicyDriftAlertSinks).toBe(true);
     expect(caps.hostedDashboardPath).toBe("/ops");
     expect(caps.hostedTenantDashboardPath).toBe("/ops/tenants");
     expect(caps.policyExplainPath).toBe("/api/ops/policy/explain");
@@ -119,6 +128,8 @@ describe("ControlPlane", () => {
     expect(caps.policyLifecycleRoleParam).toBe("role");
     expect(caps.policyLifecycleAuditFields).toContain("approvedByRole");
     expect(caps.policyDriftPath).toBe("/api/ops/policy/drift");
+    expect(caps.policyDriftSchedulePath).toBe("/api/ops/policy/drift/schedule");
+    expect(caps.policyDriftScheduleRunPath).toBe("/api/ops/policy/drift/schedule/run");
 
     const healthRes = await fetch(`${url}/api/ops/health`);
     expect(healthRes.status).toBe(200);
@@ -272,17 +283,47 @@ describe("ControlPlane", () => {
       ok: boolean;
       alert: boolean;
       traceId: string;
+      window: string;
       diff: { regressions: number };
       guardrails: { ok: boolean };
+      sinksTriggered: string[];
     };
     expect(drift.traceId.startsWith("trace-")).toBe(true);
     expect(drift.ok).toBe(false);
     expect(drift.alert).toBe(true);
+    expect(drift.window).toBe("custom");
     expect(drift.diff.regressions).toBe(1);
     expect(drift.guardrails.ok).toBe(false);
+    expect(drift.sinksTriggered).toContain("webhook://ops-audit");
     expect(driftAlerts).toHaveLength(1);
     expect(driftAlerts[0]?.alert).toBe(true);
     expect(driftAlerts[0]?.diff.regressions).toBe(1);
+
+    const scheduleSetRes = await fetch(
+      `${url}/api/ops/policy/drift/schedule/set?scenarios=${driftScenarios}&candidatePolicy=${candidatePolicy}&window=last_1h&intervalMs=30000&maxRegressions=0`,
+    );
+    expect(scheduleSetRes.status).toBe(200);
+    const scheduleSet = await scheduleSetRes.json() as {
+      ok: boolean;
+      schedule: { window: string; intervalMs: number; guardrails: { maxRegressions?: number } };
+    };
+    expect(scheduleSet.ok).toBe(true);
+    expect(scheduleSet.schedule.window).toBe("last_1h");
+    expect(scheduleSet.schedule.intervalMs).toBe(30000);
+    expect(scheduleSet.schedule.guardrails.maxRegressions).toBe(0);
+
+    const scheduleRunRes = await fetch(`${url}/api/ops/policy/drift/schedule/run`);
+    expect(scheduleRunRes.status).toBe(200);
+    const scheduleRun = await scheduleRunRes.json() as {
+      runId: string;
+      traceId: string;
+      window: string;
+      alert: boolean;
+    };
+    expect(scheduleRun.runId.startsWith("drift-run-")).toBe(true);
+    expect(scheduleRun.traceId.startsWith("trace-")).toBe(true);
+    expect(scheduleRun.window).toBe("last_1h");
+    expect(scheduleRun.alert).toBe(true);
 
     const opsRes = await fetch(`${url}/ops`);
     const opsHtml = await opsRes.text();

@@ -124,6 +124,9 @@ export interface ControlPlaneOpsCapabilities {
   supportsPolicyLifecycle: boolean;
   supportsPolicyLifecycleRbac: boolean;
   supportsPolicyDriftMonitoring: boolean;
+  supportsPolicyDriftScheduler: boolean;
+  supportsPolicyDriftWindows: boolean;
+  supportsPolicyDriftAlertSinks: boolean;
   hostedDashboardPath: string;
   hostedTenantDashboardPath: string;
   policyExplainPath: string;
@@ -135,6 +138,8 @@ export interface ControlPlaneOpsCapabilities {
   policyLifecycleRoleParam: string;
   policyLifecycleAuditFields: string[];
   policyDriftPath: string;
+  policyDriftSchedulePath: string;
+  policyDriftScheduleRunPath: string;
 }
 
 type ControlPlanePolicyLifecycleStatus = "draft" | "validated" | "approved" | "promoted";
@@ -166,6 +171,25 @@ interface ControlPlanePolicyLifecycleVersion {
   audit?: ControlPlanePolicyLifecycleAudit;
 }
 
+interface ControlPlanePolicyDriftScheduleConfig {
+  enabled: boolean;
+  intervalMs: number;
+  window: ControlPlanePolicyDriftWindow;
+  scenariosRaw: string;
+  baselinePolicyRaw?: string;
+  candidatePolicyRaw?: string;
+  baselineVersionId?: string;
+  candidateVersionId?: string;
+  guardrails: PolicyRolloutGuardrails;
+  updatedAt: string;
+  lastRunAt?: string;
+}
+
+interface ControlPlanePolicyDriftScheduleRun extends ControlPlanePolicyDriftAlert {
+  runId: string;
+  traceId: string;
+}
+
 export interface ControlPlanePolicyExplainTrace {
   traceId: string;
   generatedAt: string;
@@ -177,11 +201,15 @@ export interface ControlPlanePolicyDriftAlert {
   ok: boolean;
   alert: boolean;
   generatedAt: string;
+  window: ControlPlanePolicyDriftWindow;
   baselineVersionId: string | null;
   candidateVersionId: string | null;
   diff: PolicyDiffSummary;
   guardrails: PolicyRolloutGateResult;
+  sinksTriggered: string[];
 }
+
+export type ControlPlanePolicyDriftWindow = "custom" | "last_1h" | "last_24h" | "last_7d";
 
 export interface ControlPlaneOpsHealth {
   status: "ok";
@@ -233,6 +261,10 @@ export class ControlPlane implements Disposable {
   private nextExplainTraceId = 1;
   private latestExplainTraceId: string | null = null;
   private readonly policyDriftAlertHooks: Array<(alert: ControlPlanePolicyDriftAlert) => void> = [];
+  private readonly policyDriftSinks: string[] = [];
+  private policyDriftScheduleConfig: ControlPlanePolicyDriftScheduleConfig | null = null;
+  private readonly policyDriftRuns: ControlPlanePolicyDriftScheduleRun[] = [];
+  private nextPolicyDriftRunId = 1;
   private readonly policyLifecycleVersions: ControlPlanePolicyLifecycleVersion[] = [];
   private nextPolicyLifecycleVersion = 1;
   private activePolicyVersionId: string | null = null;
@@ -283,6 +315,17 @@ export class ControlPlane implements Disposable {
       const index = this.policyDriftAlertHooks.indexOf(hook);
       if (index >= 0) this.policyDriftAlertHooks.splice(index, 1);
     };
+  }
+
+  registerPolicyDriftSink(sinkId: string): this {
+    const normalized = sinkId.trim();
+    if (!normalized) {
+      throw new ValidationError("sinkId must be a non-empty string", "sinkId");
+    }
+    if (!this.policyDriftSinks.includes(normalized)) {
+      this.policyDriftSinks.push(normalized);
+    }
+    return this;
   }
 
   setCostUsage(usage: ControlPlaneUsage): this {
@@ -474,6 +517,24 @@ export class ControlPlane implements Disposable {
         if (pathname === "/api/ops/policy/lifecycle/versions") {
           res.setHeader("Content-Type", "application/json; charset=utf-8");
           res.end(JSON.stringify(this.opsPolicyLifecycleVersions(), null, 2));
+          return;
+        }
+
+        if (pathname === "/api/ops/policy/drift/schedule/set") {
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.end(JSON.stringify(this.opsPolicyDriftScheduleSet(parsed.searchParams), null, 2));
+          return;
+        }
+
+        if (pathname === "/api/ops/policy/drift/schedule/run") {
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.end(JSON.stringify(this.opsPolicyDriftScheduleRun(parsed.searchParams), null, 2));
+          return;
+        }
+
+        if (pathname === "/api/ops/policy/drift/schedule") {
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.end(JSON.stringify(this.opsPolicyDriftSchedule(), null, 2));
           return;
         }
 
@@ -834,6 +895,15 @@ export class ControlPlane implements Disposable {
     };
   }
 
+  private parsePolicyDriftWindow(raw: string | null): ControlPlanePolicyDriftWindow {
+    if (!raw || raw.trim().length === 0) return "custom";
+    const normalized = raw.trim().toLowerCase();
+    if (normalized === "last_1h" || normalized === "last_24h" || normalized === "last_7d" || normalized === "custom") {
+      return normalized;
+    }
+    throw new ValidationError(`Invalid policy drift window "${raw}"`, "window");
+  }
+
   private cloneRoutingPolicy(policy: RoutingPolicy): RoutingPolicy {
     return JSON.parse(JSON.stringify(policy)) as RoutingPolicy;
   }
@@ -1102,6 +1172,9 @@ export class ControlPlane implements Disposable {
       supportsPolicyLifecycle: true,
       supportsPolicyLifecycleRbac: true,
       supportsPolicyDriftMonitoring: true,
+      supportsPolicyDriftScheduler: true,
+      supportsPolicyDriftWindows: true,
+      supportsPolicyDriftAlertSinks: true,
       hostedDashboardPath: "/ops",
       hostedTenantDashboardPath: "/ops/tenants",
       policyExplainPath: "/api/ops/policy/explain",
@@ -1118,6 +1191,8 @@ export class ControlPlane implements Disposable {
         "promotedByRole",
       ],
       policyDriftPath: "/api/ops/policy/drift",
+      policyDriftSchedulePath: "/api/ops/policy/drift/schedule",
+      policyDriftScheduleRunPath: "/api/ops/policy/drift/schedule/run",
     };
   }
 
@@ -1369,8 +1444,151 @@ export class ControlPlane implements Disposable {
     return { ...response, traceId: trace.traceId };
   }
 
+  private opsPolicyDriftScheduleSet(params: URLSearchParams): {
+    ok: true;
+    schedule: {
+      enabled: boolean;
+      intervalMs: number;
+      window: ControlPlanePolicyDriftWindow;
+      updatedAt: string;
+      lastRunAt?: string;
+      baselineVersionId?: string;
+      candidateVersionId?: string;
+      hasBaselinePolicy: boolean;
+      hasCandidatePolicy: boolean;
+      guardrails: PolicyRolloutGuardrails;
+    };
+  } {
+    const scenariosRaw = params.get("scenarios");
+    if (!scenariosRaw) {
+      throw new ValidationError("Missing scenarios query parameter", "scenarios");
+    }
+    void this.parsePolicyExplainBatchScenarios(params);
+    const intervalMs = this.parseOptionalNumber(params.get("intervalMs"), "intervalMs") ?? 60_000;
+    if (intervalMs <= 0) {
+      throw new ValidationError("intervalMs must be > 0", "intervalMs");
+    }
+    const now = new Date().toISOString();
+    this.policyDriftScheduleConfig = {
+      enabled: true,
+      intervalMs,
+      window: this.parsePolicyDriftWindow(params.get("window")),
+      scenariosRaw,
+      baselinePolicyRaw: params.get("baselinePolicy") ?? undefined,
+      candidatePolicyRaw: params.get("candidatePolicy") ?? undefined,
+      baselineVersionId: params.get("baselineVersion") ?? undefined,
+      candidateVersionId: params.get("candidateVersion") ?? undefined,
+      guardrails: this.parsePolicyDriftGuardrails(params),
+      updatedAt: now,
+      lastRunAt: this.policyDriftScheduleConfig?.lastRunAt,
+    };
+    return {
+      ok: true,
+      schedule: {
+        enabled: this.policyDriftScheduleConfig.enabled,
+        intervalMs: this.policyDriftScheduleConfig.intervalMs,
+        window: this.policyDriftScheduleConfig.window,
+        updatedAt: this.policyDriftScheduleConfig.updatedAt,
+        lastRunAt: this.policyDriftScheduleConfig.lastRunAt,
+        baselineVersionId: this.policyDriftScheduleConfig.baselineVersionId,
+        candidateVersionId: this.policyDriftScheduleConfig.candidateVersionId,
+        hasBaselinePolicy: !!this.policyDriftScheduleConfig.baselinePolicyRaw,
+        hasCandidatePolicy: !!this.policyDriftScheduleConfig.candidatePolicyRaw,
+        guardrails: this.policyDriftScheduleConfig.guardrails,
+      },
+    };
+  }
+
+  private opsPolicyDriftSchedule(): {
+    ok: true;
+    schedule: null | {
+      enabled: boolean;
+      intervalMs: number;
+      window: ControlPlanePolicyDriftWindow;
+      updatedAt: string;
+      lastRunAt?: string;
+      baselineVersionId?: string;
+      candidateVersionId?: string;
+      hasBaselinePolicy: boolean;
+      hasCandidatePolicy: boolean;
+      guardrails: PolicyRolloutGuardrails;
+    };
+    runs: ControlPlanePolicyDriftScheduleRun[];
+  } {
+    if (!this.policyDriftScheduleConfig) {
+      return { ok: true, schedule: null, runs: [...this.policyDriftRuns] };
+    }
+    return {
+      ok: true,
+      schedule: {
+        enabled: this.policyDriftScheduleConfig.enabled,
+        intervalMs: this.policyDriftScheduleConfig.intervalMs,
+        window: this.policyDriftScheduleConfig.window,
+        updatedAt: this.policyDriftScheduleConfig.updatedAt,
+        lastRunAt: this.policyDriftScheduleConfig.lastRunAt,
+        baselineVersionId: this.policyDriftScheduleConfig.baselineVersionId,
+        candidateVersionId: this.policyDriftScheduleConfig.candidateVersionId,
+        hasBaselinePolicy: !!this.policyDriftScheduleConfig.baselinePolicyRaw,
+        hasCandidatePolicy: !!this.policyDriftScheduleConfig.candidatePolicyRaw,
+        guardrails: this.policyDriftScheduleConfig.guardrails,
+      },
+      runs: [...this.policyDriftRuns],
+    };
+  }
+
+  private opsPolicyDriftScheduleRun(params: URLSearchParams): ControlPlanePolicyDriftScheduleRun {
+    const runParams = new URLSearchParams(params);
+    if (!runParams.get("scenarios")) {
+      if (!this.policyDriftScheduleConfig) {
+        throw new ValidationError("Missing scenarios query parameter", "scenarios");
+      }
+      runParams.set("scenarios", this.policyDriftScheduleConfig.scenariosRaw);
+      if (!runParams.get("window")) runParams.set("window", this.policyDriftScheduleConfig.window);
+      if (!runParams.get("baselineVersion") && this.policyDriftScheduleConfig.baselineVersionId) {
+        runParams.set("baselineVersion", this.policyDriftScheduleConfig.baselineVersionId);
+      }
+      if (!runParams.get("candidateVersion") && this.policyDriftScheduleConfig.candidateVersionId) {
+        runParams.set("candidateVersion", this.policyDriftScheduleConfig.candidateVersionId);
+      }
+      if (!runParams.get("baselinePolicy") && this.policyDriftScheduleConfig.baselinePolicyRaw) {
+        runParams.set("baselinePolicy", this.policyDriftScheduleConfig.baselinePolicyRaw);
+      }
+      if (!runParams.get("candidatePolicy") && this.policyDriftScheduleConfig.candidatePolicyRaw) {
+        runParams.set("candidatePolicy", this.policyDriftScheduleConfig.candidatePolicyRaw);
+      }
+      if (!runParams.get("maxChanged") && this.policyDriftScheduleConfig.guardrails.maxChanged !== undefined) {
+        runParams.set("maxChanged", String(this.policyDriftScheduleConfig.guardrails.maxChanged));
+      }
+      if (!runParams.get("maxRegressions") && this.policyDriftScheduleConfig.guardrails.maxRegressions !== undefined) {
+        runParams.set("maxRegressions", String(this.policyDriftScheduleConfig.guardrails.maxRegressions));
+      }
+      if (
+        !runParams.get("minCandidatePassRate")
+        && this.policyDriftScheduleConfig.guardrails.minCandidatePassRate !== undefined
+      ) {
+        runParams.set("minCandidatePassRate", String(this.policyDriftScheduleConfig.guardrails.minCandidatePassRate));
+      }
+    }
+
+    const drift = this.opsPolicyDrift(runParams);
+    const run: ControlPlanePolicyDriftScheduleRun = {
+      ...drift,
+      runId: `drift-run-${this.nextPolicyDriftRunId++}`,
+    };
+    this.policyDriftRuns.push(run);
+    if (this.policyDriftRuns.length > this.historyLimit) {
+      this.policyDriftRuns.shift();
+    }
+    if (this.policyDriftScheduleConfig) {
+      this.policyDriftScheduleConfig.lastRunAt = run.generatedAt;
+      this.policyDriftScheduleConfig.updatedAt = new Date().toISOString();
+    }
+    return run;
+  }
+
   private opsPolicyDrift(params: URLSearchParams): ControlPlanePolicyDriftAlert & { traceId: string } {
     const scenarios = this.parsePolicyExplainBatchScenarios(params);
+    const window = this.parsePolicyDriftWindow(params.get("window"));
     const baselineVersionId = params.get("baselineVersion");
     const candidateVersionId = params.get("candidateVersion");
 
@@ -1394,10 +1612,12 @@ export class ControlPlane implements Disposable {
       ok: guardrails.ok,
       alert: !guardrails.ok,
       generatedAt: new Date().toISOString(),
+      window,
       baselineVersionId: baselineVersionId ?? this.activePolicyVersionId ?? null,
       candidateVersionId: candidateVersionId ?? null,
       diff,
       guardrails,
+      sinksTriggered: !guardrails.ok ? [...this.policyDriftSinks] : [],
     };
     if (response.alert) {
       for (const hook of this.policyDriftAlertHooks) {
