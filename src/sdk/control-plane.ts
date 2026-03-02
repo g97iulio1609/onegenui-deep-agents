@@ -78,6 +78,22 @@ export interface ControlPlaneStreamEvent {
   payload: unknown;
 }
 
+export interface ControlPlaneOpsCapabilities {
+  sections: ControlPlaneSection[];
+  channels: ControlPlaneStreamChannel[];
+  supportsMultiplex: boolean;
+  supportsReplayCursor: boolean;
+  supportsChannelRbac: boolean;
+  hostedDashboardPath: string;
+}
+
+export interface ControlPlaneOpsHealth {
+  status: "ok";
+  generatedAt: string;
+  historySize: number;
+  streamBufferSize: number;
+}
+
 export class ControlPlane implements Disposable {
   private readonly telemetry?: Pick<Telemetry, "exportSpans" | "exportMetrics">;
   private readonly approvals?: Pick<ApprovalManager, "listPending">;
@@ -232,6 +248,18 @@ export class ControlPlane implements Disposable {
           return;
         }
 
+        if (pathname === "/api/ops/capabilities") {
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.end(JSON.stringify(this.opsCapabilities(), null, 2));
+          return;
+        }
+
+        if (pathname === "/api/ops/health") {
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.end(JSON.stringify(this.opsHealth(), null, 2));
+          return;
+        }
+
         if (pathname === "/api/stream") {
           const filters = this.applyAuthClaims(this.parseContextFilters(parsed.searchParams));
           const channels = this.parseStreamChannels(parsed.searchParams);
@@ -268,6 +296,12 @@ export class ControlPlane implements Disposable {
         if (pathname === "/") {
           res.setHeader("Content-Type", "text/html; charset=utf-8");
           res.end(this.renderDashboardHtml());
+          return;
+        }
+
+        if (pathname === "/ops") {
+          res.setHeader("Content-Type", "text/html; charset=utf-8");
+          res.end(this.renderHostedOpsHtml());
           return;
         }
 
@@ -422,6 +456,26 @@ export class ControlPlane implements Disposable {
     res.write(`data: ${JSON.stringify(event)}\n\n`);
   }
 
+  private opsCapabilities(): ControlPlaneOpsCapabilities {
+    return {
+      sections: ["spans", "metrics", "pendingApprovals", "latestCost"],
+      channels: ["snapshot", "timeline", "dag"],
+      supportsMultiplex: true,
+      supportsReplayCursor: true,
+      supportsChannelRbac: true,
+      hostedDashboardPath: "/ops",
+    };
+  }
+
+  private opsHealth(): ControlPlaneOpsHealth {
+    return {
+      status: "ok",
+      generatedAt: new Date().toISOString(),
+      historySize: this.history.length,
+      streamBufferSize: this.streamEvents.length,
+    };
+  }
+
   private emitStreamBatch(
     res: import("node:http").ServerResponse,
     channels: ControlPlaneStreamChannel[],
@@ -566,6 +620,66 @@ export class ControlPlane implements Disposable {
     }
     setInterval(refresh, 2000);
     refresh();
+  </script>
+</body>
+</html>`;
+  }
+
+  private renderHostedOpsHtml(): string {
+    return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gauss Hosted Ops Console</title>
+  <style>
+    body { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; margin: 20px; background: #0b1020; color: #f5f7ff; }
+    .row { margin-bottom: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    input, button { background: #111935; color: #f5f7ff; border: 1px solid #25315f; border-radius: 6px; padding: 8px; }
+    pre { background: #111935; border: 1px solid #25315f; padding: 12px; border-radius: 8px; max-height: 60vh; overflow: auto; }
+    .muted { color: #a9b4d0; }
+  </style>
+</head>
+<body>
+  <h1>Gauss Hosted Ops Console</h1>
+  <div class="muted">Live stream viewer with multiplex channels + replay cursor support.</div>
+  <div class="row">
+    <label>Token <input id="token" placeholder="optional" /></label>
+    <label>Last Event ID <input id="lastEventId" placeholder="optional" /></label>
+    <button id="connect">Connect</button>
+  </div>
+  <div class="row">
+    <label><input type="checkbox" class="ch" value="snapshot" checked /> snapshot</label>
+    <label><input type="checkbox" class="ch" value="timeline" checked /> timeline</label>
+    <label><input type="checkbox" class="ch" value="dag" /> dag</label>
+  </div>
+  <pre id="out">idle</pre>
+  <script>
+    let source;
+    const out = document.getElementById('out');
+    function selectedChannels() {
+      return [...document.querySelectorAll('.ch:checked')].map((node) => node.value);
+    }
+    function append(message) {
+      out.textContent = message + "\\n" + out.textContent;
+    }
+    document.getElementById('connect').addEventListener('click', () => {
+      if (source) source.close();
+      const token = document.getElementById('token').value.trim();
+      const lastEventId = document.getElementById('lastEventId').value.trim();
+      const channels = selectedChannels();
+      const qs = new URLSearchParams();
+      if (channels.length > 0) qs.set('channels', channels.join(','));
+      if (token) qs.set('token', token);
+      if (lastEventId) qs.set('lastEventId', lastEventId);
+      source = new EventSource('/api/stream?' + qs.toString());
+      source.onmessage = (event) => append(event.data);
+      source.onerror = () => append('stream disconnected');
+      append('stream connected');
+    });
+    fetch('/api/ops/capabilities')
+      .then((r) => r.json())
+      .then((j) => append('capabilities: ' + JSON.stringify(j)));
   </script>
 </body>
 </html>`;

@@ -55,6 +55,38 @@ describe("ControlPlane", () => {
     await cp.stopServer();
   });
 
+  it("exposes hosted ops capabilities, health, and dashboard", async () => {
+    const cp = new ControlPlane({
+      telemetry: {
+        exportSpans: () => [{ name: "agent.run" }],
+        exportMetrics: () => ({ totalSpans: 1 }),
+      },
+      approvals: {
+        listPending: () => [],
+      },
+    });
+    cp.snapshot();
+    const { url } = await cp.startServer("127.0.0.1", 0);
+
+    const capsRes = await fetch(`${url}/api/ops/capabilities`);
+    expect(capsRes.status).toBe(200);
+    const caps = await capsRes.json() as { supportsMultiplex: boolean; hostedDashboardPath: string };
+    expect(caps.supportsMultiplex).toBe(true);
+    expect(caps.hostedDashboardPath).toBe("/ops");
+
+    const healthRes = await fetch(`${url}/api/ops/health`);
+    expect(healthRes.status).toBe(200);
+    const health = await healthRes.json() as { status: string; historySize: number };
+    expect(health.status).toBe("ok");
+    expect(health.historySize).toBeGreaterThan(0);
+
+    const opsRes = await fetch(`${url}/ops`);
+    const opsHtml = await opsRes.text();
+    expect(opsHtml).toContain("Gauss Hosted Ops Console");
+
+    await cp.stopServer();
+  });
+
   it("supports auth token protection", async () => {
     const cp = new ControlPlane({ authToken: "secret-token" });
     const { url } = await cp.startServer("127.0.0.1", 0);
