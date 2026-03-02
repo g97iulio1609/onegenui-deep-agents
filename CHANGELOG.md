@@ -5,6 +5,18 @@ All notable changes to **Gauss** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.5] - 2026-03-02
+
+### Added
+
+- Hosted managed ops UX APIs in ControlPlane: `/api/ops/capabilities` and `/api/ops/health`.
+- Hosted dashboard route `/ops` for stream-first operations with multiplex and replay controls.
+- Parity updates across TS/Py/core for ops capabilities and health primitives.
+
+### Changed
+
+- Expanded hosted ops tests and README docs for managed operations workflows.
+
 ## [2.0.4] - 2026-03-02
 
 ### Added
