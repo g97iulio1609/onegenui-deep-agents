@@ -158,6 +158,13 @@ const c = new Agent({
     maxRequestsPerMinute: 60,
   },
 });
+
+// Runtime policy-router decision (availability + budget + rate)
+const routed = c.withRoutingContext({
+  availableProviders: ["openai"],
+  estimatedCostUsd: 1.2,
+  currentRequestsPerMinute: 20,
+});
 ```
 
 ### Unified Control Plane (M51 foundation)

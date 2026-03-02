@@ -79,12 +79,24 @@ export function resolveRoutingTarget(
 
   const candidates = policy?.aliases?.[model];
   if (candidates && candidates.length > 0) {
-    const selected = [...candidates].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))[0];
-    return {
-      provider: selected.provider,
-      model: selected.model,
-      selectedBy: `alias:${model}`,
-    };
+    const sorted = [...candidates].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+    const availableProviders = options.availableProviders;
+    if (!availableProviders || availableProviders.length === 0) {
+      return {
+        provider: sorted[0].provider,
+        model: sorted[0].model,
+        selectedBy: `alias:${model}`,
+      };
+    }
+    const available = new Set(availableProviders);
+    const availableCandidate = sorted.find((candidate) => available.has(candidate.provider));
+    if (availableCandidate) {
+      return {
+        provider: availableCandidate.provider,
+        model: availableCandidate.model,
+        selectedBy: `alias:${model}`,
+      };
+    }
   }
 
   const fallback = resolveFallbackProvider(policy, options.availableProviders ?? []);

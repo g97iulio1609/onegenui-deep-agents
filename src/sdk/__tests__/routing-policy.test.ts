@@ -26,6 +26,25 @@ describe("routing-policy helpers", () => {
     expect(resolved.selectedBy).toBe("alias:fast-chat");
   });
 
+  it("resolves alias candidates by priority among available providers", () => {
+    const resolved = resolveRoutingTarget(
+      {
+        aliases: {
+          "fast-chat": [
+            { provider: "openai", model: "gpt-4o-mini", priority: 1 },
+            { provider: "anthropic", model: "claude-3-5-haiku-latest", priority: 10 },
+          ],
+        },
+      },
+      "openai",
+      "fast-chat",
+      { availableProviders: ["openai"] },
+    );
+    expect(resolved.provider).toBe("openai");
+    expect(resolved.model).toBe("gpt-4o-mini");
+    expect(resolved.selectedBy).toBe("alias:fast-chat");
+  });
+
   it("resolves fallback provider when primary is unavailable", () => {
     const fallback = resolveFallbackProvider(
       { fallbackOrder: ["anthropic", "openai"] },

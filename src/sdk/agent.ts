@@ -47,7 +47,7 @@ import { DisposedError } from "./errors.js";
 
 import { resolveApiKey, detectProvider } from "./types.js";
 import { OPENAI_DEFAULT } from "./models.js";
-import type { RoutingPolicy } from "./routing-policy.js";
+import type { ResolveRoutingTargetOptions, RoutingPolicy } from "./routing-policy.js";
 import { resolveRoutingTarget } from "./routing-policy.js";
 import { AgentStream } from "./stream-iter.js";
 import { tool as toolFn, isTypedTool, createToolExecutor, type TypedToolDef } from "./tool.js";
@@ -226,8 +226,11 @@ export interface AgentConfig {
 export class Agent implements Disposable {
   private readonly providerHandle: Handle;
   private readonly _name: string;
+  private readonly _requestedProvider: ProviderType;
+  private readonly _requestedModel: string;
   private readonly _provider: ProviderType;
   private readonly _model: string;
+  private readonly _routingPolicy: RoutingPolicy | undefined;
   private readonly _providerOptions: ProviderOptions & { apiKey: string };
   private readonly _instructions: string;
   private _tools: (ToolDef | TypedToolDef)[] = [];
@@ -263,7 +266,10 @@ export class Agent implements Disposable {
     const detected = detectProvider();
     const requestedProvider = config.provider ?? detected?.provider ?? "openai";
     const requestedModel = config.model ?? detected?.model ?? OPENAI_DEFAULT;
-    const resolved = resolveRoutingTarget(config.routingPolicy, requestedProvider, requestedModel);
+    this._requestedProvider = requestedProvider;
+    this._requestedModel = requestedModel;
+    this._routingPolicy = config.routingPolicy;
+    const resolved = resolveRoutingTarget(this._routingPolicy, requestedProvider, requestedModel);
     this._provider = resolved.provider;
     this._model = resolved.model;
     this._name = config.name ?? "agent";
@@ -468,6 +474,27 @@ export class Agent implements Disposable {
     return new Agent({
       ...this.toConfig(),
       model,
+    });
+  }
+
+  /**
+   * Clone this agent and resolve a routing decision using runtime context.
+   *
+   * @param context - Runtime routing context (availability, budget, rate).
+   * @returns A new {@link Agent} routed according to current policy + context.
+   */
+  withRoutingContext(context: ResolveRoutingTargetOptions): Agent {
+    this.assertNotDisposed();
+    const resolved = resolveRoutingTarget(
+      this._routingPolicy,
+      this._requestedProvider,
+      this._requestedModel,
+      context,
+    );
+    return new Agent({
+      ...this.toConfig(),
+      provider: resolved.provider,
+      model: resolved.model,
     });
   }
 
@@ -1015,8 +1042,9 @@ export class Agent implements Disposable {
   private toConfig(): AgentConfig {
     return {
       name: this._name,
-      provider: this._provider,
-      model: this._model,
+      provider: this._requestedProvider,
+      model: this._requestedModel,
+      routingPolicy: this._routingPolicy,
       providerOptions: { ...this._providerOptions },
       instructions: this._instructions || undefined,
       tools: [...this._tools],

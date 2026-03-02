@@ -135,6 +135,30 @@ describe("routing policy", () => {
     );
     agent.destroy();
   });
+
+  it("applies runtime routing context via withRoutingContext", () => {
+    const agent = new Agent({
+      provider: "openai",
+      model: "fast-chat",
+      providerOptions: { apiKey: "k" },
+      routingPolicy: {
+        aliases: {
+          "fast-chat": [
+            { provider: "openai", model: "gpt-4o-mini", priority: 1 },
+            { provider: "anthropic", model: "claude-3-5-haiku-latest", priority: 10 },
+          ],
+        },
+        fallbackOrder: ["openai"],
+      },
+    });
+
+    const routed = agent.withRoutingContext({ availableProviders: ["openai"] });
+    expect(routed.provider).toBe("openai");
+    expect(routed.model).toBe("gpt-4o-mini");
+    expect(create_provider).toHaveBeenLastCalledWith("openai", "gpt-4o-mini", expect.anything());
+    agent.destroy();
+    routed.destroy();
+  });
 });
 
 // ─── Structured Output ─────────────────────────────────────────────
