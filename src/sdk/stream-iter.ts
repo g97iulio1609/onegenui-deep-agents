@@ -160,7 +160,7 @@ export class AgentStream implements AsyncIterable<StreamEvent> {
       this.options,
       onEvent,
       this.toolExecutor
-    ).then((r) => {
+    ).then((r: any) => {
       this._result = toSdkResult(r);
       done = true;
       resolve?.();

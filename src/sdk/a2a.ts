@@ -29,11 +29,14 @@ function resolveA2aFn(name: A2aNativeFn): (...args: unknown[]) => unknown {
   throw new TypeError(`gauss-napi is missing ${name}`);
 }
 
-function isNativeA2aUnavailable(error: unknown): boolean {
+function shouldFallbackToHttp(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
   return (
-    error instanceof Error &&
-    (error.message.includes('not available in this gauss-napi build') ||
-      error.message.includes('gauss-napi is missing'))
+    message.includes('not available in this gauss-napi build') ||
+    message.includes('gauss-napi is missing') ||
+    message.includes('Invalid response: missing field') ||
+    message.includes('Invalid task response: missing field') ||
+    message.includes('Invalid cancel response: missing field')
   );
 }
 
@@ -208,7 +211,7 @@ export class A2aClient {
       const raw = await discover(this.baseUrl, this.authToken ?? undefined);
       return raw as AgentCard;
     } catch (error) {
-      if (!isNativeA2aUnavailable(error)) throw error;
+      if (!shouldFallbackToHttp(error)) throw error;
       const response = await fetch(`${this.baseUrl.replace(/\/+$/, '')}/.well-known/agent.json`, {
         method: 'GET',
         headers: this.buildHeaders(),
@@ -237,7 +240,7 @@ export class A2aClient {
         config ? JSON.stringify(config) : undefined,
       )) as { _type?: string } & Record<string, unknown>;
     } catch (error) {
-      if (!isNativeA2aUnavailable(error)) throw error;
+      if (!shouldFallbackToHttp(error)) throw error;
       raw = await this.rpc<{ _type?: string } & Record<string, unknown>>('message/send', {
         message: message as unknown as Record<string, unknown>,
         config: config as unknown as Record<string, unknown> | undefined,
@@ -258,9 +261,9 @@ export class A2aClient {
   async ask(text: string): Promise<string> {
     try {
       const ask = resolveA2aFn('a2aAsk');
-      return ask(this.baseUrl, this.authToken ?? undefined, text) as Promise<string>;
+      return await (ask(this.baseUrl, this.authToken ?? undefined, text) as Promise<string>);
     } catch (error) {
-      if (!isNativeA2aUnavailable(error)) throw error;
+      if (!shouldFallbackToHttp(error)) throw error;
       const result = await this.sendMessage(userMessage(text));
       if (result.type === 'message') return extractText(result.message);
       const fromTask = taskText(result.task);
@@ -286,7 +289,7 @@ export class A2aClient {
       );
       return raw as Task;
     } catch (error) {
-      if (!isNativeA2aUnavailable(error)) throw error;
+      if (!shouldFallbackToHttp(error)) throw error;
       return this.rpc<Task>('tasks/get', {
         id: taskId,
         historyLength: historyLength ?? undefined,
@@ -308,7 +311,7 @@ export class A2aClient {
       );
       return raw as Task;
     } catch (error) {
-      if (!isNativeA2aUnavailable(error)) throw error;
+      if (!shouldFallbackToHttp(error)) throw error;
       return this.rpc<Task>('tasks/cancel', { id: taskId });
     }
   }
