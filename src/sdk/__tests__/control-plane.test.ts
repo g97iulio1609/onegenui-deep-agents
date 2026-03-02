@@ -82,12 +82,14 @@ describe("ControlPlane", () => {
       supportsPolicyExplain: boolean;
       supportsPolicyExplainBatch: boolean;
       supportsPolicyExplainTraces: boolean;
+      supportsPolicyExplainDiff: boolean;
       hostedDashboardPath: string;
       hostedTenantDashboardPath: string;
       policyExplainPath: string;
       policyExplainBatchPath: string;
       policyExplainSimulatePath: string;
       policyExplainTracePath: string;
+      policyExplainDiffPath: string;
     };
     expect(caps.supportsMultiplex).toBe(true);
     expect(caps.supportsOpsSummary).toBe(true);
@@ -95,12 +97,14 @@ describe("ControlPlane", () => {
     expect(caps.supportsPolicyExplain).toBe(true);
     expect(caps.supportsPolicyExplainBatch).toBe(true);
     expect(caps.supportsPolicyExplainTraces).toBe(true);
+    expect(caps.supportsPolicyExplainDiff).toBe(true);
     expect(caps.hostedDashboardPath).toBe("/ops");
     expect(caps.hostedTenantDashboardPath).toBe("/ops/tenants");
     expect(caps.policyExplainPath).toBe("/api/ops/policy/explain");
     expect(caps.policyExplainBatchPath).toBe("/api/ops/policy/explain/batch");
     expect(caps.policyExplainSimulatePath).toBe("/api/ops/policy/explain/simulate");
     expect(caps.policyExplainTracePath).toBe("/api/ops/policy/explain/traces");
+    expect(caps.policyExplainDiffPath).toBe("/api/ops/policy/explain/diff");
 
     const healthRes = await fetch(`${url}/api/ops/health`);
     expect(healthRes.status).toBe(200);
@@ -166,6 +170,21 @@ describe("ControlPlane", () => {
     expect(simulation.passed).toBe(1);
     expect(simulation.failed).toBe(1);
 
+    const diffRes = await fetch(`${url}/api/ops/policy/explain/diff?scenarios=${scenarios}`);
+    expect(diffRes.status).toBe(200);
+    const diff = await diffRes.json() as {
+      traceId: string;
+      total: number;
+      baselinePassed: number;
+      candidatePassed: number;
+      changed: number;
+    };
+    expect(diff.traceId.startsWith("trace-")).toBe(true);
+    expect(diff.total).toBe(2);
+    expect(diff.baselinePassed).toBe(2);
+    expect(diff.candidatePassed).toBe(1);
+    expect(diff.changed).toBe(1);
+
     const tracesRes = await fetch(`${url}/api/ops/policy/explain/traces`);
     expect(tracesRes.status).toBe(200);
     const traces = await tracesRes.json() as {
@@ -176,6 +195,7 @@ describe("ControlPlane", () => {
     expect(traces.traces.some((item) => item.mode === "single")).toBe(true);
     expect(traces.traces.some((item) => item.mode === "batch")).toBe(true);
     expect(traces.traces.some((item) => item.mode === "simulate")).toBe(true);
+    expect(traces.traces.some((item) => item.mode === "diff")).toBe(true);
 
     const opsRes = await fetch(`${url}/ops`);
     const opsHtml = await opsRes.text();

@@ -113,6 +113,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "docs": "typedoc --out docs/api src/sdk/index.ts --tsconfig tsconfig.json",
+    "policy:gate": "npm run build --silent && node scripts/policy-gate.mjs",
     "prepublishOnly": "npm run build",
     "clean": "rimraf dist"
   },

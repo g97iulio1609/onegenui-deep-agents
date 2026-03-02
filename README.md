@@ -214,6 +214,9 @@ const explanation = explainRoutingTarget(
   { currentHourUtc: 11, governanceTags: ["balanced"] },
 );
 console.log(explanation.decision?.selectedBy); // "direct" | "alias:..." | "fallback:..."
+
+// CI-friendly policy gate summary (fails with exit code 1 when scenarios fail)
+// npm run policy:gate -- ./scenarios.json ./policy.json
 ```
 
 ### Unified Control Plane (M51 foundation)
@@ -241,6 +244,7 @@ console.log(`Control Plane: ${url}`);
 // hosted policy explain -> GET ${url}/api/ops/policy/explain?provider=openai&model=gpt-5.2
 // hosted policy explain batch -> GET ${url}/api/ops/policy/explain/batch?scenarios=[...]
 // hosted policy simulation -> GET ${url}/api/ops/policy/explain/simulate?scenarios=[...]
+// hosted policy diff -> GET ${url}/api/ops/policy/explain/diff?scenarios=[...]
 // hosted policy explain traces -> GET ${url}/api/ops/policy/explain/traces
 // hosted ops dashboard -> GET ${url}/ops
 // hosted tenant dashboard -> GET ${url}/ops/tenants

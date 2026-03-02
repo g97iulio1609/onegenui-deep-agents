@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import {
   applyGovernancePack,
+  evaluatePolicyGate,
   explainRoutingTarget,
   enforceRoutingCostLimit,
   enforceRoutingGovernance,
@@ -217,5 +218,27 @@ describe("routing-policy helpers", () => {
     expect(explained.ok).toBe(false);
     expect(explained.error).toContain("routing policy rejected hour 20");
     expect(explained.checks.some((check) => check.check === "time_window" && check.status === "failed")).toBe(true);
+  });
+
+  it("evaluates policy gates for CI-friendly summaries", () => {
+    const summary = evaluatePolicyGate(
+      { allowedHoursUtc: [9, 10, 11] },
+      [
+        {
+          provider: "openai",
+          model: "gpt-5.2",
+          options: { currentHourUtc: 10 },
+        },
+        {
+          provider: "openai",
+          model: "gpt-5.2",
+          options: { currentHourUtc: 22 },
+        },
+      ],
+    );
+    expect(summary.total).toBe(2);
+    expect(summary.passed).toBe(1);
+    expect(summary.failed).toBe(1);
+    expect(summary.failedIndexes).toEqual([1]);
   });
 });

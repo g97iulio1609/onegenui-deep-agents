@@ -59,6 +59,20 @@ export interface RoutingDecisionExplanation {
   error?: string;
 }
 
+export interface PolicyGateScenario {
+  provider: ProviderType;
+  model: string;
+  options?: ResolveRoutingTargetOptions;
+}
+
+export interface PolicyGateSummary {
+  total: number;
+  passed: number;
+  failed: number;
+  failedIndexes: number[];
+  results: RoutingDecisionExplanation[];
+}
+
 export interface ResolveRoutingTargetOptions {
   availableProviders?: ProviderType[];
   estimatedCostUsd?: number;
@@ -332,4 +346,29 @@ export function explainRoutingTarget(
     }
     return fail("selection", error);
   }
+}
+
+export function evaluatePolicyGate(
+  policy: RoutingPolicy | undefined,
+  scenarios: PolicyGateScenario[],
+): PolicyGateSummary {
+  const results = scenarios.map((scenario) =>
+    explainRoutingTarget(
+      policy,
+      scenario.provider,
+      scenario.model,
+      scenario.options ?? {},
+    ));
+  const failedIndexes = results
+    .map((result, index) => ({ result, index }))
+    .filter((item) => !item.result.ok)
+    .map((item) => item.index);
+  const failed = failedIndexes.length;
+  return {
+    total: results.length,
+    passed: results.length - failed,
+    failed,
+    failedIndexes,
+    results,
+  };
 }

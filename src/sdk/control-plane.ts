@@ -113,18 +113,20 @@ export interface ControlPlaneOpsCapabilities {
   supportsPolicyExplain: boolean;
   supportsPolicyExplainBatch: boolean;
   supportsPolicyExplainTraces: boolean;
+  supportsPolicyExplainDiff: boolean;
   hostedDashboardPath: string;
   hostedTenantDashboardPath: string;
   policyExplainPath: string;
   policyExplainBatchPath: string;
   policyExplainSimulatePath: string;
   policyExplainTracePath: string;
+  policyExplainDiffPath: string;
 }
 
 export interface ControlPlanePolicyExplainTrace {
   traceId: string;
   generatedAt: string;
-  mode: "single" | "batch" | "simulate";
+  mode: "single" | "batch" | "simulate" | "diff";
   payload: unknown;
 }
 
@@ -365,6 +367,12 @@ export class ControlPlane implements Disposable {
         if (pathname === "/api/ops/policy/explain/simulate") {
           res.setHeader("Content-Type", "application/json; charset=utf-8");
           res.end(JSON.stringify(this.opsPolicyExplainSimulation(parsed.searchParams), null, 2));
+          return;
+        }
+
+        if (pathname === "/api/ops/policy/explain/diff") {
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.end(JSON.stringify(this.opsPolicyExplainDiff(parsed.searchParams), null, 2));
           return;
         }
 
@@ -725,12 +733,14 @@ export class ControlPlane implements Disposable {
       supportsPolicyExplain: true,
       supportsPolicyExplainBatch: true,
       supportsPolicyExplainTraces: true,
+      supportsPolicyExplainDiff: true,
       hostedDashboardPath: "/ops",
       hostedTenantDashboardPath: "/ops/tenants",
       policyExplainPath: "/api/ops/policy/explain",
       policyExplainBatchPath: "/api/ops/policy/explain/batch",
       policyExplainSimulatePath: "/api/ops/policy/explain/simulate",
       policyExplainTracePath: "/api/ops/policy/explain/traces",
+      policyExplainDiffPath: "/api/ops/policy/explain/diff",
     };
   }
 
@@ -827,7 +837,7 @@ export class ControlPlane implements Disposable {
   }
 
   private recordPolicyExplainTrace(
-    mode: "single" | "batch" | "simulate",
+    mode: "single" | "batch" | "simulate" | "diff",
     payload: unknown,
   ): ControlPlanePolicyExplainTrace {
     const trace: ControlPlanePolicyExplainTrace = {
@@ -934,6 +944,71 @@ export class ControlPlane implements Disposable {
     const scenarios = this.parsePolicyExplainBatchScenarios(params);
     const response = this.buildPolicyExplainBatchResponse(scenarios);
     const trace = this.recordPolicyExplainTrace("simulate", response);
+    return { ...response, traceId: trace.traceId };
+  }
+
+  private opsPolicyExplainDiff(params: URLSearchParams): {
+    ok: true;
+    traceId: string;
+    total: number;
+    baselinePassed: number;
+    candidatePassed: number;
+    changed: number;
+    results: Array<{
+      index: number;
+      input: { provider: ProviderType; model: string };
+      baseline: RoutingDecisionExplanation;
+      candidate: RoutingDecisionExplanation;
+      changed: boolean;
+    }>;
+  } {
+    const scenarios = this.parsePolicyExplainBatchScenarios(params);
+    const results = scenarios.map((scenario, index) => {
+      const baseline = explainRoutingTarget(
+        undefined,
+        scenario.provider,
+        scenario.model,
+        scenario.options,
+      );
+      const candidate = explainRoutingTarget(
+        this.routingPolicy,
+        scenario.provider,
+        scenario.model,
+        scenario.options,
+      );
+      const changed = baseline.ok !== candidate.ok
+        || baseline.decision?.provider !== candidate.decision?.provider
+        || baseline.decision?.model !== candidate.decision?.model;
+      return {
+        index,
+        input: { provider: scenario.provider, model: scenario.model },
+        baseline,
+        candidate,
+        changed,
+      };
+    });
+    const response: {
+      ok: true;
+      total: number;
+      baselinePassed: number;
+      candidatePassed: number;
+      changed: number;
+      results: Array<{
+        index: number;
+        input: { provider: ProviderType; model: string };
+        baseline: RoutingDecisionExplanation;
+        candidate: RoutingDecisionExplanation;
+        changed: boolean;
+      }>;
+    } = {
+      ok: true,
+      total: results.length,
+      baselinePassed: results.filter((item) => item.baseline.ok).length,
+      candidatePassed: results.filter((item) => item.candidate.ok).length,
+      changed: results.filter((item) => item.changed).length,
+      results,
+    };
+    const trace = this.recordPolicyExplainTrace("diff", response);
     return { ...response, traceId: trace.traceId };
   }
 
