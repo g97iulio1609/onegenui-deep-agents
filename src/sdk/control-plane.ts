@@ -84,6 +84,7 @@ export interface ControlPlaneOpsCapabilities {
   supportsMultiplex: boolean;
   supportsReplayCursor: boolean;
   supportsChannelRbac: boolean;
+  supportsOpsSummary: boolean;
   hostedDashboardPath: string;
 }
 
@@ -92,6 +93,19 @@ export interface ControlPlaneOpsHealth {
   generatedAt: string;
   historySize: number;
   streamBufferSize: number;
+}
+
+export interface ControlPlaneOpsSummary {
+  status: "ok";
+  generatedAt: string;
+  historySize: number;
+  streamBufferSize: number;
+  spansCount: number;
+  pendingApprovalsCount: number;
+  latestTotalCostUsd: number;
+  tenantCount: number;
+  sessionCount: number;
+  runCount: number;
 }
 
 export class ControlPlane implements Disposable {
@@ -257,6 +271,13 @@ export class ControlPlane implements Disposable {
         if (pathname === "/api/ops/health") {
           res.setHeader("Content-Type", "application/json; charset=utf-8");
           res.end(JSON.stringify(this.opsHealth(), null, 2));
+          return;
+        }
+
+        if (pathname === "/api/ops/summary") {
+          const filters = this.applyAuthClaims(this.parseContextFilters(parsed.searchParams));
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.end(JSON.stringify(this.opsSummary(filters), null, 2));
           return;
         }
 
@@ -463,6 +484,7 @@ export class ControlPlane implements Disposable {
       supportsMultiplex: true,
       supportsReplayCursor: true,
       supportsChannelRbac: true,
+      supportsOpsSummary: true,
       hostedDashboardPath: "/ops",
     };
   }
@@ -473,6 +495,38 @@ export class ControlPlane implements Disposable {
       generatedAt: new Date().toISOString(),
       historySize: this.history.length,
       streamBufferSize: this.streamEvents.length,
+    };
+  }
+
+  private opsSummary(filters?: ControlPlaneContext): ControlPlaneOpsSummary {
+    const history = this.filterHistory(filters);
+    const latest = history[history.length - 1];
+    const spans = latest?.spans;
+    const pendingApprovals = latest?.pendingApprovals;
+    const scopedStreamBufferSize = filters && (filters.tenantId || filters.sessionId || filters.runId)
+      ? this.streamEvents.filter((event) => this.matchesContext(event.context, filters)).length
+      : this.streamEvents.length;
+
+    const tenants = new Set<string>();
+    const sessions = new Set<string>();
+    const runs = new Set<string>();
+    for (const item of history) {
+      if (item.context.tenantId) tenants.add(item.context.tenantId);
+      if (item.context.sessionId) sessions.add(item.context.sessionId);
+      if (item.context.runId) runs.add(item.context.runId);
+    }
+
+    return {
+      status: "ok",
+      generatedAt: new Date().toISOString(),
+      historySize: history.length,
+      streamBufferSize: scopedStreamBufferSize,
+      spansCount: Array.isArray(spans) ? spans.length : 0,
+      pendingApprovalsCount: Array.isArray(pendingApprovals) ? pendingApprovals.length : 0,
+      latestTotalCostUsd: latest?.latestCost?.totalCostUsd ?? 0,
+      tenantCount: tenants.size,
+      sessionCount: sessions.size,
+      runCount: runs.size,
     };
   }
 

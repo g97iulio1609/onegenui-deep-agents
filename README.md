@@ -194,6 +194,7 @@ console.log(`Control Plane: ${url}`);
 // reconnect/replay cursor -> GET ${url}/api/stream?channel=snapshot&lastEventId=42
 // hosted ops capabilities -> GET ${url}/api/ops/capabilities
 // hosted ops health -> GET ${url}/api/ops/health
+// hosted ops summary -> GET ${url}/api/ops/summary
 // hosted ops dashboard -> GET ${url}/ops
 ```
 

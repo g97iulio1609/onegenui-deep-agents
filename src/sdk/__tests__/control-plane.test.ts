@@ -70,8 +70,13 @@ describe("ControlPlane", () => {
 
     const capsRes = await fetch(`${url}/api/ops/capabilities`);
     expect(capsRes.status).toBe(200);
-    const caps = await capsRes.json() as { supportsMultiplex: boolean; hostedDashboardPath: string };
+    const caps = await capsRes.json() as {
+      supportsMultiplex: boolean;
+      supportsOpsSummary: boolean;
+      hostedDashboardPath: string;
+    };
     expect(caps.supportsMultiplex).toBe(true);
+    expect(caps.supportsOpsSummary).toBe(true);
     expect(caps.hostedDashboardPath).toBe("/ops");
 
     const healthRes = await fetch(`${url}/api/ops/health`);
@@ -79,6 +84,13 @@ describe("ControlPlane", () => {
     const health = await healthRes.json() as { status: string; historySize: number };
     expect(health.status).toBe("ok");
     expect(health.historySize).toBeGreaterThan(0);
+
+    const summaryRes = await fetch(`${url}/api/ops/summary`);
+    expect(summaryRes.status).toBe(200);
+    const summary = await summaryRes.json() as { status: string; historySize: number; spansCount: number };
+    expect(summary.status).toBe("ok");
+    expect(summary.historySize).toBeGreaterThan(0);
+    expect(summary.spansCount).toBeGreaterThanOrEqual(1);
 
     const opsRes = await fetch(`${url}/ops`);
     const opsHtml = await opsRes.text();
