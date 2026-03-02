@@ -16,6 +16,8 @@ export interface GovernancePolicyPack {
   rules: GovernanceRule[];
 }
 
+export type GovernancePackName = "enterprise-strict" | "eu-residency" | "cost-guarded";
+
 export interface RoutingPolicy {
   aliases?: Record<string, RoutingCandidate[]>;
   fallbackOrder?: ProviderType[];
@@ -35,6 +37,48 @@ export interface ResolveRoutingTargetOptions {
   estimatedCostUsd?: number;
   currentRequestsPerMinute?: number;
   governanceTags?: string[];
+}
+
+export function governancePolicyPack(name: GovernancePackName): GovernancePolicyPack {
+  switch (name) {
+    case "enterprise-strict":
+      return {
+        rules: [
+          { type: "allow_provider", provider: "openai" },
+          { type: "allow_provider", provider: "anthropic" },
+          { type: "require_tag", tag: "pci" },
+        ],
+      };
+    case "eu-residency":
+      return {
+        rules: [
+          { type: "deny_provider", provider: "xai" },
+          { type: "require_tag", tag: "eu" },
+        ],
+      };
+    case "cost-guarded":
+      return {
+        rules: [
+          { type: "allow_provider", provider: "openai" },
+          { type: "allow_provider", provider: "deepseek" },
+          { type: "require_tag", tag: "cost-sensitive" },
+        ],
+      };
+  }
+}
+
+export function applyGovernancePack(
+  policy: RoutingPolicy | undefined,
+  packName: GovernancePackName,
+): RoutingPolicy {
+  const pack = governancePolicyPack(packName);
+  const existingRules = policy?.governance?.rules ?? [];
+  return {
+    ...policy,
+    governance: {
+      rules: [...existingRules, ...pack.rules],
+    },
+  };
 }
 
 export function enforceRoutingCostLimit(

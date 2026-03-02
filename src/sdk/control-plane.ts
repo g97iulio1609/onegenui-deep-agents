@@ -85,6 +85,7 @@ export interface ControlPlaneOpsCapabilities {
   supportsReplayCursor: boolean;
   supportsChannelRbac: boolean;
   supportsOpsSummary: boolean;
+  supportsOpsTenants: boolean;
   hostedDashboardPath: string;
 }
 
@@ -106,6 +107,17 @@ export interface ControlPlaneOpsSummary {
   tenantCount: number;
   sessionCount: number;
   runCount: number;
+}
+
+export interface ControlPlaneOpsTenantSummary {
+  tenantId: string;
+  snapshotCount: number;
+  spansCount: number;
+  pendingApprovalsCount: number;
+  latestTotalCostUsd: number;
+  sessionCount: number;
+  runCount: number;
+  latestGeneratedAt: string;
 }
 
 export class ControlPlane implements Disposable {
@@ -278,6 +290,13 @@ export class ControlPlane implements Disposable {
           const filters = this.applyAuthClaims(this.parseContextFilters(parsed.searchParams));
           res.setHeader("Content-Type", "application/json; charset=utf-8");
           res.end(JSON.stringify(this.opsSummary(filters), null, 2));
+          return;
+        }
+
+        if (pathname === "/api/ops/tenants") {
+          const filters = this.applyAuthClaims(this.parseContextFilters(parsed.searchParams));
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.end(JSON.stringify(this.opsTenants(filters), null, 2));
           return;
         }
 
@@ -485,6 +504,7 @@ export class ControlPlane implements Disposable {
       supportsReplayCursor: true,
       supportsChannelRbac: true,
       supportsOpsSummary: true,
+      supportsOpsTenants: true,
       hostedDashboardPath: "/ops",
     };
   }
@@ -528,6 +548,57 @@ export class ControlPlane implements Disposable {
       sessionCount: sessions.size,
       runCount: runs.size,
     };
+  }
+
+  private opsTenants(filters?: ControlPlaneContext): ControlPlaneOpsTenantSummary[] {
+    const history = this.filterHistory(filters);
+    const grouped = new Map<string, {
+      snapshotCount: number;
+      spansCount: number;
+      pendingApprovalsCount: number;
+      latestTotalCostUsd: number;
+      latestGeneratedAt: string;
+      sessions: Set<string>;
+      runs: Set<string>;
+    }>();
+
+    for (const item of history) {
+      const tenantId = item.context.tenantId ?? "_unscoped";
+      const current = grouped.get(tenantId) ?? {
+        snapshotCount: 0,
+        spansCount: 0,
+        pendingApprovalsCount: 0,
+        latestTotalCostUsd: 0,
+        latestGeneratedAt: item.generatedAt,
+        sessions: new Set<string>(),
+        runs: new Set<string>(),
+      };
+      current.snapshotCount += 1;
+      current.spansCount += Array.isArray(item.spans) ? item.spans.length : 0;
+      current.pendingApprovalsCount += Array.isArray(item.pendingApprovals) ? item.pendingApprovals.length : 0;
+      if (item.latestCost?.totalCostUsd !== undefined) {
+        current.latestTotalCostUsd = item.latestCost.totalCostUsd;
+      }
+      if (item.generatedAt >= current.latestGeneratedAt) {
+        current.latestGeneratedAt = item.generatedAt;
+      }
+      if (item.context.sessionId) current.sessions.add(item.context.sessionId);
+      if (item.context.runId) current.runs.add(item.context.runId);
+      grouped.set(tenantId, current);
+    }
+
+    return [...grouped.entries()]
+      .map(([tenantId, value]) => ({
+        tenantId,
+        snapshotCount: value.snapshotCount,
+        spansCount: value.spansCount,
+        pendingApprovalsCount: value.pendingApprovalsCount,
+        latestTotalCostUsd: value.latestTotalCostUsd,
+        sessionCount: value.sessions.size,
+        runCount: value.runs.size,
+        latestGeneratedAt: value.latestGeneratedAt,
+      }))
+      .sort((a, b) => a.tenantId.localeCompare(b.tenantId));
   }
 
   private emitStreamBatch(

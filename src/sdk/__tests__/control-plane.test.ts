@@ -65,7 +65,8 @@ describe("ControlPlane", () => {
         listPending: () => [],
       },
     });
-    cp.snapshot();
+    cp.withContext({ tenantId: "t-1", sessionId: "s-1", runId: "r-1" }).snapshot();
+    cp.withContext({ tenantId: "t-2", sessionId: "s-2", runId: "r-2" }).snapshot();
     const { url } = await cp.startServer("127.0.0.1", 0);
 
     const capsRes = await fetch(`${url}/api/ops/capabilities`);
@@ -73,10 +74,12 @@ describe("ControlPlane", () => {
     const caps = await capsRes.json() as {
       supportsMultiplex: boolean;
       supportsOpsSummary: boolean;
+      supportsOpsTenants: boolean;
       hostedDashboardPath: string;
     };
     expect(caps.supportsMultiplex).toBe(true);
     expect(caps.supportsOpsSummary).toBe(true);
+    expect(caps.supportsOpsTenants).toBe(true);
     expect(caps.hostedDashboardPath).toBe("/ops");
 
     const healthRes = await fetch(`${url}/api/ops/health`);
@@ -91,6 +94,13 @@ describe("ControlPlane", () => {
     expect(summary.status).toBe("ok");
     expect(summary.historySize).toBeGreaterThan(0);
     expect(summary.spansCount).toBeGreaterThanOrEqual(1);
+
+    const tenantsRes = await fetch(`${url}/api/ops/tenants`);
+    expect(tenantsRes.status).toBe(200);
+    const tenants = await tenantsRes.json() as Array<{ tenantId: string; snapshotCount: number }>;
+    expect(tenants.length).toBeGreaterThanOrEqual(2);
+    expect(tenants.some((item) => item.tenantId === "t-1")).toBe(true);
+    expect(tenants.some((item) => item.tenantId === "t-2")).toBe(true);
 
     const opsRes = await fetch(`${url}/ops`);
     const opsHtml = await opsRes.text();

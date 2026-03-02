@@ -1,9 +1,11 @@
 import { describe, it, expect } from "vitest";
 
 import {
+  applyGovernancePack,
   enforceRoutingCostLimit,
   enforceRoutingGovernance,
   enforceRoutingRateLimit,
+  governancePolicyPack,
   resolveFallbackProvider,
   resolveRoutingTarget,
 } from "../routing-policy.js";
@@ -109,5 +111,28 @@ describe("routing-policy helpers", () => {
         "gpt-5.2",
       ),
     ).toThrow("routing policy governance rejected provider openai");
+  });
+
+  it("provides governance policy packs and can apply them", () => {
+    const pack = governancePolicyPack("enterprise-strict");
+    expect(pack.rules.some((rule) => rule.type === "require_tag" && rule.tag === "pci")).toBe(true);
+
+    const merged = applyGovernancePack(
+      {
+        governance: {
+          rules: [{ type: "allow_provider", provider: "google" }],
+        },
+      },
+      "cost-guarded",
+    );
+    expect(merged.governance?.rules.length).toBeGreaterThanOrEqual(3);
+    expect(() =>
+      resolveRoutingTarget(
+        merged,
+        "openai",
+        "gpt-5.2",
+        { governanceTags: ["cost-sensitive"] },
+      ),
+    ).not.toThrow();
   });
 });

@@ -110,6 +110,10 @@ const network = Network.quick("supervisor", [
 const delegated = await network.delegate("math-expert", "What is 13 * 7?");
 console.log(delegated);
 network.destroy();
+
+// Built-in starter templates
+const incident = Network.fromTemplate("incident-response");
+incident.destroy();
 ```
 
 ---
@@ -188,6 +192,13 @@ const routed = c.withRoutingContext({
   currentRequestsPerMinute: 20,
   governanceTags: ["pci"],
 });
+
+// Apply built-in enterprise governance packs
+import { applyGovernancePack } from "gauss-ts";
+const hardenedPolicy = applyGovernancePack(
+  { fallbackOrder: ["anthropic", "openai"] },
+  "enterprise-strict",
+);
 ```
 
 ### Unified Control Plane (M51 foundation)
@@ -211,6 +222,7 @@ console.log(`Control Plane: ${url}`);
 // hosted ops capabilities -> GET ${url}/api/ops/capabilities
 // hosted ops health -> GET ${url}/api/ops/health
 // hosted ops summary -> GET ${url}/api/ops/summary
+// hosted ops tenant breakdown -> GET ${url}/api/ops/tenants
 // hosted ops dashboard -> GET ${url}/ops
 ```
 
@@ -221,7 +233,7 @@ console.log(`Control Plane: ${url}`);
 - **Agents**: `Agent`, `gauss()`
 - **Teams**: `Team`, `Team.quick()`
 - **Graphs**: `Graph`, `Graph.pipeline()`, `addConditionalEdge()`
-- **Workflows / Networks**: `Workflow`, `Network`, `Network.quick()`
+- **Workflows / Networks**: `Workflow`, `Network`, `Network.quick()`, `Network.fromTemplate()`
 - **Typed tools**: `tool()`, `createToolExecutor()`, `withTool()`
 - **MCP**: `McpServer`, `McpClient`
 - **A2A**: `A2aClient`
@@ -230,7 +242,7 @@ console.log(`Control Plane: ${url}`);
 - **Reliability**: retry, circuit breaker, fallback providers
 - **Observability & quality**: `Telemetry`, `EvalRunner`
 - **Control plane**: `ControlPlane` (local snapshot API + dashboard)
-- **Routing policy**: `routingPolicy` + `resolveRoutingTarget()`
+- **Routing policy**: `routingPolicy`, `resolveRoutingTarget()`, `applyGovernancePack()`
 - **Enterprise preset**: `enterprisePreset()`, `enterpriseRun()`
 
 ---

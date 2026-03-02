@@ -134,6 +134,18 @@ describe("Network", () => {
     expect(network_delegate).toHaveBeenCalledWith(30, "coder", "Fix bug");
     net.destroy();
   });
+
+  it("supports built-in swarm templates", async () => {
+    const spec = Network.template("research-delivery");
+    expect(spec.supervisor).toBe("lead");
+    expect(spec.agents.length).toBeGreaterThanOrEqual(3);
+
+    const net = Network.fromTemplate("incident-response");
+    await net.delegateWithSupervisor("Stabilize production issue");
+    expect(network_set_supervisor).toHaveBeenCalledWith(30, "incident-commander");
+    expect(network_delegate).toHaveBeenCalledWith(30, "incident-commander", "Stabilize production issue");
+    net.destroy();
+  });
 });
 
 describe("Team", () => {

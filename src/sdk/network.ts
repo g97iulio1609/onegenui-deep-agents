@@ -25,6 +25,13 @@ export interface NetworkAddAgentOptions {
   instructions?: string;
 }
 
+export type NetworkTemplateName = "research-delivery" | "incident-response";
+
+export interface NetworkTemplateSpec {
+  supervisor: string;
+  agents: NetworkQuickAgentSpec[];
+}
+
 export class Network implements Disposable {
   private readonly _handle: Handle;
   private disposed = false;
@@ -46,6 +53,35 @@ export class Network implements Disposable {
     }
     network.setSupervisor(supervisor);
     return network;
+  }
+
+  /**
+   * Built-in swarm templates for rapid bootstrap.
+   */
+  static template(name: NetworkTemplateName): NetworkTemplateSpec {
+    if (name === "research-delivery") {
+      return {
+        supervisor: "lead",
+        agents: [
+          { name: "lead", instructions: "Coordinate and delegate work." },
+          { name: "researcher", instructions: "Research context and constraints." },
+          { name: "implementer", instructions: "Implement practical solutions." },
+        ],
+      };
+    }
+    return {
+      supervisor: "incident-commander",
+      agents: [
+        { name: "incident-commander", instructions: "Drive response and coordination." },
+        { name: "triage", instructions: "Assess impact and prioritize mitigation." },
+        { name: "remediator", instructions: "Propose and execute remediation steps." },
+      ],
+    };
+  }
+
+  static fromTemplate(name: NetworkTemplateName): Network {
+    const template = Network.template(name);
+    return Network.quick(template.supervisor, template.agents);
   }
 
   constructor() {

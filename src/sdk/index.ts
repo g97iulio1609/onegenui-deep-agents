@@ -83,11 +83,14 @@ export type { AgentConfig } from "./agent.js";
 export { enterprisePreset, enterpriseRun } from "./enterprise.js";
 export type { EnterprisePresetOptions } from "./enterprise.js";
 export {
+  applyGovernancePack,
   enforceRoutingCostLimit,
   enforceRoutingGovernance,
   enforceRoutingRateLimit,
+  governancePolicyPack,
   resolveFallbackProvider,
   resolveRoutingTarget,
+  type GovernancePackName,
   type GovernancePolicyPack,
   type GovernanceRule,
   type RoutingPolicy,
@@ -129,7 +132,12 @@ export type { TeamStrategy, TeamResult } from "./team.js";
 
 // ─── Network (Multi-Agent) ─────────────────────────────────────────
 export { Network } from "./network.js";
-export type { NetworkQuickAgentSpec, NetworkAddAgentOptions } from "./network.js";
+export type {
+  NetworkQuickAgentSpec,
+  NetworkAddAgentOptions,
+  NetworkTemplateName,
+  NetworkTemplateSpec,
+} from "./network.js";
 
 // ─── Middleware ────────────────────────────────────────────────────
 export { MiddlewareChain } from "./middleware.js";
@@ -182,6 +190,7 @@ export type {
   ControlPlaneSnapshot,
   ControlPlaneUsage,
   ControlPlaneOpsSummary,
+  ControlPlaneOpsTenantSummary,
 } from "./control-plane.js";
 
 // ─── Resilience ────────────────────────────────────────────────────
