@@ -155,6 +155,7 @@ const c = new Agent({
     },
     fallbackOrder: ["anthropic", "openai"],
     maxTotalCostUsd: 2.0,
+    maxRequestsPerMinute: 60,
   },
 });
 ```

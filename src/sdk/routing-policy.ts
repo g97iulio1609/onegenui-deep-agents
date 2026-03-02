@@ -11,6 +11,7 @@ export interface RoutingPolicy {
   aliases?: Record<string, RoutingCandidate[]>;
   fallbackOrder?: ProviderType[];
   maxTotalCostUsd?: number;
+  maxRequestsPerMinute?: number;
 }
 
 export interface ResolvedRoutingTarget {
@@ -22,6 +23,7 @@ export interface ResolvedRoutingTarget {
 export interface ResolveRoutingTargetOptions {
   availableProviders?: ProviderType[];
   estimatedCostUsd?: number;
+  currentRequestsPerMinute?: number;
 }
 
 export function enforceRoutingCostLimit(
@@ -30,6 +32,18 @@ export function enforceRoutingCostLimit(
 ): void {
   if (policy?.maxTotalCostUsd !== undefined && costUsd > policy.maxTotalCostUsd) {
     throw new Error(`routing policy rejected cost ${costUsd}`);
+  }
+}
+
+export function enforceRoutingRateLimit(
+  policy: RoutingPolicy | undefined,
+  requestsPerMinute: number,
+): void {
+  if (
+    policy?.maxRequestsPerMinute !== undefined &&
+    requestsPerMinute > policy.maxRequestsPerMinute
+  ) {
+    throw new Error(`routing policy rejected rate ${requestsPerMinute}`);
   }
 }
 
@@ -58,6 +72,9 @@ export function resolveRoutingTarget(
 ): ResolvedRoutingTarget {
   if (options.estimatedCostUsd !== undefined) {
     enforceRoutingCostLimit(policy, options.estimatedCostUsd);
+  }
+  if (options.currentRequestsPerMinute !== undefined) {
+    enforceRoutingRateLimit(policy, options.currentRequestsPerMinute);
   }
 
   const candidates = policy?.aliases?.[model];

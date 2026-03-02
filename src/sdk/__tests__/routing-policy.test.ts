@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import {
   enforceRoutingCostLimit,
+  enforceRoutingRateLimit,
   resolveFallbackProvider,
   resolveRoutingTarget,
 } from "../routing-policy.js";
@@ -49,5 +50,11 @@ describe("routing-policy helpers", () => {
     );
     expect(() => enforceRoutingCostLimit({ maxTotalCostUsd: 2 }, 1.5)).not.toThrow();
   });
-});
 
+  it("enforces policy rate limit", () => {
+    expect(() => enforceRoutingRateLimit({ maxRequestsPerMinute: 10 }, 11)).toThrow(
+      "routing policy rejected rate 11",
+    );
+    expect(() => enforceRoutingRateLimit({ maxRequestsPerMinute: 10 }, 10)).not.toThrow();
+  });
+});
