@@ -2,12 +2,18 @@
 import { readFileSync } from 'node:fs';
 import process from 'node:process';
 
-import { evaluatePolicyGate } from '../dist/index.js';
+import {
+  evaluatePolicyDiff,
+  evaluatePolicyGate,
+  evaluatePolicyRolloutGuardrails,
+} from '../dist/index.js';
 
-const [, , scenariosPath, policyPath] = process.argv;
+const [, , scenariosPath, policyPath, baselinePolicyPath, guardrailsPath] = process.argv;
 
 if (!scenariosPath) {
-  process.stderr.write('Usage: node scripts/policy-gate.mjs <scenarios.json> [policy.json]\n');
+  process.stderr.write(
+    'Usage: node scripts/policy-gate.mjs <scenarios.json> [policy.json] [baseline-policy.json] [guardrails.json]\n',
+  );
   process.exit(2);
 }
 
@@ -31,7 +37,23 @@ const normalizedScenarios = scenariosRaw.map((scenario, index) => {
 
 const policy = policyPath ? parseJsonFile(policyPath) : undefined;
 const summary = evaluatePolicyGate(policy, normalizedScenarios);
-process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
-if (summary.failed > 0) {
+let output = summary;
+let rolloutFailed = false;
+
+if (baselinePolicyPath || guardrailsPath) {
+  const baselinePolicy = baselinePolicyPath ? parseJsonFile(baselinePolicyPath) : undefined;
+  const guardrails = guardrailsPath ? parseJsonFile(guardrailsPath) : undefined;
+  const diff = evaluatePolicyDiff(policy, normalizedScenarios, baselinePolicy);
+  const rollout = evaluatePolicyRolloutGuardrails(diff, guardrails ?? {});
+  rolloutFailed = !rollout.ok;
+  output = {
+    summary,
+    diff,
+    rollout,
+  };
+}
+
+process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+if (summary.failed > 0 || rolloutFailed) {
   process.exitCode = 1;
 }

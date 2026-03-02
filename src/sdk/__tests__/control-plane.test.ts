@@ -178,12 +178,14 @@ describe("ControlPlane", () => {
       baselinePassed: number;
       candidatePassed: number;
       changed: number;
+      regressions: number;
     };
     expect(diff.traceId.startsWith("trace-")).toBe(true);
     expect(diff.total).toBe(2);
     expect(diff.baselinePassed).toBe(2);
     expect(diff.candidatePassed).toBe(1);
     expect(diff.changed).toBe(1);
+    expect(diff.regressions).toBe(1);
 
     const tracesRes = await fetch(`${url}/api/ops/policy/explain/traces`);
     expect(tracesRes.status).toBe(200);

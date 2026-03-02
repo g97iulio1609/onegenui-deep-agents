@@ -15,6 +15,7 @@ import type { Telemetry } from "./telemetry.js";
 import type { ApprovalManager } from "./approval.js";
 import { estimateCost } from "./tokens.js";
 import {
+  evaluatePolicyDiff,
   explainRoutingTarget,
   type ResolveRoutingTargetOptions,
   type RoutingDecisionExplanation,
@@ -954,6 +955,7 @@ export class ControlPlane implements Disposable {
     baselinePassed: number;
     candidatePassed: number;
     changed: number;
+    regressions: number;
     results: Array<{
       index: number;
       input: { provider: ProviderType; model: string };
@@ -963,36 +965,14 @@ export class ControlPlane implements Disposable {
     }>;
   } {
     const scenarios = this.parsePolicyExplainBatchScenarios(params);
-    const results = scenarios.map((scenario, index) => {
-      const baseline = explainRoutingTarget(
-        undefined,
-        scenario.provider,
-        scenario.model,
-        scenario.options,
-      );
-      const candidate = explainRoutingTarget(
-        this.routingPolicy,
-        scenario.provider,
-        scenario.model,
-        scenario.options,
-      );
-      const changed = baseline.ok !== candidate.ok
-        || baseline.decision?.provider !== candidate.decision?.provider
-        || baseline.decision?.model !== candidate.decision?.model;
-      return {
-        index,
-        input: { provider: scenario.provider, model: scenario.model },
-        baseline,
-        candidate,
-        changed,
-      };
-    });
+    const diff = evaluatePolicyDiff(this.routingPolicy, scenarios, undefined);
     const response: {
       ok: true;
       total: number;
       baselinePassed: number;
       candidatePassed: number;
       changed: number;
+      regressions: number;
       results: Array<{
         index: number;
         input: { provider: ProviderType; model: string };
@@ -1002,11 +982,12 @@ export class ControlPlane implements Disposable {
       }>;
     } = {
       ok: true,
-      total: results.length,
-      baselinePassed: results.filter((item) => item.baseline.ok).length,
-      candidatePassed: results.filter((item) => item.candidate.ok).length,
-      changed: results.filter((item) => item.changed).length,
-      results,
+      total: diff.total,
+      baselinePassed: diff.baselinePassed,
+      candidatePassed: diff.candidatePassed,
+      changed: diff.changed,
+      regressions: diff.regressions,
+      results: diff.results,
     };
     const trace = this.recordPolicyExplainTrace("diff", response);
     return { ...response, traceId: trace.traceId };

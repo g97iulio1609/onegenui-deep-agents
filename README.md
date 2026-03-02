@@ -201,22 +201,34 @@ const routed = c.withRoutingContext({
 });
 
 // Apply built-in enterprise governance packs
-import { applyGovernancePack, explainRoutingTarget } from "gauss-ts";
+import {
+  applyGovernancePack,
+  evaluatePolicyDiff,
+  evaluatePolicyRolloutGuardrails,
+  explainRoutingTarget,
+} from "gauss-ts";
 const hardenedPolicy = applyGovernancePack(
   { fallbackOrder: ["anthropic", "openai"] },
   "balanced-mix",
 );
+const rolloutPolicy = applyGovernancePack(hardenedPolicy, "rollout-canary");
 
 const explanation = explainRoutingTarget(
-  hardenedPolicy,
+  rolloutPolicy,
   "openai",
   "gpt-5.2",
-  { currentHourUtc: 11, governanceTags: ["balanced"] },
+  { currentHourUtc: 11, governanceTags: ["balanced", "rollout"] },
 );
 console.log(explanation.decision?.selectedBy); // "direct" | "alias:..." | "fallback:..."
 
+// Rollout diff + guardrails (regression-aware)
+// const diff = evaluatePolicyDiff(rolloutPolicy, scenarios);
+// const rolloutGate = evaluatePolicyRolloutGuardrails(diff, { maxRegressions: 0, minCandidatePassRate: 0.95 });
+
 // CI-friendly policy gate summary (fails with exit code 1 when scenarios fail)
 // npm run policy:gate -- ./scenarios.json ./policy.json
+// Optional rollout guardrails (diff + thresholds):
+// npm run policy:gate -- ./scenarios.json ./candidate-policy.json ./baseline-policy.json ./guardrails.json
 ```
 
 ### Unified Control Plane (M51 foundation)

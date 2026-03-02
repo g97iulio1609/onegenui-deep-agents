@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 
 import {
   applyGovernancePack,
+  evaluatePolicyDiff,
   evaluatePolicyGate,
+  evaluatePolicyRolloutGuardrails,
   explainRoutingTarget,
   enforceRoutingCostLimit,
   enforceRoutingGovernance,
@@ -240,5 +242,37 @@ describe("routing-policy helpers", () => {
     expect(summary.passed).toBe(1);
     expect(summary.failed).toBe(1);
     expect(summary.failedIndexes).toEqual([1]);
+  });
+
+  it("applies rollout governance bundles", () => {
+    const canary = applyGovernancePack(undefined, "rollout-canary");
+    expect(canary.maxTotalCostUsd).toBe(0.1);
+    expect(canary.maxRequestsPerMinute).toBe(30);
+    expect(canary.providerWeights?.openai).toBe(70);
+    expect(canary.fallbackOrder).toContain("anthropic");
+    expect(() =>
+      resolveRoutingTarget(
+        canary,
+        "openai",
+        "gpt-5.2",
+        { governanceTags: ["rollout"], currentHourUtc: 12 },
+      ),
+    ).not.toThrow();
+  });
+
+  it("evaluates rollout guardrails from policy diffs", () => {
+    const scenarios = [
+      { provider: "openai" as const, model: "gpt-5.2", options: { currentHourUtc: 10 } },
+      { provider: "openai" as const, model: "gpt-5.2", options: { currentHourUtc: 22 } },
+    ];
+    const diff = evaluatePolicyDiff({ allowedHoursUtc: [9, 10, 11] }, scenarios);
+    expect(diff.regressions).toBe(1);
+    const guard = evaluatePolicyRolloutGuardrails(diff, {
+      maxChanged: 2,
+      maxRegressions: 0,
+      minCandidatePassRate: 0.9,
+    });
+    expect(guard.ok).toBe(false);
+    expect(guard.checks.some((check) => check.check === "regression_budget" && check.status === "failed")).toBe(true);
   });
 });

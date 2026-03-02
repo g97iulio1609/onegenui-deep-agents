@@ -14,6 +14,11 @@ export type GovernanceRule =
 
 export interface GovernancePolicyPack {
   rules: GovernanceRule[];
+  maxTotalCostUsd?: number;
+  maxRequestsPerMinute?: number;
+  allowedHoursUtc?: number[];
+  providerWeights?: Partial<Record<ProviderType, number>>;
+  fallbackOrder?: ProviderType[];
 }
 
 export type GovernancePackName =
@@ -21,7 +26,9 @@ export type GovernancePackName =
   | "eu-residency"
   | "cost-guarded"
   | "ops-business-hours"
-  | "balanced-mix";
+  | "balanced-mix"
+  | "rollout-canary"
+  | "rollout-strict";
 
 export interface RoutingPolicy {
   aliases?: Record<string, RoutingCandidate[]>;
@@ -73,6 +80,46 @@ export interface PolicyGateSummary {
   results: RoutingDecisionExplanation[];
 }
 
+export interface PolicyDiffResult {
+  index: number;
+  input: { provider: ProviderType; model: string };
+  baseline: RoutingDecisionExplanation;
+  candidate: RoutingDecisionExplanation;
+  changed: boolean;
+}
+
+export interface PolicyDiffSummary {
+  total: number;
+  baselinePassed: number;
+  candidatePassed: number;
+  changed: number;
+  regressions: number;
+  results: PolicyDiffResult[];
+}
+
+export interface PolicyRolloutGuardrails {
+  maxChanged?: number;
+  maxRegressions?: number;
+  minCandidatePassRate?: number;
+}
+
+export type PolicyRolloutCheckName =
+  | "changed_budget"
+  | "regression_budget"
+  | "candidate_pass_rate";
+
+export interface PolicyRolloutCheck {
+  check: PolicyRolloutCheckName;
+  status: "passed" | "failed";
+  detail: string;
+}
+
+export interface PolicyRolloutGateResult {
+  ok: boolean;
+  checks: PolicyRolloutCheck[];
+  error?: string;
+}
+
 export interface ResolveRoutingTargetOptions {
   availableProviders?: ProviderType[];
   estimatedCostUsd?: number;
@@ -105,10 +152,12 @@ export function governancePolicyPack(name: GovernancePackName): GovernancePolicy
           { type: "allow_provider", provider: "deepseek" },
           { type: "require_tag", tag: "cost-sensitive" },
         ],
+        maxTotalCostUsd: 0.15,
       };
     case "ops-business-hours":
       return {
         rules: [{ type: "require_tag", tag: "ops" }],
+        allowedHoursUtc: Array.from({ length: 11 }, (_, i) => i + 8),
       };
     case "balanced-mix":
       return {
@@ -117,6 +166,32 @@ export function governancePolicyPack(name: GovernancePackName): GovernancePolicy
           { type: "allow_provider", provider: "anthropic" },
           { type: "require_tag", tag: "balanced" },
         ],
+        providerWeights: { openai: 60, anthropic: 40 },
+      };
+    case "rollout-canary":
+      return {
+        rules: [
+          { type: "allow_provider", provider: "openai" },
+          { type: "allow_provider", provider: "anthropic" },
+          { type: "require_tag", tag: "rollout" },
+        ],
+        maxTotalCostUsd: 0.1,
+        maxRequestsPerMinute: 30,
+        fallbackOrder: ["openai", "anthropic"],
+        providerWeights: { openai: 70, anthropic: 30 },
+      };
+    case "rollout-strict":
+      return {
+        rules: [
+          { type: "allow_provider", provider: "openai" },
+          { type: "allow_provider", provider: "anthropic" },
+          { type: "require_tag", tag: "rollout" },
+          { type: "require_tag", tag: "approved" },
+        ],
+        maxTotalCostUsd: 0.08,
+        maxRequestsPerMinute: 15,
+        allowedHoursUtc: Array.from({ length: 9 }, (_, i) => i + 9),
+        fallbackOrder: ["openai", "anthropic"],
       };
   }
 }
@@ -127,19 +202,18 @@ export function applyGovernancePack(
 ): RoutingPolicy {
   const pack = governancePolicyPack(packName);
   const existingRules = policy?.governance?.rules ?? [];
-  const allowedHoursUtc = packName === "ops-business-hours"
-    ? Array.from({ length: 11 }, (_, i) => i + 8)
-    : policy?.allowedHoursUtc;
-  const providerWeights = packName === "balanced-mix"
-    ? {
-      ...(policy?.providerWeights ?? {}),
-      openai: 60,
-      anthropic: 40,
-    }
+  const mergedFallbackOrder = pack.fallbackOrder
+    ? [...new Set([...(policy?.fallbackOrder ?? []), ...pack.fallbackOrder])]
+    : policy?.fallbackOrder;
+  const providerWeights = pack.providerWeights
+    ? { ...(policy?.providerWeights ?? {}), ...pack.providerWeights }
     : policy?.providerWeights;
   return {
     ...policy,
-    allowedHoursUtc,
+    maxTotalCostUsd: pack.maxTotalCostUsd ?? policy?.maxTotalCostUsd,
+    maxRequestsPerMinute: pack.maxRequestsPerMinute ?? policy?.maxRequestsPerMinute,
+    allowedHoursUtc: pack.allowedHoursUtc ?? policy?.allowedHoursUtc,
+    fallbackOrder: mergedFallbackOrder,
     providerWeights,
     governance: {
       rules: [...existingRules, ...pack.rules],
@@ -371,4 +445,78 @@ export function evaluatePolicyGate(
     failedIndexes,
     results,
   };
+}
+
+export function evaluatePolicyDiff(
+  candidatePolicy: RoutingPolicy | undefined,
+  scenarios: PolicyGateScenario[],
+  baselinePolicy: RoutingPolicy | undefined = undefined,
+): PolicyDiffSummary {
+  const results = scenarios.map((scenario, index) => {
+    const baseline = explainRoutingTarget(
+      baselinePolicy,
+      scenario.provider,
+      scenario.model,
+      scenario.options ?? {},
+    );
+    const candidate = explainRoutingTarget(
+      candidatePolicy,
+      scenario.provider,
+      scenario.model,
+      scenario.options ?? {},
+    );
+    const changed = baseline.ok !== candidate.ok
+      || baseline.decision?.provider !== candidate.decision?.provider
+      || baseline.decision?.model !== candidate.decision?.model
+      || baseline.decision?.selectedBy !== candidate.decision?.selectedBy
+      || baseline.error !== candidate.error;
+    return {
+      index,
+      input: { provider: scenario.provider, model: scenario.model },
+      baseline,
+      candidate,
+      changed,
+    };
+  });
+  const regressions = results.filter((item) => item.baseline.ok && !item.candidate.ok).length;
+  return {
+    total: results.length,
+    baselinePassed: results.filter((item) => item.baseline.ok).length,
+    candidatePassed: results.filter((item) => item.candidate.ok).length,
+    changed: results.filter((item) => item.changed).length,
+    regressions,
+    results,
+  };
+}
+
+export function evaluatePolicyRolloutGuardrails(
+  diff: PolicyDiffSummary,
+  guardrails: PolicyRolloutGuardrails = {},
+): PolicyRolloutGateResult {
+  const checks: PolicyRolloutCheck[] = [];
+  const maxChanged = guardrails.maxChanged ?? diff.total;
+  const maxRegressions = guardrails.maxRegressions ?? 0;
+  const minCandidatePassRate = guardrails.minCandidatePassRate ?? 1;
+  const candidatePassRate = diff.total === 0 ? 1 : diff.candidatePassed / diff.total;
+
+  checks.push({
+    check: "changed_budget",
+    status: diff.changed <= maxChanged ? "passed" : "failed",
+    detail: `changed=${diff.changed}, limit=${maxChanged}`,
+  });
+  checks.push({
+    check: "regression_budget",
+    status: diff.regressions <= maxRegressions ? "passed" : "failed",
+    detail: `regressions=${diff.regressions}, limit=${maxRegressions}`,
+  });
+  checks.push({
+    check: "candidate_pass_rate",
+    status: candidatePassRate >= minCandidatePassRate ? "passed" : "failed",
+    detail: `candidate_pass_rate=${candidatePassRate.toFixed(3)}, min=${minCandidatePassRate.toFixed(3)}`,
+  });
+
+  const failed = checks.find((check) => check.status === "failed");
+  return failed
+    ? { ok: false, checks, error: failed.detail }
+    : { ok: true, checks };
 }
