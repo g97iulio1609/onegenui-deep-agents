@@ -5,6 +5,18 @@ All notable changes to **Gauss** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.4] - 2026-03-02
+
+### Added
+
+- Hosted stream hardening for `ControlPlane` SSE API: multiplex channels (`channels=`), replay cursor (`lastEventId`/`Last-Event-ID`), and SSE event ids.
+- Stream channel RBAC checks for role-scoped operations.
+- Expanded stream E2E/unit coverage for multiplex, replay, and scoped authorization.
+
+### Changed
+
+- Updated stream quick-start docs with multiplex/replay usage examples.
+
 ## [2.0.3] - 2026-03-02
 
 ### Added
