@@ -76,11 +76,13 @@ describe("ControlPlane", () => {
       supportsOpsSummary: boolean;
       supportsOpsTenants: boolean;
       hostedDashboardPath: string;
+      hostedTenantDashboardPath: string;
     };
     expect(caps.supportsMultiplex).toBe(true);
     expect(caps.supportsOpsSummary).toBe(true);
     expect(caps.supportsOpsTenants).toBe(true);
     expect(caps.hostedDashboardPath).toBe("/ops");
+    expect(caps.hostedTenantDashboardPath).toBe("/ops/tenants");
 
     const healthRes = await fetch(`${url}/api/ops/health`);
     expect(healthRes.status).toBe(200);
@@ -105,6 +107,10 @@ describe("ControlPlane", () => {
     const opsRes = await fetch(`${url}/ops`);
     const opsHtml = await opsRes.text();
     expect(opsHtml).toContain("Gauss Hosted Ops Console");
+
+    const tenantOpsRes = await fetch(`${url}/ops/tenants`);
+    const tenantOpsHtml = await tenantOpsRes.text();
+    expect(tenantOpsHtml).toContain("Gauss Hosted Tenant Ops");
 
     await cp.stopServer();
   });

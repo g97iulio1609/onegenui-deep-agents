@@ -87,6 +87,7 @@ export {
   enforceRoutingCostLimit,
   enforceRoutingGovernance,
   enforceRoutingRateLimit,
+  enforceRoutingTimeWindow,
   governancePolicyPack,
   resolveFallbackProvider,
   resolveRoutingTarget,

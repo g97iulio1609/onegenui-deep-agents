@@ -5,6 +5,7 @@ import {
   enforceRoutingCostLimit,
   enforceRoutingGovernance,
   enforceRoutingRateLimit,
+  enforceRoutingTimeWindow,
   governancePolicyPack,
   resolveFallbackProvider,
   resolveRoutingTarget,
@@ -80,6 +81,13 @@ describe("routing-policy helpers", () => {
     expect(() => enforceRoutingRateLimit({ maxRequestsPerMinute: 10 }, 10)).not.toThrow();
   });
 
+  it("enforces policy UTC time window", () => {
+    expect(() => enforceRoutingTimeWindow({ allowedHoursUtc: [9, 10, 11] }, 10)).not.toThrow();
+    expect(() => enforceRoutingTimeWindow({ allowedHoursUtc: [9, 10, 11] }, 20)).toThrow(
+      "routing policy rejected hour 20",
+    );
+  });
+
   it("enforces governance provider and required tags", () => {
     const policy = {
       governance: {
@@ -132,6 +140,46 @@ describe("routing-policy helpers", () => {
         "openai",
         "gpt-5.2",
         { governanceTags: ["cost-sensitive"] },
+      ),
+    ).not.toThrow();
+  });
+
+  it("prefers weighted providers for alias routing", () => {
+    const resolved = resolveRoutingTarget(
+      {
+        aliases: {
+          "fast-chat": [
+            { provider: "openai", model: "gpt-4o-mini", priority: 1 },
+            { provider: "anthropic", model: "claude-3-5-haiku-latest", priority: 10 },
+          ],
+        },
+        providerWeights: {
+          openai: 100,
+          anthropic: 10,
+        },
+      },
+      "openai",
+      "fast-chat",
+      { availableProviders: ["openai", "anthropic"], currentHourUtc: 12 },
+    );
+    expect(resolved.provider).toBe("openai");
+    expect(resolved.model).toBe("gpt-4o-mini");
+  });
+
+  it("applies M64 governance packs with time windows and provider mix", () => {
+    const businessHours = applyGovernancePack(undefined, "ops-business-hours");
+    expect(businessHours.allowedHoursUtc?.includes(8)).toBe(true);
+    expect(businessHours.allowedHoursUtc?.includes(18)).toBe(true);
+
+    const balanced = applyGovernancePack(undefined, "balanced-mix");
+    expect(balanced.providerWeights?.openai).toBe(60);
+    expect(balanced.providerWeights?.anthropic).toBe(40);
+    expect(() =>
+      resolveRoutingTarget(
+        balanced,
+        "openai",
+        "gpt-5.2",
+        { governanceTags: ["balanced"], currentHourUtc: 12 },
       ),
     ).not.toThrow();
   });

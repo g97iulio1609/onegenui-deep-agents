@@ -113,7 +113,13 @@ network.destroy();
 
 // Built-in starter templates
 const incident = Network.fromTemplate("incident-response");
+const support = Network.fromTemplate("support-triage");
+const risk = Network.fromTemplate("fintech-risk-review");
+const ragOps = Network.fromTemplate("rag-ops");
 incident.destroy();
+support.destroy();
+risk.destroy();
+ragOps.destroy();
 ```
 
 ---
@@ -190,6 +196,7 @@ const routed = c.withRoutingContext({
   availableProviders: ["openai"],
   estimatedCostUsd: 1.2,
   currentRequestsPerMinute: 20,
+  currentHourUtc: 11,
   governanceTags: ["pci"],
 });
 
@@ -197,7 +204,7 @@ const routed = c.withRoutingContext({
 import { applyGovernancePack } from "gauss-ts";
 const hardenedPolicy = applyGovernancePack(
   { fallbackOrder: ["anthropic", "openai"] },
-  "enterprise-strict",
+  "balanced-mix",
 );
 ```
 
@@ -224,6 +231,7 @@ console.log(`Control Plane: ${url}`);
 // hosted ops summary -> GET ${url}/api/ops/summary
 // hosted ops tenant breakdown -> GET ${url}/api/ops/tenants
 // hosted ops dashboard -> GET ${url}/ops
+// hosted tenant dashboard -> GET ${url}/ops/tenants
 ```
 
 ---

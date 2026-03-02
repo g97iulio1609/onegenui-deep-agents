@@ -25,7 +25,12 @@ export interface NetworkAddAgentOptions {
   instructions?: string;
 }
 
-export type NetworkTemplateName = "research-delivery" | "incident-response";
+export type NetworkTemplateName =
+  | "research-delivery"
+  | "incident-response"
+  | "support-triage"
+  | "fintech-risk-review"
+  | "rag-ops";
 
 export interface NetworkTemplateSpec {
   supervisor: string;
@@ -69,12 +74,42 @@ export class Network implements Disposable {
         ],
       };
     }
+    if (name === "incident-response") {
+      return {
+        supervisor: "incident-commander",
+        agents: [
+          { name: "incident-commander", instructions: "Drive response and coordination." },
+          { name: "triage", instructions: "Assess impact and prioritize mitigation." },
+          { name: "remediator", instructions: "Propose and execute remediation steps." },
+        ],
+      };
+    }
+    if (name === "support-triage") {
+      return {
+        supervisor: "support-lead",
+        agents: [
+          { name: "support-lead", instructions: "Coordinate support workload and escalations." },
+          { name: "triage-bot", instructions: "Classify incoming support requests." },
+          { name: "resolver", instructions: "Draft and validate customer resolutions." },
+        ],
+      };
+    }
+    if (name === "fintech-risk-review") {
+      return {
+        supervisor: "risk-lead",
+        agents: [
+          { name: "risk-lead", instructions: "Approve risk recommendations and report rationale." },
+          { name: "policy-analyst", instructions: "Map events to compliance policy obligations." },
+          { name: "fraud-scorer", instructions: "Score suspicious patterns and flag anomalies." },
+        ],
+      };
+    }
     return {
-      supervisor: "incident-commander",
+      supervisor: "rag-ops-lead",
       agents: [
-        { name: "incident-commander", instructions: "Drive response and coordination." },
-        { name: "triage", instructions: "Assess impact and prioritize mitigation." },
-        { name: "remediator", instructions: "Propose and execute remediation steps." },
+        { name: "rag-ops-lead", instructions: "Coordinate retrieval quality and index freshness." },
+        { name: "retrieval-auditor", instructions: "Audit recall/precision and retrieval grounding." },
+        { name: "index-maintainer", instructions: "Propose chunking and indexing improvements." },
       ],
     };
   }

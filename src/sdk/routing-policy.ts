@@ -16,13 +16,20 @@ export interface GovernancePolicyPack {
   rules: GovernanceRule[];
 }
 
-export type GovernancePackName = "enterprise-strict" | "eu-residency" | "cost-guarded";
+export type GovernancePackName =
+  | "enterprise-strict"
+  | "eu-residency"
+  | "cost-guarded"
+  | "ops-business-hours"
+  | "balanced-mix";
 
 export interface RoutingPolicy {
   aliases?: Record<string, RoutingCandidate[]>;
   fallbackOrder?: ProviderType[];
   maxTotalCostUsd?: number;
   maxRequestsPerMinute?: number;
+  allowedHoursUtc?: number[];
+  providerWeights?: Partial<Record<ProviderType, number>>;
   governance?: GovernancePolicyPack;
 }
 
@@ -36,6 +43,7 @@ export interface ResolveRoutingTargetOptions {
   availableProviders?: ProviderType[];
   estimatedCostUsd?: number;
   currentRequestsPerMinute?: number;
+  currentHourUtc?: number;
   governanceTags?: string[];
 }
 
@@ -64,6 +72,18 @@ export function governancePolicyPack(name: GovernancePackName): GovernancePolicy
           { type: "require_tag", tag: "cost-sensitive" },
         ],
       };
+    case "ops-business-hours":
+      return {
+        rules: [{ type: "require_tag", tag: "ops" }],
+      };
+    case "balanced-mix":
+      return {
+        rules: [
+          { type: "allow_provider", provider: "openai" },
+          { type: "allow_provider", provider: "anthropic" },
+          { type: "require_tag", tag: "balanced" },
+        ],
+      };
   }
 }
 
@@ -73,8 +93,20 @@ export function applyGovernancePack(
 ): RoutingPolicy {
   const pack = governancePolicyPack(packName);
   const existingRules = policy?.governance?.rules ?? [];
+  const allowedHoursUtc = packName === "ops-business-hours"
+    ? Array.from({ length: 11 }, (_, i) => i + 8)
+    : policy?.allowedHoursUtc;
+  const providerWeights = packName === "balanced-mix"
+    ? {
+      ...(policy?.providerWeights ?? {}),
+      openai: 60,
+      anthropic: 40,
+    }
+    : policy?.providerWeights;
   return {
     ...policy,
+    allowedHoursUtc,
+    providerWeights,
     governance: {
       rules: [...existingRules, ...pack.rules],
     },
@@ -99,6 +131,17 @@ export function enforceRoutingRateLimit(
     requestsPerMinute > policy.maxRequestsPerMinute
   ) {
     throw new Error(`routing policy rejected rate ${requestsPerMinute}`);
+  }
+}
+
+export function enforceRoutingTimeWindow(
+  policy: RoutingPolicy | undefined,
+  hourUtc: number,
+): void {
+  const allowedHours = policy?.allowedHoursUtc;
+  if (!allowedHours || allowedHours.length === 0) return;
+  if (!Number.isInteger(hourUtc) || hourUtc < 0 || hourUtc > 23 || !allowedHours.includes(hourUtc)) {
+    throw new Error(`routing policy rejected hour ${hourUtc}`);
   }
 }
 
@@ -149,6 +192,8 @@ export function resolveRoutingTarget(
   options: ResolveRoutingTargetOptions = {},
 ): ResolvedRoutingTarget {
   const governanceTags = options.governanceTags;
+  const currentHourUtc = options.currentHourUtc ?? new Date().getUTCHours();
+  enforceRoutingTimeWindow(policy, currentHourUtc);
   if (options.estimatedCostUsd !== undefined) {
     enforceRoutingCostLimit(policy, options.estimatedCostUsd);
   }
@@ -156,25 +201,37 @@ export function resolveRoutingTarget(
     enforceRoutingRateLimit(policy, options.currentRequestsPerMinute);
   }
 
+  const pickCandidate = (candidates: RoutingCandidate[]): RoutingCandidate => {
+    if (candidates.length === 1) return candidates[0];
+    return [...candidates].sort((a, b) => {
+      const bWeight = policy?.providerWeights?.[b.provider] ?? 0;
+      const aWeight = policy?.providerWeights?.[a.provider] ?? 0;
+      if (bWeight !== aWeight) return bWeight - aWeight;
+      return (b.priority ?? 0) - (a.priority ?? 0);
+    })[0];
+  };
+
   const candidates = policy?.aliases?.[model];
   if (candidates && candidates.length > 0) {
     const sorted = [...candidates].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
     const availableProviders = options.availableProviders;
     if (!availableProviders || availableProviders.length === 0) {
-      enforceRoutingGovernance(policy, sorted[0].provider, governanceTags);
+      const selected = pickCandidate(sorted);
+      enforceRoutingGovernance(policy, selected.provider, governanceTags);
       return {
-        provider: sorted[0].provider,
-        model: sorted[0].model,
+        provider: selected.provider,
+        model: selected.model,
         selectedBy: `alias:${model}`,
       };
     }
     const available = new Set(availableProviders);
-    const availableCandidate = sorted.find((candidate) => available.has(candidate.provider));
-    if (availableCandidate) {
-      enforceRoutingGovernance(policy, availableCandidate.provider, governanceTags);
+    const availableCandidates = sorted.filter((candidate) => available.has(candidate.provider));
+    if (availableCandidates.length > 0) {
+      const selected = pickCandidate(availableCandidates);
+      enforceRoutingGovernance(policy, selected.provider, governanceTags);
       return {
-        provider: availableCandidate.provider,
-        model: availableCandidate.model,
+        provider: selected.provider,
+        model: selected.model,
         selectedBy: `alias:${model}`,
       };
     }

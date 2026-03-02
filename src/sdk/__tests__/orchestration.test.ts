@@ -139,6 +139,9 @@ describe("Network", () => {
     const spec = Network.template("research-delivery");
     expect(spec.supervisor).toBe("lead");
     expect(spec.agents.length).toBeGreaterThanOrEqual(3);
+    expect(Network.template("support-triage").supervisor).toBe("support-lead");
+    expect(Network.template("fintech-risk-review").supervisor).toBe("risk-lead");
+    expect(Network.template("rag-ops").supervisor).toBe("rag-ops-lead");
 
     const net = Network.fromTemplate("incident-response");
     await net.delegateWithSupervisor("Stabilize production issue");
