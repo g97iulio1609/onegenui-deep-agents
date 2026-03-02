@@ -42,9 +42,6 @@ export interface Message {
   content: string;
 }
 
-/** @deprecated Use `Message` instead. */
-export type JsMessage = Message;
-
 // ─── Tools ─────────────────────────────────────────────────────────
 
 export interface ToolDef {

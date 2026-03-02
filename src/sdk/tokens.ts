@@ -9,7 +9,7 @@ import {
   estimate_cost,
 } from "gauss-napi";
 
-import type { CostEstimate, JsMessage } from "./types.js";
+import type { CostEstimate, Message } from "./types.js";
 
 // ─── Runtime Pricing Override ────────────────────────────────────────
 
@@ -66,7 +66,7 @@ export function countTokensForModel(text: string, model: string): number {
   return count_tokens_for_model(text, model);
 }
 
-export function countMessageTokens(messages: JsMessage[]): number {
+export function countMessageTokens(messages: Message[]): number {
   return count_message_tokens(messages);
 }
 

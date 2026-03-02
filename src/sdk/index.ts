@@ -25,7 +25,6 @@ export type {
   ToolDef,
   MessageRole,
   Message,
-  JsMessage,
   AgentOptions,
   AgentResult,
   Citation,
@@ -130,6 +129,7 @@ export type { TeamStrategy, TeamResult } from "./team.js";
 
 // ─── Network (Multi-Agent) ─────────────────────────────────────────
 export { Network } from "./network.js";
+export type { NetworkQuickAgentSpec, NetworkAddAgentOptions } from "./network.js";
 
 // ─── Middleware ────────────────────────────────────────────────────
 export { MiddlewareChain } from "./middleware.js";

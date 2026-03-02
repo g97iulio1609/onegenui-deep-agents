@@ -10,12 +10,43 @@ import {
   destroy_network,
 } from "gauss-napi";
 
-import type { Handle, Disposable } from "./types.js";
-import type { Agent } from "./agent.js";
+import type { Handle, Disposable, ProviderType } from "./types.js";
+import { Agent } from "./agent.js";
+import { DisposedError } from "./errors.js";
+
+export interface NetworkQuickAgentSpec {
+  name: string;
+  provider?: ProviderType;
+  model?: string;
+  instructions?: string;
+}
+
+export interface NetworkAddAgentOptions {
+  instructions?: string;
+}
 
 export class Network implements Disposable {
   private readonly _handle: Handle;
   private disposed = false;
+  private supervisorName: string | null = null;
+
+  /**
+   * Quick network builder for swarm/team-like setups in a few lines.
+   */
+  static quick(supervisor: string, agents: NetworkQuickAgentSpec[]): Network {
+    const network = new Network();
+    for (const spec of agents) {
+      const agent = new Agent({
+        name: spec.name,
+        provider: spec.provider ?? "openai",
+        model: spec.model ?? "gpt-4o",
+        instructions: spec.instructions,
+      });
+      network.addAgent(agent, spec.instructions);
+    }
+    network.setSupervisor(supervisor);
+    return network;
+  }
 
   constructor() {
     this._handle = create_network();
@@ -25,8 +56,9 @@ export class Network implements Disposable {
     return this._handle;
   }
 
-  addAgent(agent: Agent, instructions?: string): this {
+  addAgent(agent: Agent, options?: NetworkAddAgentOptions | string): this {
     this.assertNotDisposed();
+    const instructions = typeof options === "string" ? options : options?.instructions;
     network_add_agent(
       this._handle,
       agent.name,
@@ -38,17 +70,26 @@ export class Network implements Disposable {
 
   setSupervisor(agentName: string): this {
     this.assertNotDisposed();
+    this.supervisorName = agentName;
     network_set_supervisor(this._handle, agentName);
     return this;
   }
 
-  async delegate(
-    fromAgent: string,
-    toAgent: string,
-    prompt: string
-  ): Promise<unknown> {
+  async delegate(agentName: string, prompt: string): Promise<unknown>;
+  async delegate(fromAgent: string, toAgent: string, prompt: string): Promise<unknown>;
+  async delegate(arg1: string, arg2: string, arg3?: string): Promise<unknown> {
     this.assertNotDisposed();
-    return network_delegate(this._handle, fromAgent, toAgent, prompt);
+    const agentName = arg3 === undefined ? arg1 : arg2;
+    const prompt = arg3 === undefined ? arg2 : arg3;
+    return network_delegate(this._handle, agentName, prompt);
+  }
+
+  async delegateWithSupervisor(prompt: string): Promise<unknown> {
+    this.assertNotDisposed();
+    if (!this.supervisorName) {
+      throw new Error("Network supervisor is not set. Call setSupervisor() first.");
+    }
+    return network_delegate(this._handle, this.supervisorName, prompt);
   }
 
   agentCards(): unknown {
@@ -59,11 +100,7 @@ export class Network implements Disposable {
   destroy(): void {
     if (!this.disposed) {
       this.disposed = true;
-      try {
-        destroy_network(this._handle);
-      } catch {
-        // Already destroyed.
-      }
+      destroy_network(this._handle);
     }
   }
 
@@ -73,7 +110,7 @@ export class Network implements Disposable {
 
   private assertNotDisposed(): void {
     if (this.disposed) {
-      throw new Error("Network has been destroyed");
+      throw new DisposedError("Network", "network");
     }
   }
 }

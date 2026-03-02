@@ -44,7 +44,7 @@ import { Graph } from "../graph.js";
 import { Workflow } from "../workflow.js";
 import { Network } from "../network.js";
 import { Team } from "../team.js";
-import { graph_add_node, graph_add_edge, destroy_graph, team_add_agent, team_set_strategy, destroy_team } from "gauss-napi";
+import { graph_add_node, graph_add_edge, destroy_graph, team_add_agent, team_set_strategy, destroy_team, network_delegate, network_set_supervisor } from "gauss-napi";
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -115,6 +115,24 @@ describe("Network", () => {
     net.destroy();
     a1.destroy();
     a2.destroy();
+  });
+
+  it("supports quick network builder", async () => {
+    const net = Network.quick("supervisor", [
+      { name: "supervisor", instructions: "Delegate work" },
+      { name: "coder", instructions: "Write code" },
+    ]);
+    await net.delegate("coder", "Implement feature");
+    expect(network_set_supervisor).toHaveBeenCalledWith(30, "supervisor");
+    expect(network_delegate).toHaveBeenCalledWith(30, "coder", "Implement feature");
+    net.destroy();
+  });
+
+  it("maps 3-arg delegate calls to native target+prompt semantics", async () => {
+    const net = new Network();
+    await net.delegate("supervisor", "coder", "Fix bug");
+    expect(network_delegate).toHaveBeenCalledWith(30, "coder", "Fix bug");
+    net.destroy();
   });
 });
 

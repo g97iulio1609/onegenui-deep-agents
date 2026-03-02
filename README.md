@@ -96,6 +96,22 @@ console.log(out.finalText);
 graph.destroy();
 ```
 
+### 3) Network.quick() (swarm delegation bootstrap)
+
+```ts
+import { Network } from "gauss-ts";
+
+const network = Network.quick("supervisor", [
+  { name: "supervisor", instructions: "Delegate to best specialist." },
+  { name: "math-expert", instructions: "Solve math tasks precisely." },
+  { name: "writer", instructions: "Write concise user-facing output." },
+]);
+
+const delegated = await network.delegate("math-expert", "What is 13 * 7?");
+console.log(delegated);
+network.destroy();
+```
+
 ---
 
 ## Agent DX
@@ -205,7 +221,7 @@ console.log(`Control Plane: ${url}`);
 - **Agents**: `Agent`, `gauss()`
 - **Teams**: `Team`, `Team.quick()`
 - **Graphs**: `Graph`, `Graph.pipeline()`, `addConditionalEdge()`
-- **Workflows / Networks**: `Workflow`, `Network`
+- **Workflows / Networks**: `Workflow`, `Network`, `Network.quick()`
 - **Typed tools**: `tool()`, `createToolExecutor()`, `withTool()`
 - **MCP**: `McpServer`, `McpClient`
 - **A2A**: `A2aClient`

@@ -405,8 +405,7 @@ export function network_add_agent(
 export function network_set_supervisor(handle: number, agentName: string): void
 export function network_delegate(
   handle: number,
-  fromAgent: string,
-  toAgent: string,
+  agentName: string,
   prompt: string
 ): Promise<NapiNetworkDelegateResult>
 export function network_agent_cards(handle: number): NapiAgentCard[]
