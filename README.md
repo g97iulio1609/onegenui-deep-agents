@@ -201,11 +201,19 @@ const routed = c.withRoutingContext({
 });
 
 // Apply built-in enterprise governance packs
-import { applyGovernancePack } from "gauss-ts";
+import { applyGovernancePack, explainRoutingTarget } from "gauss-ts";
 const hardenedPolicy = applyGovernancePack(
   { fallbackOrder: ["anthropic", "openai"] },
   "balanced-mix",
 );
+
+const explanation = explainRoutingTarget(
+  hardenedPolicy,
+  "openai",
+  "gpt-5.2",
+  { currentHourUtc: 11, governanceTags: ["balanced"] },
+);
+console.log(explanation);
 ```
 
 ### Unified Control Plane (M51 foundation)

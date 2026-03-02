@@ -39,6 +39,26 @@ export interface ResolvedRoutingTarget {
   selectedBy: "direct" | `alias:${string}` | `fallback:${ProviderType}`;
 }
 
+export type RoutingExplainCheckName =
+  | "time_window"
+  | "cost_limit"
+  | "rate_limit"
+  | "governance"
+  | "selection";
+
+export interface RoutingExplainCheck {
+  check: RoutingExplainCheckName;
+  status: "passed" | "failed" | "skipped";
+  detail: string;
+}
+
+export interface RoutingDecisionExplanation {
+  ok: boolean;
+  decision?: ResolvedRoutingTarget;
+  checks: RoutingExplainCheck[];
+  error?: string;
+}
+
 export interface ResolveRoutingTargetOptions {
   availableProviders?: ProviderType[];
   estimatedCostUsd?: number;
@@ -245,4 +265,71 @@ export function resolveRoutingTarget(
 
   enforceRoutingGovernance(policy, provider, governanceTags);
   return { provider, model, selectedBy: "direct" };
+}
+
+export function explainRoutingTarget(
+  policy: RoutingPolicy | undefined,
+  provider: ProviderType,
+  model: string,
+  options: ResolveRoutingTargetOptions = {},
+): RoutingDecisionExplanation {
+  const checks: RoutingExplainCheck[] = [];
+  const hour = options.currentHourUtc ?? new Date().getUTCHours();
+  const fail = (check: RoutingExplainCheckName, error: unknown): RoutingDecisionExplanation => {
+    const message = error instanceof Error ? error.message : String(error);
+    checks.push({ check, status: "failed", detail: message });
+    return { ok: false, checks, error: message };
+  };
+
+  if (policy?.allowedHoursUtc && policy.allowedHoursUtc.length > 0) {
+    try {
+      enforceRoutingTimeWindow(policy, hour);
+      checks.push({ check: "time_window", status: "passed", detail: `hour=${hour}` });
+    } catch (error) {
+      return fail("time_window", error);
+    }
+  } else {
+    checks.push({ check: "time_window", status: "skipped", detail: "not configured" });
+  }
+
+  if (options.estimatedCostUsd !== undefined) {
+    try {
+      enforceRoutingCostLimit(policy, options.estimatedCostUsd);
+      checks.push({ check: "cost_limit", status: "passed", detail: `cost=${options.estimatedCostUsd}` });
+    } catch (error) {
+      return fail("cost_limit", error);
+    }
+  } else {
+    checks.push({ check: "cost_limit", status: "skipped", detail: "no estimate provided" });
+  }
+
+  if (options.currentRequestsPerMinute !== undefined) {
+    try {
+      enforceRoutingRateLimit(policy, options.currentRequestsPerMinute);
+      checks.push({
+        check: "rate_limit",
+        status: "passed",
+        detail: `rpm=${options.currentRequestsPerMinute}`,
+      });
+    } catch (error) {
+      return fail("rate_limit", error);
+    }
+  } else {
+    checks.push({ check: "rate_limit", status: "skipped", detail: "no rpm provided" });
+  }
+
+  try {
+    const decision = resolveRoutingTarget(policy, provider, model, options);
+    checks.push({ check: "governance", status: "passed", detail: "accepted" });
+    checks.push({ check: "selection", status: "passed", detail: decision.selectedBy });
+    return { ok: true, decision, checks };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("governance")) {
+      checks.push({ check: "governance", status: "failed", detail: message });
+      checks.push({ check: "selection", status: "skipped", detail: "selection aborted" });
+      return { ok: false, checks, error: message };
+    }
+    return fail("selection", error);
+  }
 }

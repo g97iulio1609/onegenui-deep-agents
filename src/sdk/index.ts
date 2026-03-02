@@ -84,6 +84,7 @@ export { enterprisePreset, enterpriseRun } from "./enterprise.js";
 export type { EnterprisePresetOptions } from "./enterprise.js";
 export {
   applyGovernancePack,
+  explainRoutingTarget,
   enforceRoutingCostLimit,
   enforceRoutingGovernance,
   enforceRoutingRateLimit,
@@ -98,6 +99,9 @@ export {
   type RoutingCandidate,
   type ResolvedRoutingTarget,
   type ResolveRoutingTargetOptions,
+  type RoutingDecisionExplanation,
+  type RoutingExplainCheck,
+  type RoutingExplainCheckName,
 } from "./routing-policy.js";
 
 // ─── Streaming ────────────────────────────────────────────────────

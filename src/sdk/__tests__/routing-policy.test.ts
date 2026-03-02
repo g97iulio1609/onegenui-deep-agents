@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import {
   applyGovernancePack,
+  explainRoutingTarget,
   enforceRoutingCostLimit,
   enforceRoutingGovernance,
   enforceRoutingRateLimit,
@@ -182,5 +183,39 @@ describe("routing-policy helpers", () => {
         { governanceTags: ["balanced"], currentHourUtc: 12 },
       ),
     ).not.toThrow();
+  });
+
+  it("explains successful routing decisions", () => {
+    const explained = explainRoutingTarget(
+      {
+        aliases: {
+          "fast-chat": [
+            { provider: "openai", model: "gpt-4o-mini", priority: 1 },
+            { provider: "anthropic", model: "claude-3-5-haiku-latest", priority: 10 },
+          ],
+        },
+        providerWeights: { openai: 100, anthropic: 10 },
+      },
+      "openai",
+      "fast-chat",
+      { availableProviders: ["openai", "anthropic"], currentHourUtc: 12 },
+    );
+
+    expect(explained.ok).toBe(true);
+    expect(explained.decision?.provider).toBe("openai");
+    expect(explained.checks.some((check) => check.check === "selection" && check.status === "passed")).toBe(true);
+  });
+
+  it("explains rejected routing decisions", () => {
+    const explained = explainRoutingTarget(
+      { allowedHoursUtc: [9, 10, 11] },
+      "openai",
+      "gpt-5.2",
+      { currentHourUtc: 20 },
+    );
+
+    expect(explained.ok).toBe(false);
+    expect(explained.error).toContain("routing policy rejected hour 20");
+    expect(explained.checks.some((check) => check.check === "time_window" && check.status === "failed")).toBe(true);
   });
 });
