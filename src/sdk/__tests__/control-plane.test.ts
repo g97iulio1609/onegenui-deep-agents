@@ -116,11 +116,12 @@ describe("ControlPlane", () => {
     expect(explainRes.status).toBe(200);
     const explain = await explainRes.json() as {
       ok: boolean;
-      decision?: { provider: string; model: string };
+      decision?: { provider: string; model: string; selectedBy: string };
       checks: Array<{ check: string; status: string }>;
     };
     expect(explain.ok).toBe(true);
     expect(explain.decision?.provider).toBe("openai");
+    expect(explain.decision?.selectedBy).toBe("direct");
     expect(explain.checks.some((item) => item.check === "selection" && item.status === "passed")).toBe(true);
 
     const opsRes = await fetch(`${url}/ops`);

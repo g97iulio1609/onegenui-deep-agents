@@ -213,7 +213,7 @@ const explanation = explainRoutingTarget(
   "gpt-5.2",
   { currentHourUtc: 11, governanceTags: ["balanced"] },
 );
-console.log(explanation);
+console.log(explanation.decision?.selectedBy); // "direct" | "alias:..." | "fallback:..."
 ```
 
 ### Unified Control Plane (M51 foundation)
