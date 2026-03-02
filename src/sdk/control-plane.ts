@@ -10,12 +10,33 @@ import { createServer, type IncomingMessage, type Server } from "node:http";
 import { dirname } from "node:path";
 
 import { ValidationError } from "./errors.js";
-import type { Disposable } from "./types.js";
+import type { Disposable, ProviderType } from "./types.js";
 import type { Telemetry } from "./telemetry.js";
 import type { ApprovalManager } from "./approval.js";
 import { estimateCost } from "./tokens.js";
+import {
+  explainRoutingTarget,
+  type ResolveRoutingTargetOptions,
+  type RoutingDecisionExplanation,
+  type RoutingPolicy,
+} from "./routing-policy.js";
 
 class ControlPlaneForbiddenError extends Error {}
+
+const PROVIDER_VALUES: ProviderType[] = [
+  "openai",
+  "anthropic",
+  "google",
+  "groq",
+  "ollama",
+  "deepseek",
+  "openrouter",
+  "together",
+  "fireworks",
+  "mistral",
+  "perplexity",
+  "xai",
+];
 
 export interface ControlPlaneUsage {
   inputTokens: number;
@@ -53,6 +74,7 @@ export interface ControlPlaneOptions {
   telemetry?: Pick<Telemetry, "exportSpans" | "exportMetrics">;
   approvals?: Pick<ApprovalManager, "listPending">;
   model?: string;
+  routingPolicy?: RoutingPolicy;
   authToken?: string;
   authClaims?: ControlPlaneAuthClaims;
   persistPath?: string;
@@ -86,8 +108,10 @@ export interface ControlPlaneOpsCapabilities {
   supportsChannelRbac: boolean;
   supportsOpsSummary: boolean;
   supportsOpsTenants: boolean;
+  supportsPolicyExplain: boolean;
   hostedDashboardPath: string;
   hostedTenantDashboardPath: string;
+  policyExplainPath: string;
 }
 
 export interface ControlPlaneOpsHealth {
@@ -125,6 +149,7 @@ export class ControlPlane implements Disposable {
   private readonly telemetry?: Pick<Telemetry, "exportSpans" | "exportMetrics">;
   private readonly approvals?: Pick<ApprovalManager, "listPending">;
   private model: string;
+  private routingPolicy?: RoutingPolicy;
   private authToken?: string;
   private authClaims?: ControlPlaneAuthClaims;
   private readonly persistPath?: string;
@@ -141,6 +166,7 @@ export class ControlPlane implements Disposable {
     this.telemetry = options.telemetry;
     this.approvals = options.approvals;
     this.model = options.model ?? "gpt-5.2";
+    this.routingPolicy = options.routingPolicy;
     this.authToken = options.authToken;
     this.authClaims = options.authClaims;
     this.persistPath = options.persistPath;
@@ -151,6 +177,11 @@ export class ControlPlane implements Disposable {
 
   withModel(model: string): this {
     this.model = model;
+    return this;
+  }
+
+  withRoutingPolicy(routingPolicy?: RoutingPolicy): this {
+    this.routingPolicy = routingPolicy;
     return this;
   }
 
@@ -298,6 +329,12 @@ export class ControlPlane implements Disposable {
           const filters = this.applyAuthClaims(this.parseContextFilters(parsed.searchParams));
           res.setHeader("Content-Type", "application/json; charset=utf-8");
           res.end(JSON.stringify(this.opsTenants(filters), null, 2));
+          return;
+        }
+
+        if (pathname === "/api/ops/policy/explain") {
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.end(JSON.stringify(this.opsPolicyExplain(parsed.searchParams), null, 2));
           return;
         }
 
@@ -472,6 +509,63 @@ export class ControlPlane implements Disposable {
     };
   }
 
+  private parsePolicyProvider(value: string): ProviderType {
+    if (!PROVIDER_VALUES.includes(value as ProviderType)) {
+      throw new ValidationError(`Unknown provider "${value}"`, "provider");
+    }
+    return value as ProviderType;
+  }
+
+  private parsePolicyExplainOptions(params: URLSearchParams): {
+    provider: ProviderType;
+    model: string;
+    options: ResolveRoutingTargetOptions;
+  } {
+    const provider = this.parsePolicyProvider(params.get("provider") ?? "openai");
+    const model = params.get("model") ?? "gpt-5.2";
+
+    const parseNumber = (raw: string | null, key: string): number | undefined => {
+      if (raw === null || raw.trim().length === 0) return undefined;
+      const parsed = Number(raw);
+      if (!Number.isFinite(parsed)) {
+        throw new ValidationError(`Invalid ${key} "${raw}"`, key);
+      }
+      return parsed;
+    };
+
+    const availableRaw = params.get("available");
+    const availableProviders = availableRaw
+      ? availableRaw
+        .split(",")
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0)
+        .map((value) => this.parsePolicyProvider(value))
+      : undefined;
+    const tags = params.get("tags");
+    const governanceTags = tags
+      ? tags
+        .split(",")
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0)
+      : undefined;
+
+    const cost = parseNumber(params.get("cost"), "cost");
+    const rpm = parseNumber(params.get("rpm"), "rpm");
+    const hour = parseNumber(params.get("hour"), "hour");
+
+    return {
+      provider,
+      model,
+      options: {
+        availableProviders,
+        estimatedCostUsd: cost,
+        currentRequestsPerMinute: rpm,
+        currentHourUtc: hour,
+        governanceTags,
+      },
+    };
+  }
+
   private buildStreamEvent(
     channel: ControlPlaneStreamChannel,
     filters: ControlPlaneContext,
@@ -512,8 +606,10 @@ export class ControlPlane implements Disposable {
       supportsChannelRbac: true,
       supportsOpsSummary: true,
       supportsOpsTenants: true,
+      supportsPolicyExplain: true,
       hostedDashboardPath: "/ops",
       hostedTenantDashboardPath: "/ops/tenants",
+      policyExplainPath: "/api/ops/policy/explain",
     };
   }
 
@@ -607,6 +703,16 @@ export class ControlPlane implements Disposable {
         latestGeneratedAt: value.latestGeneratedAt,
       }))
       .sort((a, b) => a.tenantId.localeCompare(b.tenantId));
+  }
+
+  private opsPolicyExplain(params: URLSearchParams): RoutingDecisionExplanation {
+    const parsed = this.parsePolicyExplainOptions(params);
+    return explainRoutingTarget(
+      this.routingPolicy,
+      parsed.provider,
+      parsed.model,
+      parsed.options,
+    );
   }
 
   private emitStreamBatch(

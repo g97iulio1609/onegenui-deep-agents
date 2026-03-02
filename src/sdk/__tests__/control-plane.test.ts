@@ -64,6 +64,10 @@ describe("ControlPlane", () => {
       approvals: {
         listPending: () => [],
       },
+      routingPolicy: {
+        fallbackOrder: ["openai"],
+        allowedHoursUtc: [9, 10, 11],
+      },
     });
     cp.withContext({ tenantId: "t-1", sessionId: "s-1", runId: "r-1" }).snapshot();
     cp.withContext({ tenantId: "t-2", sessionId: "s-2", runId: "r-2" }).snapshot();
@@ -75,14 +79,18 @@ describe("ControlPlane", () => {
       supportsMultiplex: boolean;
       supportsOpsSummary: boolean;
       supportsOpsTenants: boolean;
+      supportsPolicyExplain: boolean;
       hostedDashboardPath: string;
       hostedTenantDashboardPath: string;
+      policyExplainPath: string;
     };
     expect(caps.supportsMultiplex).toBe(true);
     expect(caps.supportsOpsSummary).toBe(true);
     expect(caps.supportsOpsTenants).toBe(true);
+    expect(caps.supportsPolicyExplain).toBe(true);
     expect(caps.hostedDashboardPath).toBe("/ops");
     expect(caps.hostedTenantDashboardPath).toBe("/ops/tenants");
+    expect(caps.policyExplainPath).toBe("/api/ops/policy/explain");
 
     const healthRes = await fetch(`${url}/api/ops/health`);
     expect(healthRes.status).toBe(200);
@@ -103,6 +111,17 @@ describe("ControlPlane", () => {
     expect(tenants.length).toBeGreaterThanOrEqual(2);
     expect(tenants.some((item) => item.tenantId === "t-1")).toBe(true);
     expect(tenants.some((item) => item.tenantId === "t-2")).toBe(true);
+
+    const explainRes = await fetch(`${url}/api/ops/policy/explain?provider=openai&model=gpt-5.2&hour=10`);
+    expect(explainRes.status).toBe(200);
+    const explain = await explainRes.json() as {
+      ok: boolean;
+      decision?: { provider: string; model: string };
+      checks: Array<{ check: string; status: string }>;
+    };
+    expect(explain.ok).toBe(true);
+    expect(explain.decision?.provider).toBe("openai");
+    expect(explain.checks.some((item) => item.check === "selection" && item.status === "passed")).toBe(true);
 
     const opsRes = await fetch(`${url}/ops`);
     const opsHtml = await opsRes.text();
