@@ -146,6 +146,68 @@ export interface UseCompletionReturn {
   isLoading: boolean;
 }
 
+/** Options for the useAssistant hook. */
+export interface UseAssistantOptions extends SharedHookOptions {
+  /** API endpoint URL. Default: "/api/assistant". */
+  api?: string;
+  /** Thread ID to resume. If not provided, creates a new thread. */
+  threadId?: string;
+  /** Assistant/agent ID to use. */
+  assistantId?: string;
+}
+
+/** Return value of the useAssistant hook. */
+export interface UseAssistantReturn {
+  /** All messages in the thread. */
+  messages: ChatMessage[];
+  /** Send a message to the assistant. */
+  sendMessage: (message: SendMessageOptions | string) => Promise<void>;
+  /** Current status. */
+  status: ChatStatus;
+  /** Latest error. */
+  error: Error | null;
+  /** Current thread ID. */
+  threadId: string | undefined;
+  /** Cancel the current run. */
+  cancel: () => void;
+  /** Whether a run is active. */
+  isRunning: boolean;
+  /** Set thread ID to resume a conversation. */
+  setThreadId: (id: string) => void;
+}
+
+/** Schema definition for structured output (simplified, no external deps). */
+export interface ObjectSchema<T = unknown> {
+  /** Parse raw text into the target type. Throws on invalid input. */
+  parse: (input: unknown) => T;
+  /** Optional: validate without throwing. */
+  safeParse?: (input: unknown) => { success: boolean; data?: T; error?: string };
+}
+
+/** Options for the useObject hook. */
+export interface UseObjectOptions<T> extends SharedHookOptions {
+  /** API endpoint. Default: "/api/object". */
+  api?: string;
+  /** Schema to validate/parse the streamed object. */
+  schema: ObjectSchema<T>;
+}
+
+/** Return value of the useObject hook. */
+export interface UseObjectReturn<T> {
+  /** The current partial object (updated as tokens stream). */
+  object: T | undefined;
+  /** Send a prompt to generate the object. */
+  submit: (prompt: string) => Promise<void>;
+  /** Current status. */
+  status: ChatStatus;
+  /** Latest error. */
+  error: Error | null;
+  /** Abort. */
+  stop: () => void;
+  /** Whether loading. */
+  isLoading: boolean;
+}
+
 /** Options for the useAgent hook. */
 export interface UseAgentOptions extends UseChatOptions {
   /** Agent name/ID to target. */

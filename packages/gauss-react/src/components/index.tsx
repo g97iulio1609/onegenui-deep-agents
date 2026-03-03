@@ -511,3 +511,11 @@ const selectorStyle: React.CSSProperties = {
   outline: "none",
   cursor: "pointer",
 };
+
+// ─── Re-exports ──────────────────────────────────────────────────────────────
+
+export { MarkdownRenderer } from "./markdown-renderer.js";
+export type { MarkdownRendererProps } from "./markdown-renderer.js";
+
+export { FileUpload } from "./file-upload.js";
+export type { FileUploadProps } from "./file-upload.js";

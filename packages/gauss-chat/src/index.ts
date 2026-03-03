@@ -20,6 +20,13 @@
 export { useChat } from "./hooks/use-chat.js";
 export { useCompletion } from "./hooks/use-completion.js";
 export { useAgent } from "./hooks/use-agent.js";
+export { useAssistant } from "./hooks/use-assistant.js";
+export { useObject } from "./hooks/use-object.js";
+export { usePersistentChat } from "./hooks/use-persistent-chat.js";
+
+// Persistence
+export type { ChatStorage } from "./persistence/index.js";
+export { LocalStorageAdapter, MemoryStorageAdapter } from "./persistence/index.js";
 
 // Transport
 export { GaussTransport } from "./transport/gauss-transport.js";
@@ -40,11 +47,18 @@ export type {
   TransportOptions,
   UseAgentOptions,
   UseAgentReturn,
+  UseAssistantOptions,
+  UseAssistantReturn,
   UseChatOptions,
   UseChatReturn,
   UseCompletionOptions,
   UseCompletionReturn,
+  ObjectSchema,
+  UseObjectOptions,
+  UseObjectReturn,
 } from "./types/index.js";
+
+export type { UsePersistentChatOptions, UsePersistentChatReturn } from "./hooks/use-persistent-chat.js";
 
 // Utilities
 export { createAssistantMessage, createUserMessage, generateId, getMessageText } from "./utils/index.js";
