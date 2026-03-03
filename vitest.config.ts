@@ -7,5 +7,12 @@ export default defineConfig({
       "dist/**",
       "packages/**",
     ],
+    coverage: {
+      thresholds: {
+        lines: 70,
+        branches: 60,
+        functions: 70,
+      },
+    },
   },
 });
