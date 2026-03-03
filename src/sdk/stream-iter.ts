@@ -9,6 +9,7 @@
  *   console.log(stream.result?.text);
  */
 import { agent_stream_with_tool_executor } from "gauss-napi";
+import type { AgentResult as NapiAgentResult } from "gauss-napi";
 
 import type {
   ToolDef,
@@ -26,11 +27,11 @@ import type {
  * @returns Normalised {@link AgentResult}.
  * @internal
  */
-function toSdkResult(raw: any): AgentResult {
+function toSdkResult(raw: NapiAgentResult): AgentResult {
   return {
     ...raw,
-    citations: raw.citations?.map((c: any) => ({
-      type: c.citationType ?? c.type,
+    citations: raw.citations?.map((c) => ({
+      type: c.citationType,
       citedText: c.citedText,
       documentTitle: c.documentTitle,
       start: c.start,
@@ -160,7 +161,7 @@ export class AgentStream implements AsyncIterable<StreamEvent> {
       this.options,
       onEvent,
       this.toolExecutor
-    ).then((r: any) => {
+    ).then((r: NapiAgentResult) => {
       this._result = toSdkResult(r);
       done = true;
       resolve?.();
