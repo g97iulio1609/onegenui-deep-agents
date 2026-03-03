@@ -3,7 +3,7 @@
  * Load documents from various sources and split into chunks.
  */
 import { readFile } from "node:fs/promises";
-import { basename, extname } from "node:path";
+import { basename } from "node:path";
 import type { VectorChunk } from "./types.js";
 import { TextSplitter, type TextSplitterOptions } from "./text-splitter.js";
 

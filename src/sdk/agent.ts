@@ -39,7 +39,6 @@ import type {
   StreamCallback,
   Handle,
   Disposable,
-  MemoryEntry,
   GroundingMetadata,
 } from "./types.js";
 

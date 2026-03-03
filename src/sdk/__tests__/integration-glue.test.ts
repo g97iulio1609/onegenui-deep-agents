@@ -53,7 +53,7 @@ import { Agent } from "../agent.js";
 import { Memory } from "../memory.js";
 import { MiddlewareChain } from "../middleware.js";
 import { GuardrailChain } from "../guardrail.js";
-import { tool, isTypedTool, createToolExecutor, type TypedToolDef } from "../tool.js";
+import { tool, isTypedTool, createToolExecutor } from "../tool.js";
 import {
   agent_run,
   agent_run_with_tool_executor,

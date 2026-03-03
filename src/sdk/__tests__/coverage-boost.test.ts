@@ -2,7 +2,7 @@
  * Targeted coverage tests for dispose patterns, getters, and edge cases.
  * Covers: handle getters, Symbol.dispose, assertNotDisposed, resilience agent map.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 vi.mock("gauss-napi", () => ({
   // Provider

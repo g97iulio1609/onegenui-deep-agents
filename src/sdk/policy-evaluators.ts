@@ -6,7 +6,6 @@
 import type { ProviderType } from "./types.js";
 import type {
   GovernanceRule,
-  PolicyDiffResult,
   PolicyDiffSummary,
   PolicyGateScenario,
   PolicyGateSummary,

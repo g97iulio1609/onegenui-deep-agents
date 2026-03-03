@@ -33,7 +33,7 @@ vi.mock("gauss-napi", () => ({
 
 import { Agent } from "../agent.js";
 import { batch } from "../batch.js";
-import { withRetry, retryable } from "../retry.js";
+import { withRetry } from "../retry.js";
 import { structured } from "../structured.js";
 import { template } from "../template.js";
 import { pipe, mapAsync, filterAsync, reduceAsync, tapAsync, compose } from "../pipeline.js";
@@ -73,7 +73,7 @@ describe("retry edge cases", () => {
   it("exponential backoff caps at maxDelayMs", async () => {
     const delays: number[] = [];
     const fn = vi.fn().mockRejectedValue(new Error("fail"));
-    const start = Date.now();
+    const _start = Date.now();
     await expect(
       withRetry(fn, {
         maxRetries: 3,

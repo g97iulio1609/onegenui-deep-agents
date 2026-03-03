@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { AgentSpec, SkillSpec, discoverAgents } from "../spec.js";
+import { AgentSpec, SkillSpec } from "../spec.js";
 
 // ─── AgentSpec ─────────────────────────────────────────────────────
 

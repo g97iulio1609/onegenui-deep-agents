@@ -13,7 +13,6 @@ import type {
   PolicyRolloutGateResult,
   PolicyDiffSummary,
   RoutingPolicy,
-  RoutingDecisionExplanation,
 } from "./routing-policy.js";
 
 // ── Error ──────────────────────────────────────────────────────────

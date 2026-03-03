@@ -24,7 +24,7 @@ vi.mock("gauss-napi", () => ({
 
 import { Memory } from "../memory.js";
 import { VectorStore } from "../vector-store.js";
-import { memory_store, memory_recall, memory_clear, destroy_memory } from "gauss-napi";
+import { memory_store, memory_clear, destroy_memory } from "gauss-napi";
 
 beforeEach(() => vi.clearAllMocks());
 

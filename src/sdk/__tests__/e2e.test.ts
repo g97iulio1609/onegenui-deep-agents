@@ -75,7 +75,6 @@ import { MiddlewareChain } from "../middleware.js";
 import { GuardrailChain } from "../guardrail.js";
 import { Team } from "../team.js";
 import { Graph } from "../graph.js";
-import { Network } from "../network.js";
 import { estimateCost, countTokens, setPricing, getPricing, clearPricing } from "../tokens.js";
 import { enterprisePreset } from "../enterprise.js";
 import * as napi from "gauss-napi";

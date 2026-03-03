@@ -99,6 +99,7 @@ export function isTypedTool(t: ToolDef): t is TypedToolDef {
  * @since 1.2.0
  */
 export function createToolExecutor(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   tools: TypedToolDef<any, any>[],
   fallback?: ToolExecutor
 ): ToolExecutor {

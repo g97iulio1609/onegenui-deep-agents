@@ -14,10 +14,8 @@
  */
 
 import { spawn, type ChildProcess } from "node:child_process";
-import { randomUUID } from "node:crypto";
-import { EventEmitter } from "node:events";
 
-import type { ToolDef, Handle, Disposable } from "./types.js";
+import type { ToolDef, Disposable } from "./types.js";
 
 // ─── Types ──────────────────────────────────────────────────────────
 
