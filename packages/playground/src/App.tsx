@@ -4,13 +4,14 @@ import { AgentChat } from "./components/AgentChat";
 import { ToolInspector } from "./components/ToolInspector";
 import { MemoryViewer } from "./components/MemoryViewer";
 import { GraphVisualizer } from "./components/GraphVisualizer";
+import { FeatureExplorer } from "./components/FeatureExplorer";
 
 interface Agent {
   name: string;
   description: string;
 }
 
-type Tab = "chat" | "tools" | "memory" | "graph";
+  type Tab = "chat" | "tools" | "memory" | "graph" | "explorer";
 
 export function App() {
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -30,6 +31,7 @@ export function App() {
     { id: "tools", label: "Tools", icon: "🔧" },
     { id: "memory", label: "Memory", icon: "🧠" },
     { id: "graph", label: "Graph", icon: "🕸" },
+    { id: "explorer", label: "SDK Explorer", icon: "📦" },
   ];
 
   return (
@@ -49,42 +51,46 @@ export function App() {
         <AgentList agents={agents} selected={selected} onSelect={(name) => { setSelected(name); setTab("chat"); }} />
       </aside>
       <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {selected ? (
-          <>
-            {/* Tab bar */}
-            <div style={{ display: "flex", borderBottom: "1px solid #30363d", background: "#161b22" }}>
-              {tabs.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setTab(t.id)}
-                  style={{
-                    padding: "10px 20px",
-                    border: "none",
-                    borderBottom: tab === t.id ? "2px solid #58a6ff" : "2px solid transparent",
-                    background: "transparent",
-                    color: tab === t.id ? "#58a6ff" : "#8b949e",
-                    cursor: "pointer",
-                    fontSize: 13,
-                    fontWeight: tab === t.id ? 600 : 400,
-                  }}
-                >
-                  {t.icon} {t.label}
-                </button>
-              ))}
-            </div>
-            {/* Tab content */}
-            <div style={{ flex: 1, overflow: "auto" }}>
+        {/* Tab bar — always visible */}
+        <div style={{ display: "flex", borderBottom: "1px solid #30363d", background: "#161b22" }}>
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              disabled={t.id !== "explorer" && !selected}
+              style={{
+                padding: "10px 20px",
+                border: "none",
+                borderBottom: tab === t.id ? "2px solid #58a6ff" : "2px solid transparent",
+                background: "transparent",
+                color: tab === t.id ? "#58a6ff" : "#8b949e",
+                cursor: t.id !== "explorer" && !selected ? "default" : "pointer",
+                fontSize: 13,
+                fontWeight: tab === t.id ? 600 : 400,
+                opacity: t.id !== "explorer" && !selected ? 0.4 : 1,
+              }}
+            >
+              {t.icon} {t.label}
+            </button>
+          ))}
+        </div>
+        {/* Tab content */}
+        <div style={{ flex: 1, overflow: "auto" }}>
+          {tab === "explorer" ? (
+            <FeatureExplorer />
+          ) : selected ? (
+            <>
               {tab === "chat" && <AgentChat agentName={selected} agents={agents.map(a => ({ id: a.name, name: a.name, description: a.description }))} />}
               {tab === "tools" && <ToolInspector agentName={selected} />}
               {tab === "memory" && <MemoryViewer agentName={selected} />}
               {tab === "graph" && <GraphVisualizer agentName={selected} />}
+            </>
+          ) : (
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#8b949e", height: "100%" }}>
+              Select an agent to start chatting, or try the SDK Explorer
             </div>
-          </>
-        ) : (
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#8b949e" }}>
-            Select an agent to start chatting
-          </div>
-        )}
+          )}
+        </div>
       </main>
     </div>
   );
