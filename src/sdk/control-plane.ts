@@ -11,8 +11,6 @@ import { dirname } from "node:path";
 
 import { ValidationError } from "./errors.js";
 import type { Disposable, ProviderType } from "./types.js";
-import type { Telemetry } from "./telemetry.js";
-import type { ApprovalManager } from "./approval.js";
 import { estimateCost } from "./tokens.js";
 import {
   evaluatePolicyDiff,
@@ -20,231 +18,70 @@ import {
   evaluatePolicyRolloutGuardrails,
   explainRoutingTarget,
   type PolicyDiffSummary,
-  type ResolveRoutingTargetOptions,
   type PolicyGateSummary,
   type PolicyRolloutGateResult,
   type PolicyRolloutGuardrails,
+  type ResolveRoutingTargetOptions,
   type RoutingDecisionExplanation,
   type RoutingPolicy,
 } from "./routing-policy.js";
+import {
+  renderDashboardHtml,
+  renderHostedOpsHtml,
+  renderHostedTenantOpsHtml,
+} from "./control-plane-api.js";
 
-class ControlPlaneForbiddenError extends Error {}
+// Re-export all types from core module for backwards compatibility
+export {
+  ControlPlaneForbiddenError,
+  PROVIDER_VALUES,
+  type ControlPlaneUsage,
+  type ControlPlaneSnapshot,
+  type ControlPlaneSection,
+  type ControlPlaneContext,
+  type ControlPlaneAuthClaims,
+  type ControlPlaneOptions,
+  type ControlPlaneTimelinePoint,
+  type ControlPlaneStreamChannel,
+  type ControlPlaneStreamEvent,
+  type ControlPlaneOpsCapabilities,
+  type ControlPlaneOpsHealth,
+  type ControlPlaneOpsSummary,
+  type ControlPlaneOpsTenantSummary,
+  type ControlPlanePolicyExplainTrace,
+  type ControlPlanePolicyDriftAlert,
+  type ControlPlanePolicyDriftWindow,
+} from "./control-plane-core.js";
 
-const PROVIDER_VALUES: ProviderType[] = [
-  "openai",
-  "anthropic",
-  "google",
-  "groq",
-  "ollama",
-  "deepseek",
-  "openrouter",
-  "together",
-  "fireworks",
-  "mistral",
-  "perplexity",
-  "xai",
-];
-
-export interface ControlPlaneUsage {
-  inputTokens: number;
-  outputTokens: number;
-  reasoningTokens?: number;
-  cacheReadTokens?: number;
-  cacheCreationTokens?: number;
-}
-
-export interface ControlPlaneSnapshot {
-  generatedAt: string;
-  context: ControlPlaneContext;
-  spans: unknown;
-  metrics: unknown;
-  pendingApprovals: unknown;
-  latestCost: ReturnType<typeof estimateCost> | null;
-  latestExplainTraceId: string | null;
-}
-
-export type ControlPlaneSection = "spans" | "metrics" | "pendingApprovals" | "latestCost";
-
-export interface ControlPlaneContext {
-  tenantId?: string;
-  sessionId?: string;
-  runId?: string;
-}
-
-export interface ControlPlaneAuthClaims {
-  tenantId?: string;
-  allowedSessionIds?: string[];
-  allowedRunIds?: string[];
-  roles?: string[];
-}
-
-export interface ControlPlaneOptions {
-  telemetry?: Pick<Telemetry, "exportSpans" | "exportMetrics">;
-  approvals?: Pick<ApprovalManager, "listPending">;
-  model?: string;
-  routingPolicy?: RoutingPolicy;
-  authToken?: string;
-  authClaims?: ControlPlaneAuthClaims;
-  persistPath?: string;
-  historyLimit?: number;
-  streamReplayLimit?: number;
-  context?: ControlPlaneContext;
-}
-
-export interface ControlPlaneTimelinePoint {
-  generatedAt: string;
-  spanCount: number;
-  pendingApprovalsCount: number;
-  totalCostUsd: number;
-  latestExplainTraceId?: string | null;
-}
-
-export type ControlPlaneStreamChannel = "snapshot" | "timeline" | "dag";
-
-export interface ControlPlaneStreamEvent {
-  id: number;
-  event: ControlPlaneStreamChannel;
-  generatedAt: string;
-  context: ControlPlaneContext;
-  payload: unknown;
-}
-
-export interface ControlPlaneOpsCapabilities {
-  sections: ControlPlaneSection[];
-  channels: ControlPlaneStreamChannel[];
-  supportsMultiplex: boolean;
-  supportsReplayCursor: boolean;
-  supportsChannelRbac: boolean;
-  supportsOpsSummary: boolean;
-  supportsOpsTenants: boolean;
-  supportsPolicyExplain: boolean;
-  supportsPolicyExplainBatch: boolean;
-  supportsPolicyExplainTraces: boolean;
-  supportsPolicyExplainDiff: boolean;
-  supportsPolicyLifecycle: boolean;
-  supportsPolicyLifecycleRbac: boolean;
-  supportsPolicyDriftMonitoring: boolean;
-  supportsPolicyDriftScheduler: boolean;
-  supportsPolicyDriftWindows: boolean;
-  supportsPolicyDriftAlertSinks: boolean;
-  hostedDashboardPath: string;
-  hostedTenantDashboardPath: string;
-  policyExplainPath: string;
-  policyExplainBatchPath: string;
-  policyExplainSimulatePath: string;
-  policyExplainTracePath: string;
-  policyExplainDiffPath: string;
-  policyLifecycleBasePath: string;
-  policyLifecycleRoleParam: string;
-  policyLifecycleAuditFields: string[];
-  policyDriftPath: string;
-  policyDriftSchedulePath: string;
-  policyDriftScheduleRunPath: string;
-}
-
-type ControlPlanePolicyLifecycleStatus = "draft" | "validated" | "approved" | "promoted";
-
-interface ControlPlanePolicyLifecycleAudit {
-  draftedByRole?: string;
-  draftedBy?: string;
-  draftComment?: string;
-  validatedByRole?: string;
-  validatedBy?: string;
-  validationComment?: string;
-  approvedByRole?: string;
-  approvedBy?: string;
-  approvalComment?: string;
-  promotedByRole?: string;
-  promotedBy?: string;
-  promotionComment?: string;
-}
-
-interface ControlPlanePolicyLifecycleVersion {
-  versionId: string;
-  status: ControlPlanePolicyLifecycleStatus;
-  createdAt: string;
-  validatedAt?: string;
-  approvedAt?: string;
-  promotedAt?: string;
-  policy: RoutingPolicy;
-  validation?: PolicyGateSummary;
-  audit?: ControlPlanePolicyLifecycleAudit;
-}
-
-interface ControlPlanePolicyDriftScheduleConfig {
-  enabled: boolean;
-  intervalMs: number;
-  window: ControlPlanePolicyDriftWindow;
-  scenariosRaw: string;
-  baselinePolicyRaw?: string;
-  candidatePolicyRaw?: string;
-  baselineVersionId?: string;
-  candidateVersionId?: string;
-  guardrails: PolicyRolloutGuardrails;
-  updatedAt: string;
-  lastRunAt?: string;
-}
-
-interface ControlPlanePolicyDriftScheduleRun extends ControlPlanePolicyDriftAlert {
-  runId: string;
-  traceId: string;
-}
-
-export interface ControlPlanePolicyExplainTrace {
-  traceId: string;
-  generatedAt: string;
-  mode: "single" | "batch" | "simulate" | "diff" | "drift";
-  payload: unknown;
-}
-
-export interface ControlPlanePolicyDriftAlert {
-  ok: boolean;
-  alert: boolean;
-  generatedAt: string;
-  window: ControlPlanePolicyDriftWindow;
-  baselineVersionId: string | null;
-  candidateVersionId: string | null;
-  diff: PolicyDiffSummary;
-  guardrails: PolicyRolloutGateResult;
-  sinksTriggered: string[];
-}
-
-export type ControlPlanePolicyDriftWindow = "custom" | "last_1h" | "last_24h" | "last_7d";
-
-export interface ControlPlaneOpsHealth {
-  status: "ok";
-  generatedAt: string;
-  historySize: number;
-  streamBufferSize: number;
-}
-
-export interface ControlPlaneOpsSummary {
-  status: "ok";
-  generatedAt: string;
-  historySize: number;
-  streamBufferSize: number;
-  spansCount: number;
-  pendingApprovalsCount: number;
-  latestTotalCostUsd: number;
-  tenantCount: number;
-  sessionCount: number;
-  runCount: number;
-}
-
-export interface ControlPlaneOpsTenantSummary {
-  tenantId: string;
-  snapshotCount: number;
-  spansCount: number;
-  pendingApprovalsCount: number;
-  latestTotalCostUsd: number;
-  sessionCount: number;
-  runCount: number;
-  latestGeneratedAt: string;
-}
+import {
+  ControlPlaneForbiddenError,
+  PROVIDER_VALUES,
+  type ControlPlaneUsage,
+  type ControlPlaneSnapshot,
+  type ControlPlaneSection,
+  type ControlPlaneContext,
+  type ControlPlaneAuthClaims,
+  type ControlPlaneOptions,
+  type ControlPlaneTimelinePoint,
+  type ControlPlaneStreamChannel,
+  type ControlPlaneStreamEvent,
+  type ControlPlaneOpsCapabilities,
+  type ControlPlaneOpsHealth,
+  type ControlPlaneOpsSummary,
+  type ControlPlaneOpsTenantSummary,
+  type ControlPlanePolicyExplainTrace,
+  type ControlPlanePolicyDriftAlert,
+  type ControlPlanePolicyDriftWindow,
+  type ControlPlanePolicyLifecycleStatus,
+  type ControlPlanePolicyLifecycleAudit,
+  type ControlPlanePolicyLifecycleVersion,
+  type ControlPlanePolicyDriftScheduleConfig,
+  type ControlPlanePolicyDriftScheduleRun,
+} from "./control-plane-core.js";
 
 export class ControlPlane implements Disposable {
-  private readonly telemetry?: Pick<Telemetry, "exportSpans" | "exportMetrics">;
-  private readonly approvals?: Pick<ApprovalManager, "listPending">;
+  private readonly telemetry?: ControlPlaneOptions["telemetry"];
+  private readonly approvals?: ControlPlaneOptions["approvals"];
   private model: string;
   private routingPolicy?: RoutingPolicy;
   private authToken?: string;
@@ -1750,155 +1587,14 @@ export class ControlPlane implements Disposable {
   }
 
   private renderDashboardHtml(): string {
-    return `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Gauss Control Plane</title>
-  <style>
-    body { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; margin: 24px; background: #0b1020; color: #f5f7ff; }
-    h1 { margin-top: 0; }
-    .muted { color: #a9b4d0; margin-bottom: 12px; }
-    pre { background: #111935; border: 1px solid #25315f; padding: 16px; border-radius: 8px; overflow: auto; max-height: 70vh; }
-  </style>
-</head>
-<body>
-  <h1>Gauss Control Plane</h1>
-  <div class="muted">Live snapshot refreshes every 2s • filter: <code>?section=metrics</code> • auth via <code>?token=...</code></div>
-  <pre id="out">loading...</pre>
-  <script>
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
-    const section = params.get('section');
-    const qs = new URLSearchParams();
-    if (token) qs.set('token', token);
-    if (section) qs.set('section', section);
-    async function refresh() {
-      const target = '/api/snapshot' + (qs.toString() ? ('?' + qs.toString()) : '');
-      const r = await fetch(target);
-      if (!r.ok) {
-        document.getElementById('out').textContent = 'HTTP ' + r.status + ': ' + await r.text();
-        return;
-      }
-      const j = await r.json();
-      document.getElementById('out').textContent = JSON.stringify(j, null, 2);
-    }
-    setInterval(refresh, 2000);
-    refresh();
-  </script>
-</body>
-</html>`;
+    return renderDashboardHtml();
   }
 
   private renderHostedOpsHtml(): string {
-    return `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Gauss Hosted Ops Console</title>
-  <style>
-    body { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; margin: 20px; background: #0b1020; color: #f5f7ff; }
-    .row { margin-bottom: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    input, button { background: #111935; color: #f5f7ff; border: 1px solid #25315f; border-radius: 6px; padding: 8px; }
-    pre { background: #111935; border: 1px solid #25315f; padding: 12px; border-radius: 8px; max-height: 60vh; overflow: auto; }
-    .muted { color: #a9b4d0; }
-  </style>
-</head>
-<body>
-  <h1>Gauss Hosted Ops Console</h1>
-  <div class="muted">Live stream viewer with multiplex channels + replay cursor support.</div>
-  <div class="row"><a href="/ops/tenants" style="color:#9cc3ff">Open tenant dashboard →</a></div>
-  <div class="row">
-    <label>Token <input id="token" placeholder="optional" /></label>
-    <label>Last Event ID <input id="lastEventId" placeholder="optional" /></label>
-    <button id="connect">Connect</button>
-  </div>
-  <div class="row">
-    <label><input type="checkbox" class="ch" value="snapshot" checked /> snapshot</label>
-    <label><input type="checkbox" class="ch" value="timeline" checked /> timeline</label>
-    <label><input type="checkbox" class="ch" value="dag" /> dag</label>
-  </div>
-  <pre id="out">idle</pre>
-  <script>
-    let source;
-    const out = document.getElementById('out');
-    function selectedChannels() {
-      return [...document.querySelectorAll('.ch:checked')].map((node) => node.value);
-    }
-    function append(message) {
-      out.textContent = message + "\\n" + out.textContent;
-    }
-    document.getElementById('connect').addEventListener('click', () => {
-      if (source) source.close();
-      const token = document.getElementById('token').value.trim();
-      const lastEventId = document.getElementById('lastEventId').value.trim();
-      const channels = selectedChannels();
-      const qs = new URLSearchParams();
-      if (channels.length > 0) qs.set('channels', channels.join(','));
-      if (token) qs.set('token', token);
-      if (lastEventId) qs.set('lastEventId', lastEventId);
-      source = new EventSource('/api/stream?' + qs.toString());
-      source.onmessage = (event) => append(event.data);
-      source.onerror = () => append('stream disconnected');
-      append('stream connected');
-    });
-    fetch('/api/ops/capabilities')
-      .then((r) => r.json())
-      .then((j) => append('capabilities: ' + JSON.stringify(j)));
-  </script>
-</body>
-</html>`;
+    return renderHostedOpsHtml();
   }
 
   private renderHostedTenantOpsHtml(): string {
-    return `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Gauss Hosted Tenant Ops</title>
-  <style>
-    body { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; margin: 20px; background: #0b1020; color: #f5f7ff; }
-    .row { margin-bottom: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    input, button { background: #111935; color: #f5f7ff; border: 1px solid #25315f; border-radius: 6px; padding: 8px; }
-    pre { background: #111935; border: 1px solid #25315f; padding: 12px; border-radius: 8px; max-height: 60vh; overflow: auto; }
-    a { color: #9cc3ff; }
-    .muted { color: #a9b4d0; }
-  </style>
-</head>
-<body>
-  <h1>Gauss Hosted Tenant Ops</h1>
-  <div class="muted">Tenant-level operational metrics powered by <code>/api/ops/tenants</code>.</div>
-  <div class="row"><a href="/ops">← Back to stream console</a></div>
-  <div class="row">
-    <label>Token <input id="token" placeholder="optional" /></label>
-    <label>Tenant <input id="tenant" placeholder="optional filter" /></label>
-    <button id="refresh">Refresh</button>
-  </div>
-  <pre id="out">loading...</pre>
-  <script>
-    const out = document.getElementById('out');
-    async function refresh() {
-      const token = document.getElementById('token').value.trim();
-      const tenant = document.getElementById('tenant').value.trim();
-      const qs = new URLSearchParams();
-      if (token) qs.set('token', token);
-      if (tenant) qs.set('tenant', tenant);
-      const target = '/api/ops/tenants' + (qs.toString() ? ('?' + qs.toString()) : '');
-      const r = await fetch(target);
-      if (!r.ok) {
-        out.textContent = 'HTTP ' + r.status + ': ' + await r.text();
-        return;
-      }
-      const j = await r.json();
-      out.textContent = JSON.stringify(j, null, 2);
-    }
-    document.getElementById('refresh').addEventListener('click', refresh);
-    refresh();
-  </script>
-</body>
-</html>`;
+    return renderHostedTenantOpsHtml();
   }
 }
