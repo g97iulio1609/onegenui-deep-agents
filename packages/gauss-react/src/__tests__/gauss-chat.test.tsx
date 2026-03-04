@@ -72,6 +72,57 @@ describe("GaussChat", () => {
     expect(root.className).toContain("my-chat");
     expect(root.style.maxWidth).toBe("600px");
   });
+
+  it("renders suggestions when chat is empty", () => {
+    render(
+      <GaussChat
+        api="/api/chat"
+        suggestions={[
+          { id: "s1", label: "Hello" },
+          { id: "s2", label: "Help me" },
+        ]}
+      />,
+    );
+    expect(screen.getByTestId("gauss-suggestions")).toBeTruthy();
+    expect(screen.getByTestId("gauss-suggestion-s1")).toBeTruthy();
+    expect(screen.getByTestId("gauss-suggestion-s2")).toBeTruthy();
+  });
+
+  it("calls onSuggestion with prompt text when a suggestion is clicked", () => {
+    const onSuggestion = vi.fn();
+    render(
+      <GaussChat
+        api="/api/chat"
+        suggestions={[{ id: "s1", label: "Hello", prompt: "Say hello" }]}
+        onSuggestion={onSuggestion}
+      />,
+    );
+    fireEvent.click(screen.getByTestId("gauss-suggestion-s1"));
+    expect(onSuggestion).toHaveBeenCalledWith("Say hello");
+  });
+
+  it("sends suggestion prompt when no onSuggestion handler", () => {
+    render(
+      <GaussChat
+        api="/api/chat"
+        suggestions={[{ id: "s1", label: "Hello", prompt: "Say hello" }]}
+      />,
+    );
+    fireEvent.click(screen.getByTestId("gauss-suggestion-s1"));
+    expect(mockSendMessage).toHaveBeenCalledWith("Say hello");
+  });
+
+  it("renders welcome message when chat is empty", () => {
+    render(<GaussChat api="/api/chat" welcomeMessage="Welcome! How can I help?" />);
+    expect(screen.getByTestId("gauss-welcome")).toBeTruthy();
+    expect(screen.getByText("Welcome! How can I help?")).toBeTruthy();
+  });
+
+  it("renders footer content", () => {
+    render(<GaussChat api="/api/chat" footer={<span>Powered by Gauss</span>} />);
+    expect(screen.getByTestId("gauss-footer")).toBeTruthy();
+    expect(screen.getByText("Powered by Gauss")).toBeTruthy();
+  });
 });
 
 /* ── GaussChatWindow ──────────────────────────────────────────────────────── */
@@ -131,5 +182,54 @@ describe("GaussChatWindow", () => {
   it("applies theme to the floating window", () => {
     render(<GaussChatWindow api="/api/chat" theme={darkTheme} defaultOpen />);
     expect(screen.getByTestId("gauss-chat-window-panel")).toBeTruthy();
+  });
+
+  it("displays subtitle under title", () => {
+    render(<GaussChatWindow api="/api/chat" defaultOpen title="Support" subtitle="Online" />);
+    expect(screen.getByText("Support")).toBeTruthy();
+    expect(screen.getByText("Online")).toBeTruthy();
+  });
+
+  it("renders custom launcher icon", () => {
+    render(<GaussChatWindow api="/api/chat" launcherIcon="🤖" />);
+    const toggle = screen.getByTestId("gauss-chat-window-toggle");
+    expect(toggle.textContent).toContain("🤖");
+  });
+
+  it("renders custom close icon when open", () => {
+    render(<GaussChatWindow api="/api/chat" defaultOpen launcherCloseIcon="×" />);
+    const toggle = screen.getByTestId("gauss-chat-window-toggle");
+    expect(toggle.textContent).toContain("×");
+  });
+
+  it("shows badge count on launcher", () => {
+    render(<GaussChatWindow api="/api/chat" badgeCount={3} />);
+    const badge = screen.getByTestId("gauss-chat-window-badge");
+    expect(badge.textContent).toBe("3");
+  });
+
+  it("caps badge count at 99+", () => {
+    render(<GaussChatWindow api="/api/chat" badgeCount={150} />);
+    const badge = screen.getByTestId("gauss-chat-window-badge");
+    expect(badge.textContent).toBe("99+");
+  });
+
+  it("hides badge when count is 0", () => {
+    render(<GaussChatWindow api="/api/chat" badgeCount={0} />);
+    expect(screen.queryByTestId("gauss-chat-window-badge")).toBeNull();
+  });
+
+  it("calls onOpen when window opens", () => {
+    const onOpen = vi.fn();
+    render(<GaussChatWindow api="/api/chat" onOpen={onOpen} />);
+    fireEvent.click(screen.getByTestId("gauss-chat-window-toggle"));
+    expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls onClose when window closes", () => {
+    const onClose = vi.fn();
+    render(<GaussChatWindow api="/api/chat" defaultOpen onClose={onClose} />);
+    fireEvent.click(screen.getByTestId("gauss-chat-window-toggle"));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
