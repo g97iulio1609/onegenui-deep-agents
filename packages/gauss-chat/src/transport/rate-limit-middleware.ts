@@ -38,13 +38,23 @@ export function rateLimitMiddleware(
         timestamps.shift();
       }
 
-      if (timestamps.length >= maxRequests) {
+      // Reserve slot before yielding control (prevents race condition)
+      timestamps.push(now);
+
+      if (timestamps.length > maxRequests) {
+        timestamps.pop();
         const retryAfterMs = timestamps[0] + windowMs - now;
         onRateLimited?.(retryAfterMs);
         throw new RateLimitError(retryAfterMs);
       }
 
-      timestamps.push(now);
-      yield* next(messages, opts);
+      try {
+        yield* next(messages, opts);
+      } catch (error) {
+        // Remove our timestamp on failure to avoid leak
+        const idx = timestamps.indexOf(now);
+        if (idx !== -1) timestamps.splice(idx, 1);
+        throw error;
+      }
     };
 }

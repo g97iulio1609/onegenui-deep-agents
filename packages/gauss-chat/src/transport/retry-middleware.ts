@@ -57,7 +57,7 @@ export function retryMiddleware(options?: RetryOptions): TransportMiddleware {
 
   return (next: ChatTransport["send"]): ChatTransport["send"] =>
     async function* retrySend(messages, opts) {
-      let lastError: unknown;
+      let lastError: unknown = new Error("Retry failed — no attempts made");
 
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
         try {
