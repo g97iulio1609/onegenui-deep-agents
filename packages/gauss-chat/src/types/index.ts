@@ -50,6 +50,9 @@ export type StreamEvent =
   | { type: "text-delta"; text: string }
   | { type: "tool-call"; toolName: string; toolCallId: string; args: Record<string, unknown> }
   | { type: "tool-result"; toolCallId: string; result: unknown }
+  | { type: "thinking"; text: string }
+  | { type: "cost"; totalUsd: number; stepCosts: number[] }
+  | { type: "trace"; trace: AgentStreamTrace }
   | { type: "finish"; finishReason: string }
   | { type: "error"; error: string };
 
@@ -190,6 +193,8 @@ export interface UseObjectOptions<T> extends SharedHookOptions {
   api?: string;
   /** Schema to validate/parse the streamed object. */
   schema: ObjectSchema<T>;
+  /** Callback invoked with each valid partial object during streaming. */
+  onPartialObject?: (partial: Partial<T>) => void;
 }
 
 /** Return value of the useObject hook. */
@@ -216,6 +221,16 @@ export interface UseAgentOptions extends UseChatOptions {
   enableMemory?: boolean;
   /** Session ID for memory continuity. */
   sessionId?: string;
+  /** Callback when agent emits thinking text. */
+  onThinking?: (text: string) => void;
+  /** Callback when a tool call starts. */
+  onToolCall?: (toolName: string, args: unknown) => void;
+  /** Callback when a tool call completes. */
+  onToolResult?: (toolName: string, result: unknown) => void;
+  /** Callback when cost data is updated. */
+  onCostUpdate?: (cost: CostInfo) => void;
+  /** Callback when trace data is updated. */
+  onTraceUpdate?: (trace: AgentStreamTrace) => void;
 }
 
 /** Return value of the useAgent hook (extends useChat). */
@@ -226,4 +241,39 @@ export interface UseAgentReturn extends UseChatReturn {
   setAgent: (agent: string) => void;
   /** Session ID for memory. */
   sessionId: string | undefined;
+  /** Current thinking text from the agent. */
+  thinking: string | null;
+  /** Currently active tool calls. */
+  activeTools: ToolCallInfo[];
+  /** Cost data from the current/last run. */
+  cost: CostInfo | null;
+  /** Trace data from the current/last run. */
+  trace: AgentStreamTrace | null;
+  /** Granular agent status. */
+  agentStatus: AgentStatus;
+  /** Process an agent-specific SSE event to update hook state. */
+  processAgentEvent: (event: { type: string; [key: string]: unknown }) => void;
+}
+
+/** Granular agent status. */
+export type AgentStatus = "idle" | "thinking" | "calling-tool" | "streaming" | "error";
+
+/** Information about an active tool call. */
+export interface ToolCallInfo {
+  toolName: string;
+  toolCallId: string;
+  args: Record<string, unknown>;
+  result?: unknown;
+}
+
+/** Cost information from agent runs. */
+export interface CostInfo {
+  totalUsd: number;
+  stepCosts: number[];
+}
+
+/** Trace data from an agent run stream. */
+export interface AgentStreamTrace {
+  spans: Array<{ name: string; startMs: number; endMs: number }>;
+  totalDurationMs: number;
 }

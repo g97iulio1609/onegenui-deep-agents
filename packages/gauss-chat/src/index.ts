@@ -24,6 +24,10 @@ export { useAssistant } from "./hooks/use-assistant.js";
 export { useObject } from "./hooks/use-object.js";
 export { usePersistentChat } from "./hooks/use-persistent-chat.js";
 
+// Context
+export { AgentProvider, AgentContext, useAgentConfig } from "./context/agent-provider.js";
+export type { AgentProviderConfig, AgentProviderProps } from "./context/agent-provider.js";
+
 // Persistence
 export type { ChatStorage } from "./persistence/index.js";
 export { LocalStorageAdapter, MemoryStorageAdapter } from "./persistence/index.js";
@@ -56,6 +60,10 @@ export type {
   ObjectSchema,
   UseObjectOptions,
   UseObjectReturn,
+  AgentStatus,
+  ToolCallInfo,
+  CostInfo,
+  AgentStreamTrace,
 } from "./types/index.js";
 
 export type { UsePersistentChatOptions, UsePersistentChatReturn } from "./hooks/use-persistent-chat.js";
