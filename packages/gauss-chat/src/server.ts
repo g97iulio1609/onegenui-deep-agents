@@ -242,3 +242,112 @@ export function createHonoHandler(
     });
   };
 }
+
+/* ── Fastify adapter ── */
+
+interface FastifyLikeRequest {
+  body: Record<string, unknown>;
+}
+
+interface FastifyLikeReply {
+  raw: {
+    writeHead(status: number, headers: Record<string, string>): void;
+    write(chunk: string | Uint8Array): boolean;
+    end(): void;
+  };
+  hijack(): void;
+}
+
+/**
+ * Create a Fastify route handler.
+ *
+ * @example
+ * ```ts
+ * import Fastify from "fastify";
+ * import { createFastifyHandler } from "@gauss-ai/chat/server";
+ *
+ * const app = Fastify();
+ *
+ * app.post("/api/chat", createFastifyHandler(async (messages, stream) => {
+ *   for await (const chunk of agent.stream(messages)) {
+ *     stream.writeText(chunk);
+ *   }
+ * }));
+ * ```
+ */
+export function createFastifyHandler(
+  handler: StreamHandler,
+): (req: FastifyLikeRequest, reply: FastifyLikeReply) => void {
+  return (req, reply) => {
+    reply.hijack();
+
+    const body = req.body ?? {};
+    const messages = (body.messages ?? []) as ChatMessage[];
+    const stream = new GaussStream();
+
+    reply.raw.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    });
+
+    const reader = stream.readable.getReader();
+
+    const pump = async () => {
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          reply.raw.write(value);
+        }
+      } finally {
+        reply.raw.end();
+      }
+    };
+
+    pump();
+    handler(messages, stream, body).catch((err) => {
+      stream.error(err instanceof Error ? err.message : String(err));
+    });
+  };
+}
+
+/* ── Generic Web-standard adapter ── */
+
+/**
+ * Create a generic Web-standard handler (works with Bun, Deno, Cloudflare Workers, etc.).
+ *
+ * @example
+ * ```ts
+ * import { createHandler } from "@gauss-ai/chat/server";
+ *
+ * export default {
+ *   fetch: createHandler(async (messages, stream) => {
+ *     for await (const chunk of agent.stream(messages)) {
+ *       stream.writeText(chunk);
+ *     }
+ *   }),
+ * };
+ * ```
+ */
+export function createHandler(
+  handler: StreamHandler,
+): (req: Request) => Promise<Response> {
+  return async (req) => {
+    const body = (await req.json()) as Record<string, unknown>;
+    const messages = (body.messages ?? []) as ChatMessage[];
+    const stream = new GaussStream();
+
+    handler(messages, stream, body).catch((err) => {
+      stream.error(err instanceof Error ? err.message : String(err));
+    });
+
+    return new Response(stream.readable, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
+    });
+  };
+}

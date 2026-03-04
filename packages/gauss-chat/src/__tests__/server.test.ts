@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { GaussStream, pipeTextStream, toNextResponse, createExpressHandler, createHonoHandler } from "../server.js";
+import { GaussStream, pipeTextStream, toNextResponse, createExpressHandler, createHonoHandler, createFastifyHandler, createHandler } from "../server.js";
 import type { StreamEvent } from "../types/index.js";
 
 describe("GaussStream", () => {
@@ -323,5 +323,184 @@ describe("createHonoHandler", () => {
     const fullText = chunks.join("");
     expect(fullText).toContain('"type":"error"');
     expect(fullText).toContain("hono error");
+  });
+});
+
+describe("createFastifyHandler", () => {
+  function makeReply() {
+    const chunks: (string | Uint8Array)[] = [];
+    return {
+      hijack: vi.fn(),
+      raw: {
+        writeHead: vi.fn(),
+        write: vi.fn((chunk: string | Uint8Array) => { chunks.push(chunk); return true; }),
+        end: vi.fn(),
+      },
+      chunks,
+    };
+  }
+
+  it("should call reply.hijack() to take over the response", async () => {
+    const handler = createFastifyHandler(async (_msgs, stream) => {
+      stream.writeText("hi");
+      stream.close();
+    });
+
+    const reply = makeReply();
+    handler({ body: { messages: [] } }, reply);
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(reply.hijack).toHaveBeenCalled();
+  });
+
+  it("should set SSE headers on raw response", async () => {
+    const handler = createFastifyHandler(async (_msgs, stream) => {
+      stream.writeText("hi");
+      stream.close();
+    });
+
+    const reply = makeReply();
+    handler({ body: { messages: [] } }, reply);
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(reply.raw.writeHead).toHaveBeenCalledWith(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    });
+  });
+
+  it("should pipe stream data to reply.raw.write", async () => {
+    const handler = createFastifyHandler(async (_msgs, stream) => {
+      stream.writeText("hello");
+      stream.close();
+    });
+
+    const reply = makeReply();
+    handler({ body: { messages: [{ id: "1", role: "user", parts: [{ type: "text", text: "Hi" }] }] } }, reply);
+
+    await new Promise((r) => setTimeout(r, 100));
+    expect(reply.raw.write).toHaveBeenCalled();
+    expect(reply.raw.end).toHaveBeenCalled();
+  });
+
+  it("should pass messages from req.body to handler", async () => {
+    const receivedMessages: unknown[] = [];
+    const handler = createFastifyHandler(async (msgs, stream) => {
+      receivedMessages.push(...msgs);
+      stream.close();
+    });
+
+    const testMsg = { id: "1", role: "user", parts: [{ type: "text", text: "Hello" }] };
+    handler({ body: { messages: [testMsg] } }, makeReply());
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(receivedMessages).toHaveLength(1);
+    expect(receivedMessages[0]).toEqual(testMsg);
+  });
+
+  it("should handle handler errors gracefully", async () => {
+    const handler = createFastifyHandler(async (_msgs, _stream) => {
+      throw new Error("fastify error");
+    });
+
+    const reply = makeReply();
+    handler({ body: { messages: [] } }, reply);
+
+    await new Promise((r) => setTimeout(r, 100));
+    expect(reply.raw.end).toHaveBeenCalled();
+  });
+});
+
+describe("createHandler", () => {
+  it("should return a Response with SSE headers", async () => {
+    const handler = createHandler(async (_msgs, stream) => {
+      stream.writeText("hello");
+      stream.close();
+    });
+
+    const req = new Request("http://localhost/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: [] }),
+    });
+    const response = await handler(req);
+
+    expect(response).toBeInstanceOf(Response);
+    expect(response.headers.get("Content-Type")).toBe("text/event-stream");
+    expect(response.headers.get("Cache-Control")).toBe("no-cache");
+  });
+
+  it("should pass messages from request body to handler", async () => {
+    const receivedMessages: unknown[] = [];
+    const handler = createHandler(async (msgs, stream) => {
+      receivedMessages.push(...msgs);
+      stream.close();
+    });
+
+    const testMsg = { id: "1", role: "user", parts: [{ type: "text", text: "Test" }] };
+    const req = new Request("http://localhost/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: [testMsg] }),
+    });
+    await handler(req);
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(receivedMessages).toHaveLength(1);
+    expect(receivedMessages[0]).toEqual(testMsg);
+  });
+
+  it("should stream text events to the response body", async () => {
+    const handler = createHandler(async (_msgs, stream) => {
+      stream.writeText("chunk1");
+      stream.writeText("chunk2");
+      stream.close();
+    });
+
+    const req = new Request("http://localhost/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: [] }),
+    });
+    const response = await handler(req);
+
+    const reader = response.body!.getReader();
+    const chunks: string[] = [];
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(new TextDecoder().decode(value));
+    }
+
+    const fullText = chunks.join("");
+    expect(fullText).toContain("chunk1");
+    expect(fullText).toContain("chunk2");
+    expect(fullText).toContain("[DONE]");
+  });
+
+  it("should handle handler errors gracefully", async () => {
+    const handler = createHandler(async (_msgs, _stream) => {
+      throw new Error("handler error");
+    });
+
+    const req = new Request("http://localhost/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: [] }),
+    });
+    const response = await handler(req);
+
+    const reader = response.body!.getReader();
+    const chunks: string[] = [];
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(new TextDecoder().decode(value));
+    }
+
+    const fullText = chunks.join("");
+    expect(fullText).toContain('"type":"error"');
+    expect(fullText).toContain("handler error");
   });
 });
