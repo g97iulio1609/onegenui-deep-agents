@@ -35,6 +35,7 @@ import type {
   Message,
   AgentOptions,
   AgentResult,
+  CostEstimate,
   ToolExecutor,
   StreamCallback,
   Handle,
@@ -96,6 +97,23 @@ function toSdkResult(raw: RawNapiResult): AgentResult {
       end: c.end,
     })),
   };
+}
+
+// ─── Trace Types ───────────────────────────────────────────────────
+
+/** A single span within an agent trace. */
+export interface TraceSpan {
+  name: string;
+  startMs: number;
+  endMs: number;
+  metadata?: Record<string, unknown>;
+}
+
+/** Trace data captured from an agent run. */
+export interface AgentTrace {
+  spans: TraceSpan[];
+  totalDurationMs: number;
+  steps: number;
 }
 
 // ─── Config ────────────────────────────────────────────────────────
@@ -244,6 +262,10 @@ export class Agent implements Disposable {
   private _mcpClients: McpClient[] = [];
   private _mcpToolsLoaded = false;
 
+  // ─── Cost & Trace Tracking (M90) ─────────────────────────────────
+  private _lastRunCost: CostEstimate | null = null;
+  private _lastRunTrace: AgentTrace | null = null;
+
   /**
    * Create a new Agent.
    *
@@ -373,6 +395,22 @@ export class Agent implements Disposable {
   get capabilities(): import("./types.js").ProviderCapabilities {
     return get_provider_capabilities(this.providerHandle);
   }
+
+  /**
+   * Cost estimate from the last completed run/stream call.
+   *
+   * @returns The {@link CostEstimate} or `null` if no run has completed yet.
+   * @since 2.0.0
+   */
+  get lastRunCost(): CostEstimate | null { return this._lastRunCost; }
+
+  /**
+   * Trace data from the last completed run/stream call.
+   *
+   * @returns The {@link AgentTrace} or `null` if no run has completed yet.
+   * @since 2.0.0
+   */
+  get lastRunTrace(): AgentTrace | null { return this._lastRunTrace; }
 
   // ─── Fluent Configuration ───────────────────────────────────────
 
@@ -677,6 +715,7 @@ export class Agent implements Disposable {
       });
     }
 
+    this.captureRunMetadata(result);
     return result;
   }
 
@@ -727,7 +766,7 @@ export class Agent implements Disposable {
       return toolExecutor(callJson);
     };
 
-    return toSdkResult(await agent_run_with_tool_executor(
+    const result = toSdkResult(await agent_run_with_tool_executor(
       this._name,
       this.providerHandle,
       toolDefs,
@@ -735,6 +774,8 @@ export class Agent implements Disposable {
       this._options,
       composedExecutor
     ));
+    this.captureRunMetadata(result);
+    return result;
   }
 
   /**
@@ -775,7 +816,7 @@ export class Agent implements Disposable {
     const { toolDefs, executor: typedExecutor } = this.resolveToolsAndExecutor();
     const finalExecutor = toolExecutor ?? typedExecutor ?? NOOP_TOOL_EXECUTOR;
 
-    return toSdkResult(await agent_stream_with_tool_executor(
+    const result = toSdkResult(await agent_stream_with_tool_executor(
       this._name,
       this.providerHandle,
       toolDefs,
@@ -784,6 +825,8 @@ export class Agent implements Disposable {
       onEvent,
       finalExecutor
     ));
+    this.captureRunMetadata(result);
+    return result;
   }
 
   /**
@@ -1067,6 +1110,47 @@ export class Agent implements Disposable {
       nativeCodeExecution: this._options.nativeCodeExecution,
       responseModalities: this._options.responseModalities,
     };
+  }
+
+  /**
+   * Extract cost and trace metadata from an agent result.
+   * @internal
+   */
+  private captureRunMetadata(result: AgentResult): void {
+    // Extract cost estimate if available on the result
+    const raw = result as Record<string, unknown>;
+    if (raw.costEstimate && typeof raw.costEstimate === "object") {
+      this._lastRunCost = raw.costEstimate as CostEstimate;
+    } else {
+      // Build a minimal cost estimate from token counts
+      this._lastRunCost = {
+        model: this._model,
+        normalizedModel: this._model,
+        currency: "USD",
+        inputTokens: result.inputTokens ?? 0,
+        outputTokens: result.outputTokens ?? 0,
+        reasoningTokens: 0,
+        cacheReadTokens: 0,
+        cacheCreationTokens: 0,
+        inputCostUsd: 0,
+        outputCostUsd: 0,
+        reasoningCostUsd: 0,
+        cacheReadCostUsd: 0,
+        cacheCreationCostUsd: 0,
+        totalCostUsd: 0,
+      };
+    }
+
+    // Build trace from result metadata
+    if (raw.trace && typeof raw.trace === "object") {
+      this._lastRunTrace = raw.trace as AgentTrace;
+    } else {
+      this._lastRunTrace = {
+        spans: [{ name: "agent.run", startMs: 0, endMs: 0 }],
+        totalDurationMs: 0,
+        steps: result.steps ?? 1,
+      };
+    }
   }
 }
 
