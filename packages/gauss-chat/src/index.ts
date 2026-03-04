@@ -23,6 +23,8 @@ export { useAgent } from "./hooks/use-agent.js";
 export { useAssistant } from "./hooks/use-assistant.js";
 export { useObject } from "./hooks/use-object.js";
 export { usePersistentChat } from "./hooks/use-persistent-chat.js";
+export { useMultiAgent } from "./hooks/use-multi-agent.js";
+export type { AgentConfig, UseMultiAgentOptions, UseMultiAgentReturn } from "./hooks/use-multi-agent.js";
 
 // Context
 export { AgentProvider, AgentContext, useAgentConfig } from "./context/agent-provider.js";
@@ -44,6 +46,8 @@ export { rateLimitMiddleware, RateLimitError } from "./transport/rate-limit-midd
 export type { RateLimitOptions } from "./transport/rate-limit-middleware.js";
 export { hooksMiddleware } from "./transport/hooks-middleware.js";
 export type { TransportHooks } from "./transport/hooks-middleware.js";
+export { createCachedTransport } from "./transport/cached-transport.js";
+export type { CacheOptions } from "./transport/cached-transport.js";
 
 // Types
 export type {
