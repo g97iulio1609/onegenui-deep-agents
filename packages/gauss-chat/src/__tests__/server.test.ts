@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { GaussStream, pipeTextStream, toNextResponse } from "../server.js";
+import { GaussStream, pipeTextStream, toNextResponse, createExpressHandler, createHonoHandler } from "../server.js";
 import type { StreamEvent } from "../types/index.js";
 
 describe("GaussStream", () => {
@@ -171,5 +171,157 @@ describe("pipeTextStream", () => {
     expect(fullText).toContain("Start");
     expect(fullText).toContain("Source failed");
     expect(fullText).toContain('"type":"error"');
+  });
+});
+
+describe("createExpressHandler", () => {
+  function makeRes() {
+    const chunks: (string | Uint8Array)[] = [];
+    return {
+      writeHead: vi.fn(),
+      write: vi.fn((chunk: string | Uint8Array) => { chunks.push(chunk); return true; }),
+      end: vi.fn(),
+      on: vi.fn(),
+      chunks,
+    };
+  }
+
+  it("should set SSE headers", async () => {
+    const handler = createExpressHandler(async (_msgs, stream) => {
+      stream.writeText("hi");
+      stream.close();
+    });
+
+    const req = { body: { messages: [] } };
+    const res = makeRes();
+    handler(req, res);
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(res.writeHead).toHaveBeenCalledWith(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    });
+  });
+
+  it("should pipe stream data to res.write", async () => {
+    const handler = createExpressHandler(async (_msgs, stream) => {
+      stream.writeText("hello");
+      stream.close();
+    });
+
+    const req = { body: { messages: [{ id: "1", role: "user", parts: [{ type: "text", text: "Hi" }] }] } };
+    const res = makeRes();
+    handler(req, res);
+
+    await new Promise((r) => setTimeout(r, 100));
+
+    expect(res.write).toHaveBeenCalled();
+    expect(res.end).toHaveBeenCalled();
+  });
+
+  it("should pass messages from req.body to handler", async () => {
+    const receivedMessages: unknown[] = [];
+    const handler = createExpressHandler(async (msgs, stream) => {
+      receivedMessages.push(...msgs);
+      stream.close();
+    });
+
+    const testMsg = { id: "1", role: "user", parts: [{ type: "text", text: "Hello" }] };
+    handler({ body: { messages: [testMsg] } }, makeRes());
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(receivedMessages).toHaveLength(1);
+    expect(receivedMessages[0]).toEqual(testMsg);
+  });
+
+  it("should handle errors in the handler gracefully", async () => {
+    const handler = createExpressHandler(async (_msgs, _stream) => {
+      throw new Error("handler error");
+    });
+
+    const res = makeRes();
+    handler({ body: { messages: [] } }, res);
+
+    await new Promise((r) => setTimeout(r, 100));
+    expect(res.end).toHaveBeenCalled();
+  });
+});
+
+describe("createHonoHandler", () => {
+  it("should return a Response with SSE headers", async () => {
+    const handler = createHonoHandler(async (_msgs, stream) => {
+      stream.writeText("hello");
+      stream.close();
+    });
+
+    const ctx = { req: { json: async () => ({ messages: [] }) } };
+    const response = await handler(ctx);
+
+    expect(response).toBeInstanceOf(Response);
+    expect(response.headers.get("Content-Type")).toBe("text/event-stream");
+    expect(response.headers.get("Cache-Control")).toBe("no-cache");
+  });
+
+  it("should pass messages from body to handler", async () => {
+    const receivedMessages: unknown[] = [];
+    const handler = createHonoHandler(async (msgs, stream) => {
+      receivedMessages.push(...msgs);
+      stream.close();
+    });
+
+    const testMsg = { id: "1", role: "user", parts: [{ type: "text", text: "Test" }] };
+    const ctx = { req: { json: async () => ({ messages: [testMsg] }) } };
+    await handler(ctx);
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(receivedMessages).toHaveLength(1);
+    expect(receivedMessages[0]).toEqual(testMsg);
+  });
+
+  it("should stream text events to the response", async () => {
+    const handler = createHonoHandler(async (_msgs, stream) => {
+      stream.writeText("chunk1");
+      stream.writeText("chunk2");
+      stream.close();
+    });
+
+    const ctx = { req: { json: async () => ({ messages: [] }) } };
+    const response = await handler(ctx);
+
+    const reader = response.body!.getReader();
+    const chunks: string[] = [];
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(new TextDecoder().decode(value));
+    }
+
+    const fullText = chunks.join("");
+    expect(fullText).toContain("chunk1");
+    expect(fullText).toContain("chunk2");
+    expect(fullText).toContain("[DONE]");
+  });
+
+  it("should handle handler errors gracefully", async () => {
+    const handler = createHonoHandler(async (_msgs, _stream) => {
+      throw new Error("hono error");
+    });
+
+    const ctx = { req: { json: async () => ({ messages: [] }) } };
+    const response = await handler(ctx);
+
+    const reader = response.body!.getReader();
+    const chunks: string[] = [];
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(new TextDecoder().decode(value));
+    }
+
+    const fullText = chunks.join("");
+    expect(fullText).toContain('"type":"error"');
+    expect(fullText).toContain("hono error");
   });
 });

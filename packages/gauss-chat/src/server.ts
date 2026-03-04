@@ -19,7 +19,7 @@
  * @packageDocumentation
  */
 
-import type { StreamEvent } from "./types/index.js";
+import type { ChatMessage, StreamEvent } from "./types/index.js";
 
 /** A writable stream that emits Gauss chat events as SSE. */
 export class GaussStream {
@@ -123,3 +123,122 @@ export async function pipeTextStream(
 // Re-export types used on server side
 export type { StreamEvent } from "./types/index.js";
 export type { ChatMessage, TransportOptions } from "./types/index.js";
+
+// ─── Framework Route Adapters ────────────────────────────────────────────────
+
+/** Handler function that receives messages and writes to a stream. */
+export type StreamHandler = (
+  messages: ChatMessage[],
+  stream: GaussStream,
+  body: Record<string, unknown>,
+) => Promise<void>;
+
+/* ── Express adapter ── */
+
+interface ExpressLikeRequest {
+  body: Record<string, unknown>;
+}
+
+interface ExpressLikeResponse {
+  writeHead(status: number, headers: Record<string, string>): void;
+  write(chunk: string | Uint8Array): boolean;
+  end(): void;
+  on(event: string, listener: () => void): void;
+}
+
+/**
+ * Create an Express/Connect route handler.
+ *
+ * @example
+ * ```ts
+ * import express from "express";
+ * import { createExpressHandler } from "@gauss-ai/chat/server";
+ *
+ * const app = express();
+ * app.use(express.json());
+ *
+ * app.post("/api/chat", createExpressHandler(async (messages, stream) => {
+ *   for await (const chunk of agent.stream(messages)) {
+ *     stream.writeText(chunk);
+ *   }
+ * }));
+ * ```
+ */
+export function createExpressHandler(
+  handler: StreamHandler,
+): (req: ExpressLikeRequest, res: ExpressLikeResponse) => void {
+  return (req, res) => {
+    const body = req.body ?? {};
+    const messages = (body.messages ?? []) as ChatMessage[];
+    const stream = new GaussStream();
+
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    });
+
+    const reader = stream.readable.getReader();
+
+    const pump = async () => {
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          res.write(value);
+        }
+      } finally {
+        res.end();
+      }
+    };
+
+    pump();
+    handler(messages, stream, body).catch((err) => {
+      stream.error(err instanceof Error ? err.message : String(err));
+    });
+  };
+}
+
+/* ── Hono / Web-standard adapter ── */
+
+interface HonoLikeContext {
+  req: { json(): Promise<Record<string, unknown>> };
+}
+
+/**
+ * Create a Hono/Bun/Deno-compatible route handler (Web Response-based).
+ *
+ * @example
+ * ```ts
+ * import { Hono } from "hono";
+ * import { createHonoHandler } from "@gauss-ai/chat/server";
+ *
+ * const app = new Hono();
+ * app.post("/api/chat", createHonoHandler(async (messages, stream) => {
+ *   for await (const chunk of agent.stream(messages)) {
+ *     stream.writeText(chunk);
+ *   }
+ * }));
+ * ```
+ */
+export function createHonoHandler(
+  handler: StreamHandler,
+): (c: HonoLikeContext) => Promise<Response> {
+  return async (c) => {
+    const body = await c.req.json();
+    const messages = (body.messages ?? []) as ChatMessage[];
+    const stream = new GaussStream();
+
+    handler(messages, stream, body).catch((err) => {
+      stream.error(err instanceof Error ? err.message : String(err));
+    });
+
+    return new Response(stream.readable, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
+    });
+  };
+}
