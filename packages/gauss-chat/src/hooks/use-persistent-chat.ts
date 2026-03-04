@@ -75,19 +75,22 @@ export function usePersistentChat(options: UsePersistentChatOptions): UsePersist
   // At this point useChat has re-rendered with the new initialMessages value,
   // so its reset callback (which depends on initialMessages) is up to date.
   const hasRestoredRef = useRef(false);
+  const currentConvIdRef = useRef(conversationId);
+
+  // Reset restore flag when conversationId changes
   useEffect(() => {
-    if (loaded && !hasRestoredRef.current) {
+    currentConvIdRef.current = conversationId;
+    hasRestoredRef.current = false;
+  }, [conversationId]);
+
+  useEffect(() => {
+    if (loaded && !hasRestoredRef.current && currentConvIdRef.current === conversationId) {
       hasRestoredRef.current = true;
       if (storedMessages.length > 0) {
         chat.reset();
       }
     }
-  }, [loaded, storedMessages, chat]);
-
-  // Reset restore flag when conversationId changes
-  useEffect(() => {
-    hasRestoredRef.current = false;
-  }, [conversationId]);
+  }, [loaded, storedMessages, chat, conversationId]);
 
   // Handle pending reset (after deleteConversation clears storedMessages)
   const [pendingReset, setPendingReset] = useState(false);

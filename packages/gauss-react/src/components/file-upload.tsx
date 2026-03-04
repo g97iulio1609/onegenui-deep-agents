@@ -79,12 +79,14 @@ export function FileUpload({
       setErrors(errs);
 
       if (valid.length > 0) {
-        const next = multiple ? [...selectedFiles, ...valid] : valid;
-        setSelectedFiles(next);
-        onUpload(next);
+        setSelectedFiles((prev) => {
+          const next = multiple ? [...prev, ...valid] : valid;
+          onUpload(next);
+          return next;
+        });
       }
     },
-    [validateFiles, multiple, selectedFiles, onUpload],
+    [validateFiles, multiple, onUpload],
   );
 
   const handleDragOver = useCallback(

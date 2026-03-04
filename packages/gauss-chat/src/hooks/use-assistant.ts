@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { GaussTransport } from "../transport/gauss-transport.js";
 import type {
   ChatMessage,
@@ -58,6 +58,13 @@ export function useAssistant(options: UseAssistantOptions = {}): UseAssistantRet
   const [threadId, setThreadIdState] = useState<string | undefined>(initialThreadId);
 
   const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
+
   const transportRef = useRef<ChatTransport>(
     customTransport ?? new GaussTransport({ api, headers, body, credentials }),
   );
