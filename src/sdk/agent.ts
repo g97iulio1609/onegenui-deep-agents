@@ -904,6 +904,10 @@ export class Agent implements Disposable {
       onDelta?.(delta);
     }
 
+    if (stream.result) {
+      this.captureRunMetadata(stream.result);
+    }
+
     return stream.result?.text ?? aggregated;
   }
 
@@ -1118,7 +1122,7 @@ export class Agent implements Disposable {
    */
   private captureRunMetadata(result: AgentResult): void {
     // Extract cost estimate if available on the result
-    const raw = result as Record<string, unknown>;
+    const raw = result as unknown as Record<string, unknown>;
     if (raw.costEstimate && typeof raw.costEstimate === "object") {
       this._lastRunCost = raw.costEstimate as CostEstimate;
     } else {

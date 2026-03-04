@@ -171,10 +171,11 @@ export function parseSimpleYaml(yaml: string): Record<string, unknown> {
     // Array item
     if (trimmed.startsWith("- ")) {
       const arrKey = findParentKey(stack);
-      if (arrKey) {
-        const arr = parent[arrKey] as unknown[];
-        arr.push(coerceScalar(trimmed.slice(2).trim()));
+      if (!arrKey) {
+        throw new Error(`Array item at line ${i + 1} has no parent key`);
       }
+      const arr = parent[arrKey] as unknown[];
+      arr.push(coerceScalar(trimmed.slice(2).trim()));
       continue;
     }
 
