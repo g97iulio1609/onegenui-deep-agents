@@ -27,6 +27,8 @@ export { useMultiAgent } from "./hooks/use-multi-agent.js";
 export type { AgentConfig, UseMultiAgentOptions, UseMultiAgentReturn } from "./hooks/use-multi-agent.js";
 export { useStreamStatus } from "./hooks/use-stream-status.js";
 export type { StreamStatus } from "./hooks/use-stream-status.js";
+export { useTokenCount } from "./hooks/use-token-count.js";
+export type { TokenEstimate } from "./hooks/use-token-count.js";
 
 // Context
 export { AgentProvider, AgentContext, useAgentConfig } from "./context/agent-provider.js";
@@ -50,6 +52,8 @@ export { hooksMiddleware } from "./transport/hooks-middleware.js";
 export type { TransportHooks } from "./transport/hooks-middleware.js";
 export { createCachedTransport } from "./transport/cached-transport.js";
 export type { CacheOptions } from "./transport/cached-transport.js";
+export { throttleMiddleware } from "./transport/throttle-middleware.js";
+export type { ThrottleOptions } from "./transport/throttle-middleware.js";
 
 // Types
 export type {
