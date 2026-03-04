@@ -25,6 +25,8 @@ export { useObject } from "./hooks/use-object.js";
 export { usePersistentChat } from "./hooks/use-persistent-chat.js";
 export { useMultiAgent } from "./hooks/use-multi-agent.js";
 export type { AgentConfig, UseMultiAgentOptions, UseMultiAgentReturn } from "./hooks/use-multi-agent.js";
+export { useStreamStatus } from "./hooks/use-stream-status.js";
+export type { StreamStatus } from "./hooks/use-stream-status.js";
 
 // Context
 export { AgentProvider, AgentContext, useAgentConfig } from "./context/agent-provider.js";
