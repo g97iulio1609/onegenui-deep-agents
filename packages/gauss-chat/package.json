@@ -1,6 +1,6 @@
 {
   "name": "@gauss-ai/chat",
-  "version": "0.2.0",
+  "version": "2.10.0",
   "description": "React hooks for building AI chat interfaces with Gauss — useChat, useCompletion, useAgent",
   "license": "MIT",
   "type": "module",
