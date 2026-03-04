@@ -406,13 +406,6 @@ export class ControlPlane implements Disposable {
             return;
           }
 
-          const timer = setInterval(() => {
-            if (res.writableEnded || res.destroyed) {
-              clearInterval(timer);
-              return;
-            }
-            this.emitStreamBatch(res, channels, filters);
-          }, 1000);
           const cleanup = () => {
             clearInterval(timer);
             req.removeListener("close", cleanup);
@@ -424,6 +417,13 @@ export class ControlPlane implements Disposable {
           req.once("aborted", cleanup);
           res.once("error", cleanup);
           res.once("finish", cleanup);
+          const timer = setInterval(() => {
+            if (res.writableEnded || res.destroyed) {
+              cleanup();
+              return;
+            }
+            this.emitStreamBatch(res, channels, filters);
+          }, 1000);
           return;
         }
 
@@ -462,8 +462,12 @@ export class ControlPlane implements Disposable {
     });
 
     await new Promise<void>((resolve, reject) => {
-      this.server!.once("error", reject);
-      this.server!.listen(port, host, () => resolve());
+      const onError = (err: Error) => reject(err);
+      this.server!.once("error", onError);
+      this.server!.listen(port, host, () => {
+        this.server!.removeListener("error", onError);
+        resolve();
+      });
     });
 
     const addr = this.server.address();

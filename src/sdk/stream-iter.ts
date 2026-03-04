@@ -9,7 +9,6 @@
  *   console.log(stream.result?.text);
  */
 import { agent_stream_with_tool_executor } from "gauss-napi";
-import type { AgentResult as NapiAgentResult } from "gauss-napi";
 
 import type {
   ToolDef,
@@ -19,6 +18,24 @@ import type {
   ToolExecutor,
   Handle,
 } from "./types.js";
+
+/** Raw result shape returned by the NAPI layer. @internal */
+interface NapiAgentResult {
+  text: string;
+  steps: number;
+  inputTokens: number;
+  outputTokens: number;
+  structuredOutput?: Record<string, unknown>;
+  thinking?: string;
+  citations?: Array<{
+    citationType: string;
+    citedText?: string;
+    documentTitle?: string;
+    start?: number;
+    end?: number;
+  }>;
+  groundingMetadata?: Record<string, unknown>;
+}
 
 /** Map a single raw citation to the public SDK shape. */
 function mapNapiCitation(c: NonNullable<NapiAgentResult["citations"]>[number]) {
@@ -42,6 +59,7 @@ function toSdkResult(raw: NapiAgentResult): AgentResult {
   return {
     ...raw,
     citations: raw.citations?.map(mapNapiCitation),
+    groundingMetadata: raw.groundingMetadata as AgentResult["groundingMetadata"],
   };
 }
 
@@ -158,6 +176,8 @@ export class AgentStream implements AsyncIterable<StreamEvent> {
       resolve?.();
     };
 
+    let streamError: unknown;
+
     const runPromise = agent_stream_with_tool_executor(
       this.agentName,
       this.providerHandle,
@@ -168,6 +188,10 @@ export class AgentStream implements AsyncIterable<StreamEvent> {
       this.toolExecutor
     ).then((r: NapiAgentResult) => {
       this._result = toSdkResult(r);
+      done = true;
+      resolve?.();
+    }).catch((err: unknown) => {
+      streamError = err;
       done = true;
       resolve?.();
     });
@@ -181,5 +205,6 @@ export class AgentStream implements AsyncIterable<StreamEvent> {
     }
 
     await runPromise;
+    if (streamError) throw streamError;
   }
 }

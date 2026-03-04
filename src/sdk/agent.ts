@@ -1098,9 +1098,10 @@ export class Agent implements Disposable {
   private async ensureMcpTools(): Promise<void> {
     if (this._mcpToolsLoaded || this._mcpClients.length === 0) return;
 
-    for (const client of this._mcpClients) {
-      const { tools, executor } = await client.getToolsWithExecutor();
-      // Add MCP tools as typed tools with the MCP executor as their execute callback
+    const mcpResults = await Promise.all(
+      this._mcpClients.map((client) => client.getToolsWithExecutor()),
+    );
+    for (const { tools, executor } of mcpResults) {
       for (const t of tools) {
         const mcpTool: TypedToolDef = {
           ...t,
