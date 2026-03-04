@@ -1,0 +1,64 @@
+{
+  "name": "@gauss-ai/next",
+  "version": "2.17.0",
+  "description": "Next.js integration for Gauss AI — zero-config route handlers for App Router and Pages Router",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "check-types": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "clean": "rimraf dist"
+  },
+  "peerDependencies": {
+    "next": ">=13.0.0",
+    "react": ">=18.0.0",
+    "@gauss-ai/chat": ">=2.17.0"
+  },
+  "devDependencies": {
+    "@gauss-ai/chat": "file:../gauss-chat",
+    "@types/react": "^19.0.0",
+    "@vitest/coverage-v8": "^4.0.18",
+    "rimraf": "^6.1.2",
+    "tsup": "^8.0.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.15"
+  },
+  "keywords": [
+    "gauss",
+    "ai",
+    "next",
+    "nextjs",
+    "route-handler",
+    "app-router",
+    "pages-router",
+    "streaming"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/giulio-leone/gauss.git",
+    "directory": "packages/gauss-next"
+  },
+  "author": "Giulio Leone <https://github.com/giulio-leone>",
+  "publishConfig": {
+    "access": "public"
+  }
+}
