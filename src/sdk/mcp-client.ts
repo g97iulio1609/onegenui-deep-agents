@@ -106,7 +106,7 @@ export class McpClient implements Disposable {
   }>();
   private buffer = "";
   private serverCapabilities: Record<string, unknown> = {};
-  private cachedTools: ToolDef[] | null = null;
+  private cachedToolsRef: WeakRef<ToolDef[]> | null = null;
   private _onError: ((err: Error) => void) | null = null;
   private _onClose: (() => void) | null = null;
 
@@ -161,7 +161,8 @@ export class McpClient implements Disposable {
   async listTools(): Promise<ToolDef[]> {
     this.assertConnected();
 
-    if (this.cachedTools) return this.cachedTools;
+    const cached = this.cachedToolsRef?.deref();
+    if (cached) return cached;
 
     const result = await this.request("tools/list", {}) as {
       tools?: McpToolDef[];
@@ -173,7 +174,7 @@ export class McpClient implements Disposable {
       parameters: t.inputSchema,
     }));
 
-    this.cachedTools = tools;
+    this.cachedToolsRef = new WeakRef(tools);
     return tools;
   }
 
@@ -245,7 +246,7 @@ export class McpClient implements Disposable {
     if (this.closed) return;
     this.closed = true;
     this.connected = false;
-    this.cachedTools = null;
+    this.cachedToolsRef = null;
 
     // Reject all pending requests
     for (const [, { reject }] of this.pending) {

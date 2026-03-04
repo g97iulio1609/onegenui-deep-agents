@@ -32,6 +32,11 @@ export interface StructuredStreamSchema {
   [key: string]: unknown;
 }
 
+// ─── Cached Regex Patterns ─────────────────────────────────────────
+
+const TRAILING_COMMA_RE = /,\s*$/;
+const TRAILING_COLON_RE = /:\s*$/;
+
 // ─── Implementation ────────────────────────────────────────────────
 
 /**
@@ -43,12 +48,22 @@ export interface StructuredStreamSchema {
  */
 export class StructuredStream<T = unknown> {
   private readonly schema: StructuredStreamSchema;
-  private buffer: string = "";
+  private chunks: string[] = [];
+  private _buffer: string | null = "";
+  private bufferLength: number = 0;
   private lastParsedLength: number = 0;
   private lastParsedResult: Partial<T> | null = null;
 
   constructor(schema: StructuredStreamSchema) {
     this.schema = schema;
+  }
+
+  /** Compact chunks into a single string, caching the result. */
+  private compactBuffer(): string {
+    if (this._buffer !== null) return this._buffer;
+    this._buffer = this.chunks.join("");
+    this.chunks = [this._buffer];
+    return this._buffer;
   }
 
   /**
@@ -59,17 +74,20 @@ export class StructuredStream<T = unknown> {
    */
   writePartial(delta: string): Partial<T> | null {
     if (!delta) return this.lastParsedResult;
-    this.buffer += delta;
-    if (this.buffer.length === this.lastParsedLength) return this.lastParsedResult;
+    this.chunks.push(delta);
+    this.bufferLength += delta.length;
+    this._buffer = null;
+    if (this.bufferLength === this.lastParsedLength) return this.lastParsedResult;
+    const buf = this.compactBuffer();
     try {
-      const result = JSON.parse(this.buffer) as Partial<T>;
-      this.lastParsedLength = this.buffer.length;
+      const result = JSON.parse(buf) as Partial<T>;
+      this.lastParsedLength = this.bufferLength;
       this.lastParsedResult = result;
       return result;
     } catch {
-      const result = this.parsePartial(this.buffer);
+      const result = this.parsePartial(buf);
       if (result !== null) {
-        this.lastParsedLength = this.buffer.length;
+        this.lastParsedLength = this.bufferLength;
         this.lastParsedResult = result;
       }
       return result ?? this.lastParsedResult;
@@ -90,7 +108,9 @@ export class StructuredStream<T = unknown> {
    * Reset the internal buffer.
    */
   reset(): void {
-    this.buffer = "";
+    this.chunks = [];
+    this._buffer = "";
+    this.bufferLength = 0;
     this.lastParsedLength = 0;
     this.lastParsedResult = null;
   }
@@ -99,7 +119,7 @@ export class StructuredStream<T = unknown> {
    * Get the current buffer content.
    */
   getBuffer(): string {
-    return this.buffer;
+    return this.compactBuffer();
   }
 
   /**
@@ -171,8 +191,8 @@ export function parsePartialJson(json: string): unknown | null {
   }
 
   // Remove trailing comma or colon with incomplete value
-  repaired = repaired.replace(/,\s*$/, "");
-  repaired = repaired.replace(/:\s*$/, ': null');
+  repaired = repaired.replace(TRAILING_COMMA_RE, "");
+  repaired = repaired.replace(TRAILING_COLON_RE, ': null');
 
   // Close all unclosed structures
   while (closers.length > 0) {

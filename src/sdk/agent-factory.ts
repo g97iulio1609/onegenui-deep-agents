@@ -155,11 +155,11 @@ export function parseSimpleYaml(yaml: string): Record<string, unknown> {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    // Skip empty lines and comments
-    if (!line.trim() || line.trim().startsWith("#")) continue;
+    // Skip empty lines and comments — compute trimmed once
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
 
     const indent = line.length - line.trimStart().length;
-    const trimmed = line.trim();
 
     // Pop stack to correct level
     while (stack.length > 1 && stack[stack.length - 1].indent >= indent) {

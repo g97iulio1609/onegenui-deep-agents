@@ -319,6 +319,7 @@ export class A2aClient {
   private buildHeaders(): Record<string, string> {
     const headers: Record<string, string> = {
       Accept: 'application/json',
+      Connection: 'keep-alive',
     };
     if (this.authToken) headers.Authorization = `Bearer ${this.authToken}`;
     return headers;
