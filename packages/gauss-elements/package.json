@@ -1,0 +1,81 @@
+{
+  "name": "@gauss-ai/elements",
+  "version": "2.17.0",
+  "description": "Composable AI UI primitives for React — styled, accessible, headless-ready",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./styles.css": "./dist/styles.css",
+    "./headless": {
+      "types": "./dist/headless.d.ts",
+      "import": "./dist/headless.js",
+      "require": "./dist/headless.cjs"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "headless": ["dist/headless.d.ts"]
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "check-types": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "clean": "rimraf dist"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/dom": "^10.4.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitest/coverage-v8": "^4.0.18",
+    "jsdom": "^26.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "rimraf": "^6.1.2",
+    "tsup": "^8.0.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.15"
+  },
+  "keywords": [
+    "gauss",
+    "ai",
+    "elements",
+    "ui",
+    "primitives",
+    "chat",
+    "react",
+    "components",
+    "headless",
+    "accessible"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/giulio-leone/gauss.git",
+    "directory": "packages/gauss-elements"
+  },
+  "author": "Giulio Leone <https://github.com/giulio-leone>",
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -1,0 +1,74 @@
+/* @gauss-ai/elements — Default Styles */
+
+/* ── Typing Animation ── */
+@keyframes ai-typing-bounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+/* ── Message Styles ── */
+.ai-message {
+  transition: opacity 0.2s ease;
+}
+
+.ai-message[data-streaming="true"] .ai-message__bubble {
+  position: relative;
+}
+
+.ai-message[data-streaming="true"] .ai-message__bubble::after {
+  content: "▋";
+  animation: ai-cursor-blink 1s step-end infinite;
+}
+
+@keyframes ai-cursor-blink {
+  50% { opacity: 0; }
+}
+
+/* ── Input Focus ── */
+.ai-input textarea:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* ── Code Block ── */
+.ai-code-block pre {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+
+.ai-code-block pre::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.ai-code-block pre::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 3px;
+}
+
+/* ── Tool Call ── */
+.ai-tool-call [role="button"]:hover {
+  background-color: #f3f4f6;
+}
+
+/* ── Suggestions ── */
+.ai-suggestions button:hover {
+  background-color: #f9fafb;
+  border-color: #6366f1;
+  color: #6366f1;
+}
+
+/* ── Avatar ── */
+.ai-avatar {
+  transition: transform 0.15s ease;
+}
+
+.ai-avatar:hover {
+  transform: scale(1.05);
+}
