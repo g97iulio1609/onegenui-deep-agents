@@ -20,6 +20,17 @@ import type {
   Handle,
 } from "./types.js";
 
+/** Map a single raw citation to the public SDK shape. */
+function mapNapiCitation(c: NonNullable<NapiAgentResult["citations"]>[number]) {
+  return {
+    type: c.citationType,
+    citedText: c.citedText,
+    documentTitle: c.documentTitle,
+    start: c.start,
+    end: c.end,
+  };
+}
+
 /**
  * Transform a raw NAPI result into the public {@link AgentResult} shape.
  *
@@ -30,13 +41,7 @@ import type {
 function toSdkResult(raw: NapiAgentResult): AgentResult {
   return {
     ...raw,
-    citations: raw.citations?.map((c) => ({
-      type: c.citationType,
-      citedText: c.citedText,
-      documentTitle: c.documentTitle,
-      start: c.start,
-      end: c.end,
-    })),
+    citations: raw.citations?.map(mapNapiCitation),
   };
 }
 

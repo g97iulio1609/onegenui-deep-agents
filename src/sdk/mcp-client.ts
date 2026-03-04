@@ -66,6 +66,16 @@ interface JsonRpcNotification {
   params?: Record<string, unknown>;
 }
 
+/** Convert an MCP tool definition to a Gauss ToolDef. */
+function toGaussToolDef(t: McpToolDef): ToolDef {
+  return { name: t.name, description: t.description ?? "", parameters: t.inputSchema };
+}
+
+/** Extract concatenated text content from an MCP result. */
+function extractMcpContentText(content: McpToolResult["content"] | undefined): string {
+  return content?.map(c => c.text).filter(Boolean).join("\n") ?? "";
+}
+
 // ─── McpClient Class ────────────────────────────────────────────────
 
 /**
@@ -168,11 +178,7 @@ export class McpClient implements Disposable {
       tools?: McpToolDef[];
     };
 
-    const tools: ToolDef[] = (result?.tools ?? []).map(t => ({
-      name: t.name,
-      description: t.description ?? "",
-      parameters: t.inputSchema,
-    }));
+    const tools: ToolDef[] = (result?.tools ?? []).map(toGaussToolDef);
 
     this.cachedToolsRef = new WeakRef(tools);
     return tools;
@@ -225,10 +231,10 @@ export class McpClient implements Disposable {
       try {
         const result = await this.callTool(toolName, toolArgs);
         if (result.isError) {
-          const errorText = result.content?.map(c => c.text).filter(Boolean).join("\n") ?? "Tool error";
+          const errorText = extractMcpContentText(result.content) || "Tool error";
           return JSON.stringify({ error: errorText });
         }
-        const text = result.content?.map(c => c.text).filter(Boolean).join("\n") ?? "";
+        const text = extractMcpContentText(result.content);
         return JSON.stringify({ result: text });
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);

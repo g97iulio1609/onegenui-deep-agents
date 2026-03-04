@@ -26,6 +26,11 @@ import type { Handle, Disposable, ToolDef } from "./types.js";
 import type { Agent } from "./agent.js";
 import { DisposedError, ValidationError } from "./errors.js";
 
+/** Map a fork agent spec to the shape expected by the NAPI layer. */
+function toNapiForkAgent(a: { agent: Agent; instructions?: string }) {
+  return { agentName: a.agent.name, providerHandle: a.agent.handle, instructions: a.instructions };
+}
+
 /** Router function invoked at runtime to decide the next node. */
 export type RouterFn = (result: Record<string, unknown>) => string | Promise<string>;
 
@@ -108,11 +113,7 @@ export class Graph implements Disposable {
     graph_add_fork_node(
       this._handle,
       config.nodeId,
-      config.agents.map(a => ({
-        agentName: a.agent.name,
-        providerHandle: a.agent.handle,
-        instructions: a.instructions,
-      })),
+      config.agents.map(toNapiForkAgent),
       config.consensus ?? "concat"
     );
     return this;

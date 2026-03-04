@@ -86,20 +86,35 @@ interface RawNapiResult {
   }>;
 }
 
+/** Map a single raw citation to the public SDK shape. */
+function mapCitation(c: NonNullable<RawNapiResult["citations"]>[number]) {
+  return {
+    type: c.citationType ?? c.type ?? "unknown",
+    citedText: c.citedText,
+    documentTitle: c.documentTitle,
+    start: c.start,
+    end: c.end,
+  };
+}
+
 function toSdkResult(raw: RawNapiResult): AgentResult {
   if (raw.citations) {
-    (raw as unknown as AgentResult).citations = raw.citations.map((c) => ({
-      type: c.citationType ?? c.type ?? "unknown",
-      citedText: c.citedText,
-      documentTitle: c.documentTitle,
-      start: c.start,
-      end: c.end,
-    }));
+    (raw as unknown as AgentResult).citations = raw.citations.map(mapCitation);
   }
   return raw as unknown as AgentResult;
 }
 
 // ─── Trace Types ───────────────────────────────────────────────────
+
+/** Strip the execute callback from a tool definition for the NAPI layer. */
+function stripToolDef(t: ToolDef): ToolDef {
+  return { name: t.name, description: t.description, parameters: t.parameters };
+}
+
+/** Extract the content field from a memory entry or message. */
+function extractContent(item: { content: string | unknown }): string {
+  return String(item.content);
+}
 
 /** A single span within an agent trace. */
 export interface TraceSpan {
@@ -673,7 +688,7 @@ export class Agent implements Disposable {
         this._sessionId ? { sessionId: this._sessionId } : undefined
       );
       if (recalled.length > 0) {
-        const contextText = recalled.map(e => e.content).join("\n");
+        const contextText = recalled.map(extractContent).join("\n");
         messages = [
           { role: "system" as const, content: `Previous context:\n${contextText}` },
           ...messages,
@@ -706,7 +721,7 @@ export class Agent implements Disposable {
 
     // Memory store: save conversation (parallel — entries are independent)
     if (this._memory) {
-      const userText = typeof input === "string" ? input : input.map(m => m.content).join("\n");
+      const userText = typeof input === "string" ? input : input.map(extractContent).join("\n");
       const now = Date.now();
       const sessionId = this._sessionId || undefined;
       await Promise.all([
@@ -1063,11 +1078,7 @@ export class Agent implements Disposable {
     const typedTools = this._tools.filter(isTypedTool);
 
     // Strip execute callbacks for the NAPI layer
-    const toolDefs: ToolDef[] = this._tools.map(t => ({
-      name: t.name,
-      description: t.description,
-      parameters: t.parameters,
-    }));
+    const toolDefs: ToolDef[] = this._tools.map(stripToolDef);
 
     const executor = typedTools.length > 0
       ? createToolExecutor(typedTools)
