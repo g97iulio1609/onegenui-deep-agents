@@ -30,11 +30,14 @@ export {
   AgentSelector,
   ChatInput,
   ChatPanel,
+  ConversationList,
   FileUpload,
   MarkdownRenderer,
   MessageList,
   StreamingIndicator,
+  SyntaxHighlighter,
   ToolCallViewer,
+  createCodeBlockRenderer,
 } from "./components/index.js";
 
 // Component prop types
@@ -42,10 +45,13 @@ export type {
   AgentSelectorProps,
   ChatInputProps,
   ChatPanelProps,
+  ConversationListProps,
+  ConversationItem,
   FileUploadProps,
   MarkdownRendererProps,
   MessageListProps,
   StreamingIndicatorProps,
+  SyntaxHighlighterProps,
   ToolCallViewerProps,
 } from "./components/index.js";
 

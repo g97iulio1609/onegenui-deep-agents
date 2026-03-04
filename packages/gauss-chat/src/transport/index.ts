@@ -1,1 +1,11 @@
 export { GaussTransport } from "./gauss-transport.js";
+export { applyMiddleware } from "./middleware.js";
+export type { TransportMiddleware } from "./middleware.js";
+export { retryMiddleware } from "./retry-middleware.js";
+export type { RetryOptions } from "./retry-middleware.js";
+export { loggingMiddleware } from "./logging-middleware.js";
+export type { LoggingOptions } from "./logging-middleware.js";
+export { rateLimitMiddleware, RateLimitError } from "./rate-limit-middleware.js";
+export type { RateLimitOptions } from "./rate-limit-middleware.js";
+export { hooksMiddleware } from "./hooks-middleware.js";
+export type { TransportHooks } from "./hooks-middleware.js";

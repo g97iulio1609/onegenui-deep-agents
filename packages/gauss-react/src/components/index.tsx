@@ -525,3 +525,9 @@ export type { MarkdownRendererProps } from "./markdown-renderer.js";
 
 export { FileUpload } from "./file-upload.js";
 export type { FileUploadProps } from "./file-upload.js";
+
+export { ConversationList } from "./conversation-list.js";
+export type { ConversationListProps, Conversation as ConversationItem } from "./conversation-list.js";
+
+export { SyntaxHighlighter, createCodeBlockRenderer } from "./syntax-highlighter.js";
+export type { SyntaxHighlighterProps } from "./syntax-highlighter.js";

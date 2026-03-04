@@ -34,6 +34,16 @@ export { LocalStorageAdapter, MemoryStorageAdapter } from "./persistence/index.j
 
 // Transport
 export { GaussTransport } from "./transport/gauss-transport.js";
+export { applyMiddleware } from "./transport/middleware.js";
+export type { TransportMiddleware } from "./transport/middleware.js";
+export { retryMiddleware } from "./transport/retry-middleware.js";
+export type { RetryOptions } from "./transport/retry-middleware.js";
+export { loggingMiddleware } from "./transport/logging-middleware.js";
+export type { LoggingOptions } from "./transport/logging-middleware.js";
+export { rateLimitMiddleware, RateLimitError } from "./transport/rate-limit-middleware.js";
+export type { RateLimitOptions } from "./transport/rate-limit-middleware.js";
+export { hooksMiddleware } from "./transport/hooks-middleware.js";
+export type { TransportHooks } from "./transport/hooks-middleware.js";
 
 // Types
 export type {
