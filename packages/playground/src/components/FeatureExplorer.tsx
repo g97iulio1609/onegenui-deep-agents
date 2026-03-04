@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useChat, useCompletion, useAgent } from "@gauss-ai/chat";
-import { ChatPanel, ChatInput, StreamingIndicator, ToolCallViewer, AgentSelector } from "@gauss-ai/react";
-import type { GaussTheme, ToolCallViewerProps } from "@gauss-ai/react";
+import { applyMiddleware, retryMiddleware, loggingMiddleware, rateLimitMiddleware, hooksMiddleware } from "@gauss-ai/chat";
+import { ChatPanel, ChatInput, StreamingIndicator, ToolCallViewer, AgentSelector, ConversationList, SyntaxHighlighter } from "@gauss-ai/react";
+import type { GaussTheme, ToolCallViewerProps, ConversationItem } from "@gauss-ai/react";
 import type { ToolCallPart } from "@gauss-ai/chat";
 
 type Feature =
@@ -13,7 +14,10 @@ type Feature =
   | "ToolCallViewer"
   | "AgentSelector"
   | "StreamingIndicator"
-  | "Theming";
+  | "Theming"
+  | "Middleware"
+  | "ConversationList"
+  | "SyntaxHighlighter";
 
 interface FeatureInfo {
   id: Feature;
@@ -32,6 +36,9 @@ const features: FeatureInfo[] = [
   { id: "AgentSelector", label: "<AgentSelector />", description: "Agent picker dropdown", package: "@gauss-ai/react" },
   { id: "StreamingIndicator", label: "<StreamingIndicator />", description: "Typing animation", package: "@gauss-ai/react" },
   { id: "Theming", label: "Theming System", description: "Customizable themes", package: "@gauss-ai/react" },
+  { id: "Middleware", label: "Middleware System", description: "Composable transport middleware", package: "@gauss-ai/chat" },
+  { id: "ConversationList", label: "<ConversationList />", description: "Conversation history sidebar", package: "@gauss-ai/react" },
+  { id: "SyntaxHighlighter", label: "<SyntaxHighlighter />", description: "Zero-dep code highlighting", package: "@gauss-ai/react" },
 ];
 
 const darkTheme: GaussTheme = {
@@ -116,6 +123,12 @@ function FeatureDemo({ feature }: { feature: Feature }) {
       return <StreamingIndicatorDemo />;
     case "Theming":
       return <ThemingDemo />;
+    case "Middleware":
+      return <MiddlewareDemo />;
+    case "ConversationList":
+      return <ConversationListDemo />;
+    case "SyntaxHighlighter":
+      return <SyntaxHighlighterDemo />;
   }
 }
 
@@ -339,6 +352,247 @@ function ThemingDemo() {
           header={<span style={{ color: "#c9d1d9" }}>🎨 Themed Chat</span>}
         />
       </div>
+    </div>
+  );
+}
+
+function MiddlewareDemo() {
+  const [logs, setLogs] = useState<string[]>([]);
+
+  const addLog = useCallback((msg: string) => {
+    setLogs((prev) => [...prev.slice(-19), `[${new Date().toLocaleTimeString()}] ${msg}`]);
+  }, []);
+
+  return (
+    <div style={{ padding: 16 }}>
+      <CodeSnippet code={`import { applyMiddleware, retryMiddleware, loggingMiddleware, rateLimitMiddleware, hooksMiddleware } from "@gauss-ai/chat";
+
+const enhancedTransport = applyMiddleware(baseTransport, [
+  retryMiddleware({ maxRetries: 3, baseDelay: 1000 }),
+  loggingMiddleware({ logger: console }),
+  rateLimitMiddleware({ maxRequests: 60, windowMs: 60_000 }),
+  hooksMiddleware({
+    beforeSend: (msgs) => console.log("Sending", msgs.length, "messages"),
+    onComplete: () => console.log("Stream complete"),
+  }),
+]);`} />
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        <button
+          style={buttonStyle}
+          onClick={() => {
+            addLog("🔄 retryMiddleware: 3 retries, 1s base delay, 0.2 jitter");
+            addLog("   Retryable statuses: 408, 429, 500, 502, 503, 504");
+          }}
+        >
+          Retry Demo
+        </button>
+        <button
+          style={buttonStyle}
+          onClick={() => {
+            addLog("📝 loggingMiddleware: request logged");
+            addLog("   → POST /api/chat (3 messages)");
+            addLog("   ← event: text-delta");
+            addLog("   ✓ completed in 842ms");
+          }}
+        >
+          Logging Demo
+        </button>
+        <button
+          style={buttonStyle}
+          onClick={() => {
+            addLog("⏱️ rateLimitMiddleware: 58/60 requests remaining");
+            addLog("   Window: 60s, resets in 42s");
+          }}
+        >
+          Rate Limit Demo
+        </button>
+        <button
+          style={buttonStyle}
+          onClick={() => {
+            addLog("🪝 hooksMiddleware: beforeSend fired");
+            addLog("   → onEvent: text-delta (12 chars)");
+            addLog("   → onComplete: stream finished");
+          }}
+        >
+          Hooks Demo
+        </button>
+        <button
+          style={{ ...buttonStyle, background: "#f85149" }}
+          onClick={() => setLogs([])}
+        >
+          Clear
+        </button>
+      </div>
+      <div style={{
+        background: "#161b22",
+        border: "1px solid #30363d",
+        borderRadius: 8,
+        padding: 12,
+        minHeight: 200,
+        fontFamily: "'SF Mono', 'Fira Code', monospace",
+        fontSize: 12,
+        color: "#8b949e",
+        overflow: "auto",
+      }}>
+        {logs.length === 0 ? (
+          <span style={{ opacity: 0.5 }}>Click a button above to see middleware in action...</span>
+        ) : (
+          logs.map((log, i) => (
+            <div key={i} style={{ marginBottom: 2, color: log.includes("✓") ? "#3fb950" : log.includes("→") ? "#79c0ff" : "#c9d1d9" }}>
+              {log}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ConversationListDemo() {
+  const demoConversations: ConversationItem[] = useMemo(() => [
+    { id: "c1", title: "Building a REST API", lastMessage: "Here's the Express setup...", updatedAt: new Date(Date.now() - 120000), agentId: "coder" },
+    { id: "c2", title: "React Best Practices", lastMessage: "Use useMemo for expensive computations", updatedAt: new Date(Date.now() - 3600000), agentId: "assistant" },
+    { id: "c3", title: "Debugging Memory Leak", lastMessage: "Check the useEffect cleanup...", updatedAt: new Date(Date.now() - 86400000), agentId: "coder" },
+    { id: "c4", title: "Write a Blog Post", lastMessage: "Introduction paragraph drafted", updatedAt: new Date(Date.now() - 172800000), agentId: "writer" },
+    { id: "c5", title: "Rust Ownership Model", lastMessage: "The borrow checker ensures...", updatedAt: new Date(Date.now() - 604800000) },
+  ], []);
+
+  const [selectedId, setSelectedId] = useState<string | undefined>("c1");
+  const [deleted, setDeleted] = useState<string[]>([]);
+
+  const visibleConversations = useMemo(
+    () => demoConversations.filter((c) => !deleted.includes(c.id)),
+    [demoConversations, deleted],
+  );
+
+  return (
+    <div style={{ padding: 16 }}>
+      <CodeSnippet code={`<ConversationList
+  conversations={conversations}
+  selectedId={selectedId}
+  onSelect={(id) => setSelectedId(id)}
+  onDelete={(id) => handleDelete(id)}
+/>`} />
+      <div style={{ display: "flex", gap: 16 }}>
+        <div style={{ width: 300, border: "1px solid #30363d", borderRadius: 8, overflow: "hidden" }}>
+          <ConversationList
+            conversations={visibleConversations}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            onDelete={(id) => setDeleted((prev) => [...prev, id])}
+          />
+        </div>
+        <div style={{ flex: 1, color: "#8b949e", fontSize: 13 }}>
+          <div>Selected: <strong style={{ color: "#c9d1d9" }}>{selectedId ?? "none"}</strong></div>
+          <div>Deleted: <strong style={{ color: "#f85149" }}>{deleted.length}</strong></div>
+          {deleted.length > 0 && (
+            <button style={{ ...buttonStyle, marginTop: 8 }} onClick={() => setDeleted([])}>
+              Restore All
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SyntaxHighlighterDemo() {
+  const [language, setLanguage] = useState<"javascript" | "typescript" | "python" | "rust">("typescript");
+  const [themeName, setThemeName] = useState<"dark" | "light">("dark");
+
+  const codeExamples: Record<string, string> = useMemo(() => ({
+    javascript: `function fibonacci(n) {
+  if (n <= 1) return n;
+  return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+// Usage
+const result = fibonacci(10);
+console.log(\`Fibonacci(10) = \${result}\`);`,
+    typescript: `interface Agent {
+  id: string;
+  name: string;
+  model: "gpt-4" | "claude-3";
+  tools: Tool[];
+}
+
+async function runAgent(agent: Agent, prompt: string): Promise<string> {
+  const response = await fetch("/api/agent", {
+    method: "POST",
+    body: JSON.stringify({ agentId: agent.id, prompt }),
+  });
+  return response.json();
+}`,
+    python: `from gauss import Agent, Tool
+
+class SearchTool(Tool):
+    """Web search tool for agents."""
+    
+    async def execute(self, query: str) -> dict:
+        results = await self.client.search(query)
+        return {"results": results[:5]}
+
+agent = Agent(
+    name="researcher",
+    model="gpt-4",
+    tools=[SearchTool()],
+)`,
+    rust: `use gauss_core::{Agent, Runtime, Tool};
+
+#[derive(Debug)]
+struct Calculator;
+
+impl Tool for Calculator {
+    fn name(&self) -> &str { "calculator" }
+    
+    async fn execute(&self, input: &str) -> Result<String, Error> {
+        let result: f64 = input.parse()?;
+        Ok(format!("Result: {}", result * 2.0))
+    }
+}
+
+fn main() {
+    let agent = Agent::builder()
+        .name("math-agent")
+        .tool(Calculator)
+        .build();
+}`,
+  }), []);
+
+  return (
+    <div style={{ padding: 16 }}>
+      <CodeSnippet code={`import { SyntaxHighlighter } from "@gauss-ai/react";
+
+<SyntaxHighlighter
+  code={code}
+  language="typescript"
+  theme="dark"
+/>`} />
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        {(["javascript", "typescript", "python", "rust"] as const).map((lang) => (
+          <button
+            key={lang}
+            onClick={() => setLanguage(lang)}
+            style={{
+              ...buttonStyle,
+              background: language === lang ? "#1f6feb" : "#21262d",
+            }}
+          >
+            {lang}
+          </button>
+        ))}
+        <button
+          onClick={() => setThemeName(themeName === "dark" ? "light" : "dark")}
+          style={{ ...buttonStyle, background: "#6e40c9" }}
+        >
+          {themeName === "dark" ? "☀️ Light" : "🌙 Dark"}
+        </button>
+      </div>
+      <SyntaxHighlighter
+        code={codeExamples[language]}
+        language={language}
+        theme={themeName}
+      />
     </div>
   );
 }
