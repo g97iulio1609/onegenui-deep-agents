@@ -87,16 +87,16 @@ interface RawNapiResult {
 }
 
 function toSdkResult(raw: RawNapiResult): AgentResult {
-  return {
-    ...raw,
-    citations: raw.citations?.map((c) => ({
+  if (raw.citations) {
+    (raw as unknown as AgentResult).citations = raw.citations.map((c) => ({
       type: c.citationType ?? c.type ?? "unknown",
       citedText: c.citedText,
       documentTitle: c.documentTitle,
       start: c.start,
       end: c.end,
-    })),
-  };
+    }));
+  }
+  return raw as unknown as AgentResult;
 }
 
 // ─── Trace Types ───────────────────────────────────────────────────
@@ -656,15 +656,16 @@ export class Agent implements Disposable {
    *
    * @since 1.0.0
    */
-  async run(input: string | Message[]): Promise<AgentResult> {
+  async run(input: string | Message[], options?: { signal?: AbortSignal }): Promise<AgentResult> {
     this.assertNotDisposed();
+    options?.signal?.throwIfAborted();
 
     // Load MCP tools if needed
     await this.ensureMcpTools();
 
-    let messages = typeof input === "string"
+    let messages: Message[] = typeof input === "string"
       ? [{ role: "user" as const, content: input }]
-      : [...input];
+      : input as Message[];
 
     // Memory recall: inject context
     if (this._memory) {
@@ -810,9 +811,11 @@ export class Agent implements Disposable {
   async stream(
     input: string | Message[],
     onEvent: StreamCallback,
-    toolExecutor?: ToolExecutor
+    toolExecutor?: ToolExecutor,
+    options?: { signal?: AbortSignal }
   ): Promise<AgentResult> {
     this.assertNotDisposed();
+    options?.signal?.throwIfAborted();
 
     await this.ensureMcpTools();
 

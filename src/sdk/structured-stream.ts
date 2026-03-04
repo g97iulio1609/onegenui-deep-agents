@@ -44,6 +44,8 @@ export interface StructuredStreamSchema {
 export class StructuredStream<T = unknown> {
   private readonly schema: StructuredStreamSchema;
   private buffer: string = "";
+  private lastParsedLength: number = 0;
+  private lastParsedResult: Partial<T> | null = null;
 
   constructor(schema: StructuredStreamSchema) {
     this.schema = schema;
@@ -56,11 +58,21 @@ export class StructuredStream<T = unknown> {
    * @returns A partial object if parseable, or `null`.
    */
   writePartial(delta: string): Partial<T> | null {
+    if (!delta) return this.lastParsedResult;
     this.buffer += delta;
+    if (this.buffer.length === this.lastParsedLength) return this.lastParsedResult;
     try {
-      return JSON.parse(this.buffer) as Partial<T>;
+      const result = JSON.parse(this.buffer) as Partial<T>;
+      this.lastParsedLength = this.buffer.length;
+      this.lastParsedResult = result;
+      return result;
     } catch {
-      return this.parsePartial(this.buffer);
+      const result = this.parsePartial(this.buffer);
+      if (result !== null) {
+        this.lastParsedLength = this.buffer.length;
+        this.lastParsedResult = result;
+      }
+      return result ?? this.lastParsedResult;
     }
   }
 
@@ -79,6 +91,8 @@ export class StructuredStream<T = unknown> {
    */
   reset(): void {
     this.buffer = "";
+    this.lastParsedLength = 0;
+    this.lastParsedResult = null;
   }
 
   /**

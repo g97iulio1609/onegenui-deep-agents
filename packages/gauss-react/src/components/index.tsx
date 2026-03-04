@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import type { ChatMessage, ChatStatus } from "@gauss-ai/chat";
 import { getMessageText } from "@gauss-ai/chat";
 import type { GaussTheme } from "../theme.js";
@@ -138,13 +138,9 @@ export function MessageList({
   const endRef = useRef<HTMLDivElement>(null);
   const vars = theme ? themeToVars(theme) : {};
 
-  return (
-    <div
-      className={className}
-      data-testid="gauss-message-list"
-      style={{ ...messageListStyle, ...vars } as React.CSSProperties}
-    >
-      {messages.map((message, index) =>
+  const renderedMessages = useMemo(
+    () =>
+      messages.map((message, index) =>
         renderMessage ? (
           <React.Fragment key={message.id}>
             {renderMessage(message, index)}
@@ -152,7 +148,17 @@ export function MessageList({
         ) : (
           <MessageBubble key={message.id} message={message} />
         ),
-      )}
+      ),
+    [messages, renderMessage],
+  );
+
+  return (
+    <div
+      className={className}
+      data-testid="gauss-message-list"
+      style={{ ...messageListStyle, ...vars } as React.CSSProperties}
+    >
+      {renderedMessages}
       <div ref={endRef} />
     </div>
   );
