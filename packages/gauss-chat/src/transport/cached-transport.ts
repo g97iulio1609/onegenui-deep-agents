@@ -100,28 +100,32 @@ export function createCachedTransport(options: CacheOptions = {}): ChatTransport
       const decoder = new TextDecoder();
       let buffer = "";
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
 
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed || !trimmed.startsWith("data: ")) continue;
-          const payload = trimmed.slice(6);
-          if (payload === "[DONE]") continue;
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith("data: ")) continue;
+            const payload = trimmed.slice(6);
+            if (payload === "[DONE]") continue;
 
-          try {
-            const event = JSON.parse(payload) as StreamEvent;
-            collectedEvents.push(event);
-            yield event;
-          } catch {
-            // Skip malformed events
+            try {
+              const event = JSON.parse(payload) as StreamEvent;
+              collectedEvents.push(event);
+              yield event;
+            } catch {
+              // Skip malformed events
+            }
           }
         }
+      } finally {
+        reader.releaseLock();
       }
 
       evictOldest();

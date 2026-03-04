@@ -53,9 +53,12 @@ export function useObject<T>(options: UseObjectOptions<T>): UseObjectReturn<T> {
   const [error, setError] = useState<Error | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       abortRef.current?.abort();
     };
   }, []);
@@ -162,16 +165,20 @@ export function useObject<T>(options: UseObjectOptions<T>): UseObjectReturn<T> {
       } catch (err) {
         const isAbort = err != null && typeof err === "object" && "name" in err && (err as { name: string }).name === "AbortError";
         if (isAbort) {
-          setStatus("idle");
+          if (mountedRef.current) setStatus("idle");
           return;
         }
         const objectError = err instanceof Error ? err : new Error(String(err));
-        setError(objectError);
-        setStatus("error");
+        if (mountedRef.current) {
+          setError(objectError);
+          setStatus("error");
+        }
         onError?.(objectError);
       } finally {
         abortRef.current = null;
-        setStatus((prev) => (prev === "error" ? "error" : "idle"));
+        if (mountedRef.current) {
+          setStatus((prev) => (prev === "error" ? "error" : "idle"));
+        }
       }
     },
     [api, body, credentials, headers, onError, onFinish, onPartialObject, schema],

@@ -54,9 +54,12 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
   const [error, setError] = useState<Error | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       abortRef.current?.abort();
     };
   }, []);
@@ -151,25 +154,31 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
           createdAt: new Date(),
         };
 
-        setMessages((prev) => {
-          const withoutStreaming = prev.filter((m) => m.id !== assistantId);
-          return [...withoutStreaming, finalMessage];
-        });
+        if (mountedRef.current) {
+          setMessages((prev) => {
+            const withoutStreaming = prev.filter((m) => m.id !== assistantId);
+            return [...withoutStreaming, finalMessage];
+          });
+        }
 
         onFinish?.(finalMessage);
       } catch (err) {
         const isAbort = err != null && typeof err === "object" && "name" in err && (err as { name: string }).name === "AbortError";
         if (isAbort) {
-          setStatus("idle");
+          if (mountedRef.current) setStatus("idle");
           return;
         }
         const chatError = err instanceof Error ? err : new Error(String(err));
-        setError(chatError);
-        setStatus("error");
+        if (mountedRef.current) {
+          setError(chatError);
+          setStatus("error");
+        }
         onError?.(chatError);
       } finally {
         abortRef.current = null;
-        setStatus((prev) => (prev === "error" ? "error" : "idle"));
+        if (mountedRef.current) {
+          setStatus((prev) => (prev === "error" ? "error" : "idle"));
+        }
       }
     },
     [api, body, credentials, headers, onError, onFinish, systemPrompt],

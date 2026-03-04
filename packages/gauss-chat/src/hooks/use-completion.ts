@@ -47,9 +47,12 @@ export function useCompletion(options: UseCompletionOptions = {}): UseCompletion
   const [error, setError] = useState<Error | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       abortRef.current?.abort();
     };
   }, []);
@@ -120,16 +123,20 @@ export function useCompletion(options: UseCompletionOptions = {}): UseCompletion
       } catch (err) {
         const isAbort = err != null && typeof err === "object" && "name" in err && (err as { name: string }).name === "AbortError";
         if (isAbort) {
-          setStatus("idle");
+          if (mountedRef.current) setStatus("idle");
           return;
         }
         const completionError = err instanceof Error ? err : new Error(String(err));
-        setError(completionError);
-        setStatus("error");
+        if (mountedRef.current) {
+          setError(completionError);
+          setStatus("error");
+        }
         onError?.(completionError);
       } finally {
         abortRef.current = null;
-        setStatus((prev) => (prev === "error" ? "error" : "idle"));
+        if (mountedRef.current) {
+          setStatus((prev) => (prev === "error" ? "error" : "idle"));
+        }
       }
     },
     [api, body, credentials, headers, onError, onFinish],

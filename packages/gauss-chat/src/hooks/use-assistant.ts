@@ -58,9 +58,12 @@ export function useAssistant(options: UseAssistantOptions = {}): UseAssistantRet
   const [threadId, setThreadIdState] = useState<string | undefined>(initialThreadId);
 
   const abortRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       abortRef.current?.abort();
     };
   }, []);
@@ -160,25 +163,31 @@ export function useAssistant(options: UseAssistantOptions = {}): UseAssistantRet
           createdAt: new Date(),
         };
 
-        setMessages((prev) => {
-          const withoutStreaming = prev.filter((m) => m.id !== assistantMsgId);
-          return [...withoutStreaming, finalMessage];
-        });
+        if (mountedRef.current) {
+          setMessages((prev) => {
+            const withoutStreaming = prev.filter((m) => m.id !== assistantMsgId);
+            return [...withoutStreaming, finalMessage];
+          });
+        }
 
         onFinish?.(finalMessage);
       } catch (err) {
         const isAbort = err != null && typeof err === "object" && "name" in err && (err as { name: string }).name === "AbortError";
         if (isAbort) {
-          setStatus("idle");
+          if (mountedRef.current) setStatus("idle");
           return;
         }
         const chatError = err instanceof Error ? err : new Error(String(err));
-        setError(chatError);
-        setStatus("error");
+        if (mountedRef.current) {
+          setError(chatError);
+          setStatus("error");
+        }
         onError?.(chatError);
       } finally {
         abortRef.current = null;
-        setStatus((prev) => (prev === "error" ? "error" : "idle"));
+        if (mountedRef.current) {
+          setStatus((prev) => (prev === "error" ? "error" : "idle"));
+        }
       }
     },
     [api, assistantId, body, credentials, headers, onError, onFinish, threadId],
