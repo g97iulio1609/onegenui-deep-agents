@@ -79,7 +79,9 @@ export {
 
 // ─── Core Agent ────────────────────────────────────────────────────
 export { Agent, gauss } from "./agent.js";
-export type { AgentConfig } from "./agent.js";
+export type { AgentConfig, AgentTrace, TraceSpan } from "./agent.js";
+export { AgentFactory } from "./agent-factory.js";
+export type { QuickAgentOptions } from "./agent-factory.js";
 export { enterprisePreset, enterpriseRun } from "./enterprise.js";
 export type { EnterprisePresetOptions } from "./enterprise.js";
 export {
@@ -246,6 +248,10 @@ export type { RetryConfig } from "./retry.js";
 // ─── Structured Output ────────────────────────────────────────────
 export { structured } from "./structured.js";
 export type { JsonSchema, StructuredConfig, StructuredResult } from "./structured.js";
+
+// ─── Streaming Structured Output ──────────────────────────────────
+export { StructuredStream, parsePartialJson as parsePartialJsonStream } from "./structured-stream.js";
+export type { StructuredStreamSchema } from "./structured-stream.js";
 
 // ─── Prompt Templates ─────────────────────────────────────────────
 export {
