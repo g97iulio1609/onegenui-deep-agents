@@ -158,7 +158,8 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
 
         onFinish?.(finalMessage);
       } catch (err) {
-        if (err instanceof Error && err.name === "AbortError") {
+        const isAbort = err != null && typeof err === "object" && "name" in err && (err as { name: string }).name === "AbortError";
+        if (isAbort) {
           setStatus("idle");
           return;
         }
