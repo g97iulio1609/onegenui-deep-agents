@@ -96,14 +96,18 @@ export class ControlPlane implements Disposable {
   private nextExplainTraceId = 1;
   private latestExplainTraceId: string | null = null;
   private readonly policyDriftAlertHooks: Array<(alert: ControlPlanePolicyDriftAlert) => void> = [];
-  private readonly policyDriftSinks: string[] = [];
+  private readonly policyDriftSinks = new Set<string>();
   private policyDriftScheduleConfig: ControlPlanePolicyDriftScheduleConfig | null = null;
   private readonly policyDriftRuns: ControlPlanePolicyDriftScheduleRun[] = [];
   private nextPolicyDriftRunId = 1;
-  private readonly policyLifecycleVersions: ControlPlanePolicyLifecycleVersion[] = [];
+  private readonly policyLifecycleVersions = new Map<string, ControlPlanePolicyLifecycleVersion>();
   private nextPolicyLifecycleVersion = 1;
   private activePolicyVersionId: string | null = null;
   private server: Server | null = null;
+  private cachedOpsCapabilities: ControlPlaneOpsCapabilities | null = null;
+  private cachedDashboardHtml: string | null = null;
+  private cachedOpsHtml: string | null = null;
+  private cachedTenantOpsHtml: string | null = null;
 
   constructor(options: ControlPlaneOptions = {}) {
     this.telemetry = options.telemetry;
@@ -157,8 +161,8 @@ export class ControlPlane implements Disposable {
     if (!normalized) {
       throw new ValidationError("sinkId must be a non-empty string", "sinkId");
     }
-    if (!this.policyDriftSinks.includes(normalized)) {
-      this.policyDriftSinks.push(normalized);
+    if (!this.policyDriftSinks.has(normalized)) {
+      this.policyDriftSinks.add(normalized);
     }
     return this;
   }
@@ -779,7 +783,7 @@ export class ControlPlane implements Disposable {
   }
 
   private findLifecycleVersion(versionId: string): ControlPlanePolicyLifecycleVersion {
-    const found = this.policyLifecycleVersions.find((item) => item.versionId === versionId);
+    const found = this.policyLifecycleVersions.get(versionId);
     if (!found) {
       throw new ValidationError(`Unknown lifecycle version "${versionId}"`, "version");
     }
@@ -846,7 +850,7 @@ export class ControlPlane implements Disposable {
         draftComment: actor.comment,
       },
     };
-    this.policyLifecycleVersions.push(version);
+    this.policyLifecycleVersions.set(version.versionId, version);
     return {
       ok: true,
       version: this.summarizeLifecycleVersion(version),
@@ -938,7 +942,7 @@ export class ControlPlane implements Disposable {
         error: "version must be approved before promotion",
       };
     }
-    for (const item of this.policyLifecycleVersions) {
+    for (const [, item] of this.policyLifecycleVersions) {
       if (item.versionId !== versionId && item.status === "promoted") {
         item.status = "approved";
       }
@@ -967,7 +971,7 @@ export class ControlPlane implements Disposable {
     return {
       ok: true,
       activeVersionId: this.activePolicyVersionId,
-      versions: this.policyLifecycleVersions.map((item) => this.summarizeLifecycleVersion(item)),
+      versions: [...this.policyLifecycleVersions.values()].map((item) => this.summarizeLifecycleVersion(item)),
     };
   }
 
@@ -1003,7 +1007,8 @@ export class ControlPlane implements Disposable {
   }
 
   private opsCapabilities(): ControlPlaneOpsCapabilities {
-    return {
+    if (this.cachedOpsCapabilities) return this.cachedOpsCapabilities;
+    this.cachedOpsCapabilities = {
       sections: ["spans", "metrics", "pendingApprovals", "latestCost"],
       channels: ["snapshot", "timeline", "dag"],
       supportsMultiplex: true,
@@ -1040,6 +1045,7 @@ export class ControlPlane implements Disposable {
       policyDriftSchedulePath: "/api/ops/policy/drift/schedule",
       policyDriftScheduleRunPath: "/api/ops/policy/drift/schedule/run",
     };
+    return this.cachedOpsCapabilities;
   }
 
   private opsHealth(): ControlPlaneOpsHealth {
@@ -1596,14 +1602,17 @@ export class ControlPlane implements Disposable {
   }
 
   private renderDashboardHtml(): string {
-    return renderDashboardHtml();
+    this.cachedDashboardHtml ??= renderDashboardHtml();
+    return this.cachedDashboardHtml;
   }
 
   private renderHostedOpsHtml(): string {
-    return renderHostedOpsHtml();
+    this.cachedOpsHtml ??= renderHostedOpsHtml();
+    return this.cachedOpsHtml;
   }
 
   private renderHostedTenantOpsHtml(): string {
-    return renderHostedTenantOpsHtml();
+    this.cachedTenantOpsHtml ??= renderHostedTenantOpsHtml();
+    return this.cachedTenantOpsHtml;
   }
 }

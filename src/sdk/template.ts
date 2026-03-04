@@ -50,7 +50,7 @@ const VAR_PATTERN = /\{\{(\w+)\}\}/g;
  */
 export function template<T extends string>(templateStr: T): PromptTemplate<T> {
   const variables = [...new Set(
-    Array.from(templateStr.matchAll(VAR_PATTERN), (m) => m[1])
+    [...templateStr.matchAll(VAR_PATTERN)].map((m) => m[1])
   )];
 
   const fn = (vars: TemplateVars<T>): string => {

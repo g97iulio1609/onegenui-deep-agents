@@ -172,6 +172,7 @@ export class Graph implements Disposable {
 
     const outputs: Record<string, Record<string, unknown>> = {};
     let currentNodeId: string | undefined = entryNodes[0];
+    let lastNodeId: string = currentNodeId!;
     let currentPrompt = prompt;
 
     while (currentNodeId) {
@@ -190,6 +191,7 @@ export class Graph implements Disposable {
         ...(result.structuredOutput ? { structuredOutput: result.structuredOutput } : {}),
       };
       outputs[currentNodeId] = nodeOutput;
+      lastNodeId = currentNodeId;
 
       // Decide next node.
       const router = this._conditionalEdges.get(currentNodeId);
@@ -204,8 +206,6 @@ export class Graph implements Disposable {
     }
 
     // Build result envelope matching graph_run shape.
-    const nodeIds = Object.keys(outputs);
-    const lastNodeId = nodeIds[nodeIds.length - 1];
     return {
       outputs,
       final_text: (outputs[lastNodeId]?.text as string) ?? "",

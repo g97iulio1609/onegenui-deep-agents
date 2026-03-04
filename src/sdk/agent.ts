@@ -704,23 +704,27 @@ export class Agent implements Disposable {
       ));
     }
 
-    // Memory store: save conversation
+    // Memory store: save conversation (parallel — entries are independent)
     if (this._memory) {
       const userText = typeof input === "string" ? input : input.map(m => m.content).join("\n");
-      await this._memory.store({
-        id: `${Date.now()}-user`,
-        content: userText,
-        entryType: "conversation",
-        timestamp: new Date().toISOString(),
-        sessionId: this._sessionId || undefined,
-      });
-      await this._memory.store({
-        id: `${Date.now()}-assistant`,
-        content: result.text,
-        entryType: "conversation",
-        timestamp: new Date().toISOString(),
-        sessionId: this._sessionId || undefined,
-      });
+      const now = Date.now();
+      const sessionId = this._sessionId || undefined;
+      await Promise.all([
+        this._memory.store({
+          id: `${now}-user`,
+          content: userText,
+          entryType: "conversation",
+          timestamp: new Date(now).toISOString(),
+          sessionId,
+        }),
+        this._memory.store({
+          id: `${now}-assistant`,
+          content: result.text,
+          entryType: "conversation",
+          timestamp: new Date(now).toISOString(),
+          sessionId,
+        }),
+      ]);
     }
 
     this.captureRunMetadata(result);

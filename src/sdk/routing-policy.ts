@@ -171,7 +171,7 @@ export function governancePolicyPack(name: GovernancePackName): GovernancePolicy
     case "ops-business-hours":
       return {
         rules: [{ type: "require_tag", tag: "ops" }],
-        allowedHoursUtc: Array.from({ length: 11 }, (_, i) => i + 8),
+        allowedHoursUtc: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
       };
     case "balanced-mix":
       return {
@@ -204,7 +204,7 @@ export function governancePolicyPack(name: GovernancePackName): GovernancePolicy
         ],
         maxTotalCostUsd: 0.08,
         maxRequestsPerMinute: 15,
-        allowedHoursUtc: Array.from({ length: 9 }, (_, i) => i + 9),
+        allowedHoursUtc: [9, 10, 11, 12, 13, 14, 15, 16, 17],
         fallbackOrder: ["openai", "anthropic"],
       };
   }
