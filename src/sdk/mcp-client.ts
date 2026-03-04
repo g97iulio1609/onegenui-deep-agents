@@ -107,6 +107,8 @@ export class McpClient implements Disposable {
   private buffer = "";
   private serverCapabilities: Record<string, unknown> = {};
   private cachedTools: ToolDef[] | null = null;
+  private _onError: ((err: Error) => void) | null = null;
+  private _onClose: (() => void) | null = null;
 
   constructor(config: McpClientConfig) {
     this.config = config;
@@ -130,8 +132,10 @@ export class McpClient implements Disposable {
 
     this.process.stdout!.on("data", (chunk: Buffer) => this.onData(chunk));
     this.process.stderr!.on("data", () => { /* discard stderr */ });
-    this.process.on("error", (err) => this.onProcessError(err));
-    this.process.on("close", () => this.onProcessClose());
+    this._onError = (err: Error) => this.onProcessError(err);
+    this._onClose = () => this.onProcessClose();
+    this.process.on("error", this._onError);
+    this.process.on("close", this._onClose);
 
     // Initialize handshake
     const initResult = await this.request("initialize", {
@@ -250,6 +254,10 @@ export class McpClient implements Disposable {
     this.pending.clear();
 
     if (this.process) {
+      if (this._onError) this.process.removeListener("error", this._onError);
+      if (this._onClose) this.process.removeListener("close", this._onClose);
+      this._onError = null;
+      this._onClose = null;
       this.process.stdin!.end();
       this.process.kill("SIGTERM");
       this.process = null;

@@ -409,10 +409,17 @@ export class ControlPlane implements Disposable {
             }
             this.emitStreamBatch(res, channels, filters);
           }, 1000);
-          const cleanup = () => clearInterval(timer);
-          req.on("close", cleanup);
-          req.on("aborted", cleanup);
-          res.on("error", cleanup);
+          const cleanup = () => {
+            clearInterval(timer);
+            req.removeListener("close", cleanup);
+            req.removeListener("aborted", cleanup);
+            res.removeListener("error", cleanup);
+            res.removeListener("finish", cleanup);
+          };
+          req.once("close", cleanup);
+          req.once("aborted", cleanup);
+          res.once("error", cleanup);
+          res.once("finish", cleanup);
           return;
         }
 
@@ -492,7 +499,7 @@ export class ControlPlane implements Disposable {
     };
     this.history.push(snapshot);
     if (this.history.length > this.historyLimit) {
-      this.history.shift();
+      this.history.splice(0, this.history.length - this.historyLimit);
     }
     if (this.persistPath) {
       mkdirSync(dirname(this.persistPath), { recursive: true });
@@ -744,7 +751,7 @@ export class ControlPlane implements Disposable {
   }
 
   private cloneRoutingPolicy(policy: RoutingPolicy): RoutingPolicy {
-    return JSON.parse(JSON.stringify(policy)) as RoutingPolicy;
+    return structuredClone(policy);
   }
 
   private summarizeLifecycleVersion(version: ControlPlanePolicyLifecycleVersion): {

@@ -261,6 +261,9 @@ export class Agent implements Disposable {
   private _sessionId: string = "";
   private _mcpClients: McpClient[] = [];
   private _mcpToolsLoaded = false;
+  private _cachedToolDefs: ToolDef[] | null = null;
+  private _cachedToolExecutor: ToolExecutor | null = null;
+  private _toolsDirty = true;
 
   // ─── Cost & Trace Tracking (M90) ─────────────────────────────────
   private _lastRunCost: CostEstimate | null = null;
@@ -431,6 +434,7 @@ export class Agent implements Disposable {
    */
   addTool(tool: ToolDef | TypedToolDef): this {
     this._tools.push(tool);
+    this._toolsDirty = true;
     return this;
   }
 
@@ -454,6 +458,7 @@ export class Agent implements Disposable {
    */
   addTools(tools: (ToolDef | TypedToolDef)[]): this {
     this._tools.push(...tools);
+    this._toolsDirty = true;
     return this;
   }
 
@@ -474,6 +479,7 @@ export class Agent implements Disposable {
     parameters?: Record<string, unknown>
   ): this {
     this._tools.push(toolFn({ name, description, parameters: parameters ?? {}, execute }));
+    this._toolsDirty = true;
     return this;
   }
 
@@ -625,6 +631,7 @@ export class Agent implements Disposable {
   useMcpServer(client: McpClient): this {
     this._mcpClients.push(client);
     this._mcpToolsLoaded = false;
+    this._toolsDirty = true;
     return this;
   }
 
@@ -1042,6 +1049,10 @@ export class Agent implements Disposable {
    * @internal
    */
   private resolveToolsAndExecutor(): { toolDefs: ToolDef[]; executor: ToolExecutor | null } {
+    if (!this._toolsDirty && this._cachedToolDefs) {
+      return { toolDefs: this._cachedToolDefs, executor: this._cachedToolExecutor };
+    }
+
     const typedTools = this._tools.filter(isTypedTool);
 
     // Strip execute callbacks for the NAPI layer
@@ -1054,6 +1065,10 @@ export class Agent implements Disposable {
     const executor = typedTools.length > 0
       ? createToolExecutor(typedTools)
       : null;
+
+    this._cachedToolDefs = toolDefs;
+    this._cachedToolExecutor = executor;
+    this._toolsDirty = false;
 
     return { toolDefs, executor };
   }
@@ -1078,6 +1093,7 @@ export class Agent implements Disposable {
           },
         };
         this._tools.push(mcpTool);
+        this._toolsDirty = true;
       }
     }
 
