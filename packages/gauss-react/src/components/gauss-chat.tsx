@@ -17,6 +17,7 @@ import { useChat } from "@gauss-ai/chat";
 import type { ChatMessage, ChatTransport, UseChatOptions } from "@gauss-ai/chat";
 import type { GaussTheme } from "../theme.js";
 import { ChatPanel } from "./index.js";
+import { useGaussConfig } from "./gauss-provider.js";
 
 export interface GaussChatProps {
   /** API endpoint. Default: "/api/chat". */
@@ -69,11 +70,14 @@ export function GaussChat({
   onError,
   onFinish,
 }: GaussChatProps): React.JSX.Element {
+  const globalConfig = useGaussConfig();
+
   const hookOpts: UseChatOptions = useMemo(
     () => ({
-      api,
-      headers,
-      body,
+      api: api ?? globalConfig.api,
+      headers: { ...globalConfig.headers, ...headers },
+      body: { ...globalConfig.body, ...body },
+      credentials: globalConfig.credentials,
       transport,
       systemPrompt,
       initialMessages,
@@ -81,8 +85,10 @@ export function GaussChat({
       onError,
       onFinish,
     }),
-    [api, headers, body, transport, systemPrompt, initialMessages, maxToolRoundtrips, onError, onFinish],
+    [api, headers, body, transport, systemPrompt, initialMessages, maxToolRoundtrips, onError, onFinish, globalConfig],
   );
+
+  const resolvedTheme = theme ?? globalConfig.theme;
 
   const { messages, sendMessage, status, stop } = useChat(hookOpts);
 
@@ -97,7 +103,7 @@ export function GaussChat({
         onSend={(text) => sendMessage(text)}
         status={status}
         onStop={stop}
-        theme={theme}
+        theme={resolvedTheme}
         placeholder={placeholder}
         header={header}
         renderMessage={renderMessage}

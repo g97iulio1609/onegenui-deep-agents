@@ -58,6 +58,15 @@ export type { GaussChatProps } from "./components/gauss-chat.js";
 export { GaussChatWindow } from "./components/gauss-chat-window.js";
 export type { GaussChatWindowProps } from "./components/gauss-chat-window.js";
 
+export { GaussProvider, useGaussConfig } from "./components/gauss-provider.js";
+export type { GaussConfig, GaussProviderProps } from "./components/gauss-provider.js";
+
+export { GaussErrorBoundary } from "./components/error-boundary.js";
+export type { ErrorBoundaryProps } from "./components/error-boundary.js";
+
+export { ChatSkeleton } from "./components/chat-skeleton.js";
+export type { ChatSkeletonProps } from "./components/chat-skeleton.js";
+
 // ── Composable Components ────────────────────────────────────────────────────
 export {
   AgentSelector,
