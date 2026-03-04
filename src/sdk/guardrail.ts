@@ -13,6 +13,7 @@ import {
 } from "gauss-napi";
 
 import type { Handle, Disposable, PiiAction } from "./types.js";
+import { DisposedError } from "./errors.js";
 
 export class GuardrailChain implements Disposable {
   private readonly _handle: Handle;
@@ -85,7 +86,7 @@ export class GuardrailChain implements Disposable {
 
   private assertNotDisposed(): void {
     if (this.disposed) {
-      throw new Error("GuardrailChain has been destroyed");
+      throw new DisposedError("GuardrailChain", "guardrailChain");
     }
   }
 }

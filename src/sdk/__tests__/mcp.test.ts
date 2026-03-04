@@ -22,7 +22,7 @@ describe("McpServer", () => {
     const server = new McpServer("disp", "1.0.0");
     server[Symbol.dispose]();
     expect(() => server.addTool({ name: "x", description: "x" })).toThrow(
-      "McpServer has been destroyed",
+      "has been destroyed",
     );
   });
 

@@ -11,6 +11,7 @@ import {
 } from "gauss-napi";
 
 import type { Handle, Disposable } from "./types.js";
+import { DisposedError } from "./errors.js";
 
 export class ApprovalManager implements Disposable {
   private readonly _handle: Handle;
@@ -77,7 +78,7 @@ export class ApprovalManager implements Disposable {
 
   private assertNotDisposed(): void {
     if (this.disposed) {
-      throw new Error("ApprovalManager has been destroyed");
+      throw new DisposedError("ApprovalManager", "approvalManager");
     }
   }
 }

@@ -10,6 +10,7 @@ import {
 } from "gauss-napi";
 
 import type { Handle, Disposable, ToolDef } from "./types.js";
+import { DisposedError } from "./errors.js";
 import type { Agent } from "./agent.js";
 
 export interface WorkflowStepConfig {
@@ -74,7 +75,7 @@ export class Workflow implements Disposable {
 
   private assertNotDisposed(): void {
     if (this.disposed) {
-      throw new Error("Workflow has been destroyed");
+      throw new DisposedError("Workflow", "workflow");
     }
   }
 }

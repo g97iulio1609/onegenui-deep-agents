@@ -18,6 +18,7 @@ import type {
   MemoryEntryType,
   RecallOptions,
 } from "./types.js";
+import { DisposedError } from "./errors.js";
 
 /**
  * In-memory conversation store backed by Rust core.
@@ -107,7 +108,7 @@ export class Memory implements Disposable {
 
   private assertNotDisposed(): void {
     if (this.disposed) {
-      throw new Error("Memory has been destroyed");
+      throw new DisposedError("Memory", "memory");
     }
   }
 }

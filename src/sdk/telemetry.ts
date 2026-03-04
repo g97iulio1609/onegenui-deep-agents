@@ -11,6 +11,7 @@ import {
 } from "gauss-napi";
 
 import type { Handle, Disposable } from "./types.js";
+import { DisposedError } from "./errors.js";
 
 export class Telemetry implements Disposable {
   private readonly _handle: Handle;
@@ -79,7 +80,7 @@ export class Telemetry implements Disposable {
 
   private assertNotDisposed(): void {
     if (this.disposed) {
-      throw new Error("Telemetry has been destroyed");
+      throw new DisposedError("Telemetry", "telemetry");
     }
   }
 }

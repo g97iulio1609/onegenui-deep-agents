@@ -15,6 +15,7 @@ import type {
   VectorChunk,
   SearchResult,
 } from "./types.js";
+import { DisposedError } from "./errors.js";
 
 export class VectorStore implements Disposable {
   private readonly _handle: Handle;
@@ -81,7 +82,7 @@ export class VectorStore implements Disposable {
 
   private assertNotDisposed(): void {
     if (this.disposed) {
-      throw new Error("VectorStore has been destroyed");
+      throw new DisposedError("VectorStore", "vectorStore");
     }
   }
 

@@ -10,6 +10,7 @@ import {
 } from "gauss-napi";
 
 import type { Handle, Disposable } from "./types.js";
+import { DisposedError } from "./errors.js";
 
 export class CheckpointStore implements Disposable {
   private readonly _handle: Handle;
@@ -55,7 +56,7 @@ export class CheckpointStore implements Disposable {
 
   private assertNotDisposed(): void {
     if (this.disposed) {
-      throw new Error("CheckpointStore has been destroyed");
+      throw new DisposedError("CheckpointStore", "checkpointStore");
     }
   }
 }

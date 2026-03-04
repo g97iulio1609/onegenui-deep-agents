@@ -10,6 +10,7 @@ import {
 } from "gauss-napi";
 
 import type { Handle, Disposable } from "./types.js";
+import { DisposedError } from "./errors.js";
 
 export class MiddlewareChain implements Disposable {
   private readonly _handle: Handle;
@@ -58,7 +59,7 @@ export class MiddlewareChain implements Disposable {
 
   private assertNotDisposed(): void {
     if (this.disposed) {
-      throw new Error("MiddlewareChain has been destroyed");
+      throw new DisposedError("MiddlewareChain", "middlewareChain");
     }
   }
 }

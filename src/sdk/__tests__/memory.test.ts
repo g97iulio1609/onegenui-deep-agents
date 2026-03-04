@@ -74,7 +74,7 @@ describe("Memory", () => {
     await expect(mem.store({
       id: "x", content: "x", entryType: "conversation", timestamp: "2024-01-01T00:00:00Z",
     })).rejects.toThrow(
-      "Memory has been destroyed"
+      "has been destroyed"
     );
   });
 

@@ -10,6 +10,7 @@ import {
 } from "gauss-napi";
 
 import type { Handle, Disposable, EvalScorerType } from "./types.js";
+import { DisposedError } from "./errors.js";
 
 export class EvalRunner implements Disposable {
   private readonly _handle: Handle;
@@ -46,7 +47,7 @@ export class EvalRunner implements Disposable {
 
   private assertNotDisposed(): void {
     if (this.disposed) {
-      throw new Error("EvalRunner has been destroyed");
+      throw new DisposedError("EvalRunner", "evalRunner");
     }
   }
 

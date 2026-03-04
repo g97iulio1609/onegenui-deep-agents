@@ -97,7 +97,7 @@ describe("ToolRegistry", () => {
     const reg = new ToolRegistry();
     reg.destroy();
     expect(() => reg.add({ name: "x", description: "x" })).toThrow(
-      "ToolRegistry has been destroyed",
+      "has been destroyed",
     );
     expect(() => reg.search("x")).toThrow("destroyed");
     expect(() => reg.list()).toThrow("destroyed");

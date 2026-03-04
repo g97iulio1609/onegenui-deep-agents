@@ -8,6 +8,7 @@ import {
 } from "gauss-napi";
 
 import type { Handle, Disposable, CoercionStrategy } from "./types.js";
+import { DisposedError } from "./errors.js";
 
 export class ToolValidator implements Disposable {
   private readonly _handle: Handle;
@@ -52,7 +53,7 @@ export class ToolValidator implements Disposable {
 
   private assertNotDisposed(): void {
     if (this.disposed) {
-      throw new Error("ToolValidator has been destroyed");
+      throw new DisposedError("ToolValidator", "toolValidator");
     }
   }
 }

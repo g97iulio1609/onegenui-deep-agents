@@ -11,6 +11,7 @@ import {
 } from "gauss-napi";
 
 import type { Handle, Disposable, ToolDef } from "./types.js";
+import { DisposedError } from "./errors.js";
 
 // ── MCP Types ──────────────────────────────────────────────────
 
@@ -148,7 +149,7 @@ export class McpServer implements Disposable {
 
   private assertNotDisposed(): void {
     if (this.disposed) {
-      throw new Error("McpServer has been destroyed");
+      throw new DisposedError("McpServer", "mcpServer");
     }
   }
 }

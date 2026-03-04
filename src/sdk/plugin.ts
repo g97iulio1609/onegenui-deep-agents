@@ -11,6 +11,7 @@ import {
 } from "gauss-napi";
 
 import type { Handle, Disposable } from "./types.js";
+import { DisposedError } from "./errors.js";
 
 export class PluginRegistry implements Disposable {
   private readonly _handle: Handle;
@@ -63,7 +64,7 @@ export class PluginRegistry implements Disposable {
 
   private assertNotDisposed(): void {
     if (this.disposed) {
-      throw new Error("PluginRegistry has been destroyed");
+      throw new DisposedError("PluginRegistry", "pluginRegistry");
     }
   }
 }

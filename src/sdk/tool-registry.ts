@@ -11,6 +11,7 @@ import {
 } from "gauss-napi";
 
 import type { Handle, Disposable } from "./types.js";
+import { DisposedError } from "./errors.js";
 
 // ── Types ───────────────────────────────────────────────────────
 
@@ -89,7 +90,7 @@ export class ToolRegistry implements Disposable {
 
   private assertNotDisposed(): void {
     if (this.disposed) {
-      throw new Error("ToolRegistry has been destroyed");
+      throw new DisposedError("ToolRegistry", "toolRegistry");
     }
   }
 }
