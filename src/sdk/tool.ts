@@ -52,7 +52,9 @@ export interface TypedToolDef<TParams = Record<string, unknown>, TResult = unkno
  *     expression: { type: "string", description: "Math expression to evaluate" },
  *   },
  *   execute: async ({ expression }) => {
- *     return { result: eval(expression) };
+ *     // WARNING: Never use eval() with untrusted input. Use a safe math parser instead.
+ *     const result = Function(`"use strict"; return (${expression})`)();
+ *     return { result: String(result) };
  *   },
  * });
  *

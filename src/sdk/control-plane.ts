@@ -403,12 +403,16 @@ export class ControlPlane implements Disposable {
           }
 
           const timer = setInterval(() => {
-            if (res.writableEnded || res.destroyed) return;
+            if (res.writableEnded || res.destroyed) {
+              clearInterval(timer);
+              return;
+            }
             this.emitStreamBatch(res, channels, filters);
           }, 1000);
           const cleanup = () => clearInterval(timer);
           req.on("close", cleanup);
           req.on("aborted", cleanup);
+          res.on("error", cleanup);
           return;
         }
 
