@@ -111,7 +111,7 @@ export function useCompletion(options: UseCompletionOptions = {}): UseCompletion
 
         onFinish?.(finalMessage);
       } catch (err) {
-        if ((err as Error).name === "AbortError") {
+        if (err instanceof Error && err.name === "AbortError") {
           setStatus("idle");
           return;
         }

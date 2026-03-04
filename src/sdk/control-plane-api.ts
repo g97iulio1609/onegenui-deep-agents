@@ -105,7 +105,8 @@ export function renderHostedOpsHtml(): string {
     });
     fetch('/api/ops/capabilities')
       .then((r) => r.json())
-      .then((j) => append('capabilities: ' + JSON.stringify(j)));
+      .then((j) => append('capabilities: ' + JSON.stringify(j)))
+      .catch(() => append('capabilities: fetch error'));
   </script>
 </body>
 </html>`;

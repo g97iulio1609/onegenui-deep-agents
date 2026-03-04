@@ -153,7 +153,7 @@ export function useObject<T>(options: UseObjectOptions<T>): UseObjectReturn<T> {
           onFinish?.(finalMessage);
         }
       } catch (err) {
-        if ((err as Error).name === "AbortError") {
+        if (err instanceof Error && err.name === "AbortError") {
           setStatus("idle");
           return;
         }
