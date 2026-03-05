@@ -1,6 +1,6 @@
 {
   "name": "@gauss-ai/elements",
-  "version": "2.18.0",
+  "version": "2.20.0",
   "description": "Composable AI UI primitives for React — styled, accessible, headless-ready",
   "license": "MIT",
   "type": "module",
