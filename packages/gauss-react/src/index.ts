@@ -82,6 +82,9 @@ export {
   createCodeBlockRenderer,
 } from "./components/index.js";
 
+export { VoiceInput } from "./components/voice-input.js";
+export type { VoiceInputProps } from "./components/voice-input.js";
+
 // Component prop types
 export type {
   AgentSelectorProps,

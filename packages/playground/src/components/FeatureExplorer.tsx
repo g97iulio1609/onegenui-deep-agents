@@ -1,9 +1,10 @@
 import { useState, useCallback, useMemo } from "react";
 import { useChat, useCompletion, useAgent } from "@gauss-ai/chat";
 import { applyMiddleware, retryMiddleware, loggingMiddleware, rateLimitMiddleware, hooksMiddleware } from "@gauss-ai/chat";
-import { ChatPanel, ChatInput, StreamingIndicator, ToolCallViewer, AgentSelector, ConversationList, SyntaxHighlighter } from "@gauss-ai/react";
+import { ChatPanel, ChatInput, StreamingIndicator, ToolCallViewer, AgentSelector, ConversationList, SyntaxHighlighter, VoiceInput } from "@gauss-ai/react";
 import type { GaussTheme, ToolCallViewerProps, ConversationItem } from "@gauss-ai/react";
 import type { ToolCallPart } from "@gauss-ai/chat";
+import { AIMessage, AIInput, AICodeBlock, AIToolCall, AIAvatar, AISuggestions, AITypingIndicator } from "@gauss-ai/elements";
 
 type Feature =
   | "useChat"
@@ -17,7 +18,9 @@ type Feature =
   | "Theming"
   | "Middleware"
   | "ConversationList"
-  | "SyntaxHighlighter";
+  | "SyntaxHighlighter"
+  | "VoiceInput"
+  | "Elements";
 
 interface FeatureInfo {
   id: Feature;
@@ -39,6 +42,8 @@ const features: FeatureInfo[] = [
   { id: "Middleware", label: "Middleware System", description: "Composable transport middleware", package: "@gauss-ai/chat" },
   { id: "ConversationList", label: "<ConversationList />", description: "Conversation history sidebar", package: "@gauss-ai/react" },
   { id: "SyntaxHighlighter", label: "<SyntaxHighlighter />", description: "Zero-dep code highlighting", package: "@gauss-ai/react" },
+  { id: "VoiceInput", label: "<VoiceInput />", description: "Speech-to-text input", package: "@gauss-ai/react" },
+  { id: "Elements", label: "AI Elements", description: "Low-level UI primitives", package: "@gauss-ai/elements" },
 ];
 
 const darkTheme: GaussTheme = {
@@ -129,6 +134,10 @@ function FeatureDemo({ feature }: { feature: Feature }) {
       return <ConversationListDemo />;
     case "SyntaxHighlighter":
       return <SyntaxHighlighterDemo />;
+    case "VoiceInput":
+      return <VoiceInputDemo />;
+    case "Elements":
+      return <ElementsDemo />;
   }
 }
 
@@ -593,6 +602,54 @@ fn main() {
         language={language}
         theme={themeName}
       />
+    </div>
+  );
+}
+
+function VoiceInputDemo() {
+  const [transcript, setTranscript] = useState("");
+  return (
+    <div style={{ padding: 16 }}>
+      <CodeSnippet code={`import { VoiceInput } from "@gauss-ai/react";
+
+<VoiceInput onTranscript={(text) => console.log(text)} />`} />
+      <div style={{ padding: 16, background: "#0d1117", borderRadius: 8, border: "1px solid #30363d" }}>
+        <VoiceInput onTranscript={setTranscript} />
+        {transcript && (
+          <p style={{ marginTop: 12, color: "#8b949e", fontSize: 13 }}>
+            Transcript: <span style={{ color: "#c9d1d9" }}>{transcript}</span>
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ElementsDemo() {
+  return (
+    <div style={{ padding: 16 }}>
+      <CodeSnippet code={`import { AIMessage, AIInput, AICodeBlock, AIToolCall, AIAvatar, AISuggestions, AITypingIndicator } from "@gauss-ai/elements";
+
+// Low-level primitives — styled or headless
+<AIMessage role="user">Hello!</AIMessage>
+<AIMessage role="assistant">I'm here to help.</AIMessage>
+<AIToolCall name="search" status="done" />
+<AICodeBlock code="console.log('hi')" language="js" />
+<AISuggestions suggestions={["Tell me a joke", "Write code"]} />`} />
+      <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "start" }}>
+          <AIAvatar role="user" />
+          <AIMessage role="user">Hello! Can you help me?</AIMessage>
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "start" }}>
+          <AIAvatar role="assistant" />
+          <AIMessage role="assistant">Of course! I&apos;m here to help.</AIMessage>
+        </div>
+        <AIToolCall name="web_search" status="done" />
+        <AICodeBlock code={`function greet(name: string) {\n  return \`Hello, \${name}!\`;\n}`} language="typescript" />
+        <AITypingIndicator />
+        <AISuggestions suggestions={["Tell me a joke", "Write some code", "Explain AI"]} onSelect={(s) => alert(`Selected: ${s}`)} />
+      </div>
     </div>
   );
 }
