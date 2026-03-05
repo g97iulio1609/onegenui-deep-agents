@@ -1,6 +1,6 @@
 {
   "name": "@gauss-ai/react",
-  "version": "2.20.0",
+  "version": "2.21.0",
   "description": "Pre-built React UI components for AI chat interfaces — ChatPanel, MessageList, ChatInput, and more",
   "license": "MIT",
   "type": "module",
