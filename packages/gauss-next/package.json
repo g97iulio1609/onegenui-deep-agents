@@ -1,6 +1,6 @@
 {
   "name": "@gauss-ai/next",
-  "version": "2.21.0",
+  "version": "2.22.0",
   "description": "Next.js integration for Gauss AI — zero-config route handlers for App Router and Pages Router",
   "license": "MIT",
   "type": "module",
