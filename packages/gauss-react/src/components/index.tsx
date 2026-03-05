@@ -3,6 +3,7 @@ import type { ChatMessage, ChatStatus } from "@gauss-ai/chat";
 import { getMessageText } from "@gauss-ai/chat";
 import type { GaussTheme } from "../theme.js";
 import { themeToVars } from "../theme.js";
+import { MarkdownRenderer } from "./markdown-renderer.js";
 
 export interface ChatInputProps {
   /** Callback when user submits a message. */
@@ -17,6 +18,10 @@ export interface ChatInputProps {
   className?: string;
   /** Disable the input. */
   disabled?: boolean;
+  /** Slot rendered before the textarea (e.g., file attach button). */
+  inputStartSlot?: React.ReactNode;
+  /** Slot rendered after the send button (e.g., voice input). */
+  inputEndSlot?: React.ReactNode;
 }
 
 /** Chat input with send button and optional stop button. */
@@ -27,6 +32,8 @@ export function ChatInput({
   onStop,
   className,
   disabled,
+  inputStartSlot,
+  inputEndSlot,
 }: ChatInputProps): React.JSX.Element {
   const [value, setValue] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -53,6 +60,7 @@ export function ChatInput({
 
   return (
     <div className={className} data-testid="gauss-chat-input" style={inputContainerStyle}>
+      {inputStartSlot}
       <textarea
         ref={inputRef}
         value={value}
@@ -84,6 +92,7 @@ export function ChatInput({
           ↑
         </button>
       )}
+      {inputEndSlot}
     </div>
   );
 }
@@ -126,6 +135,8 @@ export interface MessageListProps {
   theme?: GaussTheme;
   /** Custom message renderer. */
   renderMessage?: (message: ChatMessage, index: number) => React.ReactNode;
+  /** Render assistant messages as Markdown. Default: false. */
+  markdown?: boolean;
 }
 
 /** Scrollable list of chat messages. */
@@ -134,6 +145,7 @@ export function MessageList({
   className,
   theme,
   renderMessage,
+  markdown = false,
 }: MessageListProps): React.JSX.Element {
   const endRef = useRef<HTMLDivElement>(null);
   const vars = theme ? themeToVars(theme) : {};
@@ -146,10 +158,10 @@ export function MessageList({
             {renderMessage(message, index)}
           </React.Fragment>
         ) : (
-          <MessageBubble key={message.id} message={message} />
+          <MessageBubble key={message.id} message={message} markdown={markdown} />
         ),
       ),
-    [messages, renderMessage],
+    [messages, renderMessage, markdown],
   );
 
   return (
@@ -166,12 +178,14 @@ export function MessageList({
 
 interface MessageBubbleProps {
   message: ChatMessage;
+  markdown?: boolean;
 }
 
-function MessageBubble({ message }: MessageBubbleProps): React.JSX.Element {
+function MessageBubble({ message, markdown = false }: MessageBubbleProps): React.JSX.Element {
   const isUser = message.role === "user";
   const text = getMessageText(message);
   const toolCalls = message.parts.filter((p) => p.type === "tool-call");
+  const useMarkdown = markdown && !isUser && text;
 
   return (
     <div
@@ -191,7 +205,11 @@ function MessageBubble({ message }: MessageBubbleProps): React.JSX.Element {
           borderRadius: "var(--gauss-radius, 12px)",
         }}
       >
-        {text && <p style={textStyle}>{text}</p>}
+        {useMarkdown ? (
+          <MarkdownRenderer content={text} />
+        ) : (
+          text && <p style={textStyle}>{text}</p>
+        )}
         {toolCalls.length > 0 && (
           <div data-testid="gauss-tool-calls" style={toolCallStyle}>
             {toolCalls.map((tc) =>
@@ -316,6 +334,12 @@ export interface ChatPanelProps {
   renderMessage?: (message: ChatMessage, index: number) => React.ReactNode;
   /** Header content. */
   header?: React.ReactNode;
+  /** Slot rendered before the textarea. */
+  inputStartSlot?: React.ReactNode;
+  /** Slot rendered after the send button. */
+  inputEndSlot?: React.ReactNode;
+  /** Render assistant messages as Markdown. Default: false. */
+  markdown?: boolean;
 }
 
 /** Full chat interface combining MessageList, ChatInput, and StreamingIndicator. */
@@ -329,6 +353,9 @@ export function ChatPanel({
   className,
   renderMessage,
   header,
+  inputStartSlot,
+  inputEndSlot,
+  markdown = false,
 }: ChatPanelProps): React.JSX.Element {
   const vars = theme ? themeToVars(theme) : {};
   const isStreaming = status === "streaming";
@@ -344,6 +371,7 @@ export function ChatPanel({
         messages={messages}
         theme={theme}
         renderMessage={renderMessage}
+        markdown={markdown}
       />
       <StreamingIndicator isStreaming={isStreaming} />
       <ChatInput
@@ -351,6 +379,8 @@ export function ChatPanel({
         status={status}
         onStop={onStop}
         placeholder={placeholder}
+        inputStartSlot={inputStartSlot}
+        inputEndSlot={inputEndSlot}
       />
     </div>
   );
@@ -531,3 +561,6 @@ export type { ConversationListProps, Conversation as ConversationItem } from "./
 
 export { SyntaxHighlighter, createCodeBlockRenderer } from "./syntax-highlighter.js";
 export type { SyntaxHighlighterProps } from "./syntax-highlighter.js";
+
+export { VoiceInput } from "./voice-input.js";
+export type { VoiceInputProps } from "./voice-input.js";

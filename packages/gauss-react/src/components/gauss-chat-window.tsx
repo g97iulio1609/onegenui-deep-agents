@@ -77,6 +77,12 @@ export interface GaussChatWindowProps {
   welcomeMessage?: string;
   /** Footer content. */
   footer?: React.ReactNode;
+  /** Slot rendered before the text input (e.g. file upload). */
+  inputStartSlot?: React.ReactNode;
+  /** Slot rendered after the send button (e.g. voice input). */
+  inputEndSlot?: React.ReactNode;
+  /** Render assistant messages as Markdown. Default: false. */
+  markdown?: boolean;
 }
 
 /** Floating chat window with toggle button. */
@@ -107,6 +113,9 @@ export function GaussChatWindow({
   suggestions,
   welcomeMessage,
   footer,
+  inputStartSlot,
+  inputEndSlot,
+  markdown,
 }: GaussChatWindowProps): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const toggle = useCallback(() => {
@@ -193,6 +202,9 @@ export function GaussChatWindow({
           suggestions={suggestions}
           welcomeMessage={welcomeMessage}
           footer={footer}
+          inputStartSlot={inputStartSlot}
+          inputEndSlot={inputEndSlot}
+          markdown={markdown}
           style={{ borderRadius: "16px" }}
         />
       </div>

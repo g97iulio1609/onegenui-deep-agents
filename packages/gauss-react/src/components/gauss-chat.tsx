@@ -62,6 +62,8 @@ export interface GaussChatProps {
   footer?: React.ReactNode;
   /** Whether to show a welcome message when no messages exist. */
   welcomeMessage?: string;
+  /** Render assistant messages as Markdown. Default: false. */
+  markdown?: boolean;
 }
 
 /** Fully self-contained chat widget — zero wiring required. */
@@ -83,10 +85,11 @@ export function GaussChat({
   onFinish,
   suggestions,
   onSuggestion,
-  inputStartSlot: _inputStartSlot,
-  inputEndSlot: _inputEndSlot,
+  inputStartSlot,
+  inputEndSlot,
   footer,
   welcomeMessage,
+  markdown = false,
 }: GaussChatProps): React.JSX.Element {
   const globalConfig = useGaussConfig();
 
@@ -164,6 +167,9 @@ export function GaussChat({
           </>
         }
         renderMessage={renderMessage}
+        inputStartSlot={inputStartSlot}
+        inputEndSlot={inputEndSlot}
+        markdown={markdown}
       />
       {footer && <div data-testid="gauss-footer" style={footerStyle}>{footer}</div>}
     </div>

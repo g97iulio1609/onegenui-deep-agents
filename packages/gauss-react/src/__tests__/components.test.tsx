@@ -241,4 +241,75 @@ describe("ChatPanel", () => {
     );
     expect(screen.queryByTestId("gauss-streaming-indicator")).toBeNull();
   });
+
+  it("renders inputStartSlot and inputEndSlot in ChatInput", () => {
+    render(
+      <ChatInput
+        onSend={vi.fn()}
+        inputStartSlot={<span data-testid="start-slot">📎</span>}
+        inputEndSlot={<span data-testid="end-slot">🎤</span>}
+      />,
+    );
+    expect(screen.getByTestId("start-slot")).toBeTruthy();
+    expect(screen.getByTestId("end-slot")).toBeTruthy();
+  });
+
+  it("passes slots through ChatPanel to ChatInput", () => {
+    render(
+      <ChatPanel
+        messages={[]}
+        onSend={vi.fn()}
+        inputStartSlot={<span data-testid="panel-start-slot">📎</span>}
+        inputEndSlot={<span data-testid="panel-end-slot">🎤</span>}
+      />,
+    );
+    expect(screen.getByTestId("panel-start-slot")).toBeTruthy();
+    expect(screen.getByTestId("panel-end-slot")).toBeTruthy();
+  });
+
+  it("renders assistant messages as markdown when markdown=true", () => {
+    const mdMessage: ChatMessage = {
+      id: "md1",
+      role: "assistant",
+      parts: [{ type: "text", text: "**bold text** and `code`" }],
+    };
+    render(
+      <MessageList
+        messages={[mdMessage]}
+        markdown={true}
+      />,
+    );
+    expect(screen.getByTestId("gauss-md-renderer")).toBeTruthy();
+  });
+
+  it("renders assistant messages as plain text when markdown=false", () => {
+    const msg: ChatMessage = {
+      id: "plain1",
+      role: "assistant",
+      parts: [{ type: "text", text: "**bold text**" }],
+    };
+    render(
+      <MessageList
+        messages={[msg]}
+        markdown={false}
+      />,
+    );
+    expect(screen.queryByTestId("gauss-md-renderer")).toBeNull();
+    expect(screen.getByText("**bold text**")).toBeTruthy();
+  });
+
+  it("never renders user messages as markdown", () => {
+    const msg: ChatMessage = {
+      id: "user-md",
+      role: "user",
+      parts: [{ type: "text", text: "**bold**" }],
+    };
+    render(
+      <MessageList
+        messages={[msg]}
+        markdown={true}
+      />,
+    );
+    expect(screen.queryByTestId("gauss-md-renderer")).toBeNull();
+  });
 });
